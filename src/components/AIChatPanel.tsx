@@ -258,7 +258,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
                   setLocalApiKey(e.target.value);
                   setIsKeySaved(false);
                 }}
-                placeholder="輸入您的 LongCat (ak_...) 或 Gemini API 金鑰"
+                placeholder="輸入您的自訂 AI API 金鑰 (留空使用預設金鑰)"
                 className="flex-1 px-2.5 py-1.5 bg-black/60 border border-white/5 rounded-lg text-zen-text text-[11px] placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
               />
               <button
@@ -278,7 +278,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
               </button>
             </div>
             <p className="text-[9px] text-zen-muted/50 leading-normal">
-              金鑰僅儲存於本地。輸入以 <code>ak_</code> 開頭的金鑰將啟用 LongCat，以 <code>AIzaSy</code> 開頭則自動啟用 Gemini。
+              金鑰僅儲存於本地。如未輸入，系統將使用預設的 AI 服務器（NVIDIA GLM 命理模型）進行對談。
             </p>
           </div>
         )}

@@ -20,12 +20,11 @@ async function waitForServer(url) {
 }
 
 before(async () => {
-  serverProcess = spawn('C:/Program Files/nodejs/node.exe', ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
+  serverProcess = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      LONGCAT_API_KEY: '',
-      GEMINI_API_KEY: '',
+      NVIDIA_API_KEY: '',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
