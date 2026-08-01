@@ -11,29 +11,28 @@ describe('Calibration Module (scores adjustment, auto switch, accuracy)', () => 
     followWeak: 10,
   };
 
+  const createLog = (overrides: Partial<DailyLog> = {}): DailyLog => ({
+    date: '2026-08-01',
+    health: null,
+    career: null,
+    romance: null,
+    wealth: null,
+    note: '測試日誌',
+    theoreticalOutcome: '順利',
+    dayTenGodType: '財星',
+    createdAt: new Date().toISOString(),
+    ...overrides,
+  });
+
   it('correctly adjusts scores for a Wealth day (財星) with good wealth outcome', () => {
-    const log: DailyLog = {
-      date: '2026-08-01',
-      pattern: '身強',
-      dayTenGodType: '財星',
-      theoreticalOutcome: '吉',
-      actualOutcome: '吉',
-      wealth: 'good',
-    };
+    const log = createLog({ wealth: 'good', dayTenGodType: '財星' });
     const updated = adjustScores(baseScores, log);
     expect(updated.strong).toBeGreaterThan(baseScores.strong);
     expect(updated.weak).toBeLessThan(baseScores.weak);
   });
 
   it('correctly adjusts scores for a Wealth day (財星) with bad wealth outcome', () => {
-    const log: DailyLog = {
-      date: '2026-08-01',
-      pattern: '身強',
-      dayTenGodType: '財星',
-      theoreticalOutcome: '吉',
-      actualOutcome: '凶',
-      wealth: 'bad',
-    };
+    const log = createLog({ wealth: 'bad', dayTenGodType: '財星' });
     const updated = adjustScores(baseScores, log);
     expect(updated.strong).toBeLessThan(baseScores.strong);
     expect(updated.weak).toBeGreaterThan(baseScores.weak);
@@ -46,32 +45,30 @@ describe('Calibration Module (scores adjustment, auto switch, accuracy)', () => 
       followStrong: 10,
       followWeak: 10,
     };
-    const switched = checkAutoSwitch(scores);
-    // current primary is weak (56), best other is strong (50) -> no switch
-    // let's test where strong was old primary but weak became 60 and strong became 50
-    // getPrimaryPattern returns max score, so checkAutoSwitch checks if best other > currentScore + 5
-    // let's test with tie or when best other is higher
-    expect(switched).toBeNull();
+    // strong was primary if we test a case where best > currentScore + 5
+    const testScores: PatternScores = {
+      strong: 40,
+      weak: 48,
+      followStrong: 10,
+      followWeak: 10,
+    };
+    const switched = checkAutoSwitch(testScores);
+    expect(switched).toBeNull(); // Because weak is already primary (48 > 40)
   });
 
   it('calculates accuracy based on matching good/bad theoretical outcomes', () => {
     const logs: DailyLog[] = [
-      {
-        date: '2026-08-01',
-        pattern: '身強',
+      createLog({
         dayTenGodType: '財星',
         theoreticalOutcome: '順利',
-        actualOutcome: '吉',
         wealth: 'good',
-      },
-      {
+      }),
+      createLog({
         date: '2026-08-02',
-        pattern: '身強',
         dayTenGodType: '官殺',
         theoreticalOutcome: '不順',
-        actualOutcome: '凶',
         career: 'bad',
-      },
+      }),
     ];
     const acc = calculateAccuracy(logs);
     expect(acc).toBe(100);
