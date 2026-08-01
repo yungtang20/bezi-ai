@@ -1,5 +1,5 @@
 import { Solar } from 'lunar-javascript';
-import { BaziChart } from './paipan';
+import { BaziChart, translateGanZhi } from './paipan';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, getTenGod } from './constants';
 import { checkTaiSui } from './data/rules/taiSui';
 export { checkTaiSui } from './data/rules/taiSui';
@@ -51,7 +51,7 @@ export function calculateDaYun(chart: BaziChart): DaYun[] {
   
   for (let i = 0; i < daYunArr.length; i++) {
     const dy = daYunArr[i];
-    const ganZhi = dy.getGanZhi();
+    const ganZhi = translateGanZhi(dy.getGanZhi());
     if (!ganZhi) continue;
     
     // 某些版本的 lunar-javascript，大運預設可能有空白或其它東西
@@ -129,7 +129,7 @@ export function getLiuNian(year: number, dayMaster?: string): LiuNian {
   const solar = Solar.fromYmdHms(year, 6, 1, 0, 0, 0); // 避開立春前的年份誤差
   const lunar = solar.getLunar();
   // [AI MOD] EightChar.getYear() 回傳年份數字而非干支；getYearInGanZhi() 定義在 Lunar 上。
-  const ganZhi = lunar.getYearInGanZhi();
+  const ganZhi = translateGanZhi(lunar.getYearInGanZhi());
   const gan = ganZhi.charAt(0);
   
   return {

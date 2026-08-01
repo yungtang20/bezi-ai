@@ -26,7 +26,7 @@ const ZHI_MAP: Record<string, string> = {
 };
 
 /** 將 lunar-javascript 返回的 i18n 鍵翻譯成中文字符 */
-function translateGanZhi(ganZhi: string): string {
+export function translateGanZhi(ganZhi: string): string {
   // 處理空值或已經有中文的情況
   if (!ganZhi || ganZhi.length < 2) return '';
   // 如果不是 i18n 鍵格式，直接返回
