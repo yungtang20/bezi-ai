@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import { checkMutualComplement } from '../matchmaking';
+import { PartnerInfo, SynastryDetail } from '../types';
 
 export function getCompatibilityScore(chart1: BaziChart, chart2: BaziChart, relationship: string) {
   let score = 70; // baseline
@@ -47,7 +48,7 @@ export function getCompatibilityScore(chart1: BaziChart, chart2: BaziChart, rela
 
 interface Props {
   chart: BaziChart;
-  partners: any[];
+  partners: PartnerInfo[];
   category: string;
 }
 
@@ -74,7 +75,7 @@ export default function CategorySynastry({ chart, partners, category }: Props) {
       <div className="space-y-4">
         {filteredPartners.map((p) => {
           if (!p.chart) return null;
-          const scoreData = getCompatibilityScore(chart, p.chart, p.relationship);
+          const scoreData = getCompatibilityScore(chart, p.chart, p.relationship || '');
 
           return (
             <div key={p.id} className="bg-zen-surface/60 border border-zen-border rounded-2xl p-4 md:p-5 relative overflow-hidden">
@@ -83,7 +84,7 @@ export default function CategorySynastry({ chart, partners, category }: Props) {
               <div className="flex items-center justify-between mb-3 border-b border-zen-border pb-3">
                 <div>
                   <h3 className="font-bold text-zen-text text-lg">{p.name} <span className="text-sm font-normal text-zen-muted ml-2">({p.relationship})</span></h3>
-                  <p className="text-sm text-zen-muted mt-1">日主：{p.chart.dayMaster}{p.chart.dayElement} | 生肖：{p.chart.year.zhi}</p>
+                  <p className="text-sm text-zen-muted mt-1">日主：{p.chart.dayMaster} | 生肖：{p.chart.year.zhi}</p>
                 </div>
                 <div className="text-center">
                   <span className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-200 bg-clip-text text-transparent">{scoreData.score}%</span>
@@ -92,7 +93,7 @@ export default function CategorySynastry({ chart, partners, category }: Props) {
               </div>
 
               <div className="space-y-3">
-                {scoreData.details.map((detail: any, idx: number) => (
+                {scoreData.details.map((detail: SynastryDetail, idx: number) => (
                   <div key={idx} className="bg-zen-surface/40 p-3 rounded-xl border border-white/5">
                     <p className="text-sm font-bold text-amber-500 mb-1">{detail.factor}</p>
                     <p className="text-base text-zen-text leading-relaxed font-bold">{detail.desc}</p>

@@ -42,7 +42,7 @@ export default function NavigationBar({ currentStep, onNavigate }: NavigationBar
             icon={tab.icon}
             label={tab.label}
             isActive={currentStep === tab.id}
-            onClick={() => onNavigate(tab.id as any)}
+            onClick={() => onNavigate(tab.id)}
             orientation="horizontal"
           />
         ))}

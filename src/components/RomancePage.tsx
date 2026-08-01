@@ -49,6 +49,8 @@ import { DAY_MASTER_FENG_SHUI } from "../data/charts/romanceFengShui";
 import RomanceMatchmaker from "./RomanceMatchmaker";
 import RomanceJiaziHandbook from "./RomanceJiaziHandbook";
 
+import { PartnerInfo } from '../types';
+
 interface Props {
   chart: BaziChart;
   scores: PatternScores;
@@ -58,7 +60,7 @@ interface Props {
   weakestElement: string;
   weakestElements: string[];  // 所有最弱五行
   onNavigate?: (step: number) => void;
-  partners?: any[];
+  partners?: PartnerInfo[];
 }
 
 const ZHI_TYPE: Record<string, string> = {

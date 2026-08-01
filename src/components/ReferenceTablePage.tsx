@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { FiveElement } from "../types";
 import { Solar } from "lunar-javascript";
 import { GAN_TO_ELEMENT, getYinYang } from "../constants";
 import { Search, X, ArrowLeft } from "lucide-react";
@@ -534,8 +535,8 @@ export default function ReferenceTablePage({ onNavigate }: { onNavigate?: (step:
                     const goodDayun = rule.goodElements;
                     const badDayun = rule.badElements;
                     
-                    const gdState = getLiunianAndRemedy(el as any, rule.strength, true);
-                    const bdState = getLiunianAndRemedy(el as any, rule.strength, false);
+                    const gdState = getLiunianAndRemedy(el as FiveElement, rule.strength, true);
+                    const bdState = getLiunianAndRemedy(el as FiveElement, rule.strength, false);
 
                     return (
                       <div className="space-y-4 text-xs md:text-sm">

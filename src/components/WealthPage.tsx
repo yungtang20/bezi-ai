@@ -26,6 +26,8 @@ import { Solar } from 'lunar-javascript';
 import { WEALTH_GUIDELINES, WEALTH_PILLAR_MEANINGS, NO_WEALTH_REMEDIES, SOLVE_MONEY_LOSS, WEALTH_LOST_TIMING } from '../data/charts/wealthGuidelines';
 import { LECTURE_DATA } from '../data/lecture/lectureData';
 
+import { PartnerInfo } from '../types';
+
 interface Props {
   chart: BaziChart;
   primaryPattern: string;
@@ -33,7 +35,7 @@ interface Props {
   unfavorable: string[];
   weakestElement: string;
   weakestElements: string[];  // 所有最弱五行
-  partners?: any[];
+  partners?: PartnerInfo[];
   onNavigate?: (step: number) => void;
 }
 

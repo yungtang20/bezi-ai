@@ -1,4 +1,12 @@
-export const WORKPLACE_STRATEGIES: Record<string, any> = {
+export interface WorkplaceStrategyItem {
+  title: string;
+  traits: string;
+  up: string;
+  same: string;
+  down: string;
+}
+
+export const WORKPLACE_STRATEGIES: Record<string, WorkplaceStrategyItem> = {
   '正財': {
     title: '做事僅慎小心',
     traits: '性格保守，按部就班，實務、不喜失誤',

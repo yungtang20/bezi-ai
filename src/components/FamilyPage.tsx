@@ -30,6 +30,8 @@ import {
   Gift
 } from 'lucide-react';
 
+import { PartnerInfo } from '../types';
+
 interface Props {
   chart: BaziChart;
   scores: PatternScores;
@@ -39,7 +41,7 @@ interface Props {
   weakestElement: string;
   weakestElements: string[];  // 所有最弱五行
   onNavigate?: (step: number) => void;
-  partners?: any[];
+  partners?: PartnerInfo[];
 }
 
 interface DecorGuide {
@@ -219,7 +221,7 @@ export default function FamilyPage({ chart, primaryPattern, favorable, unfavorab
     '辰': '四墓庫', '戌': '四墓庫', '丑': '四墓庫', '未': '四墓庫',
   };
   
-  const CHILD_ZHI_TRAITS: Record<string, any> = {
+  const CHILD_ZHI_TRAITS: Record<string, { trait: string; strategy: string }> = {
     '四正': {
        trait: '個性鮮明直接、情緒寫在臉上、自尊心較強。',
        strategy: '孩子吃軟不吃硬，同理陪伴與傾聽。'

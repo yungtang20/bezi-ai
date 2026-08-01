@@ -128,7 +128,21 @@ function checkBranchInteractions(
   return interactions;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+import { FiveElement } from '../types';
+
+interface TooltipPayload {
+  payload: {
+    ageLabel: string;
+    gan: string;
+    zhi: string;
+    tenGod: string;
+    isGood: boolean;
+    isBad: boolean;
+    quality: string;
+  };
+}
+
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -232,7 +246,7 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
 
   const strengthArg = primaryPattern === '身弱' || primaryPattern === '從弱' ? '身弱' : '身強';
   const activeDaYunRules = getLiunianAndRemedy(
-    GAN_TO_ELEMENT[chart.dayMaster] as any,
+    GAN_TO_ELEMENT[chart.dayMaster] as FiveElement,
     strengthArg,
     daYunQuality === '好運'
   );
@@ -292,9 +306,10 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
                 <AreaChart
                   data={chartData}
                   margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
-                  onClick={(e: any) => {
-                    if (e && e.activePayload && e.activePayload.length > 0) {
-                      const clickedIdx = e.activePayload[0].payload.index;
+                  onClick={(e: unknown) => {
+                    const event = e as { activePayload?: Array<{ payload: { index: number } }> } | null;
+                    if (event && event.activePayload && event.activePayload.length > 0) {
+                      const clickedIdx = event.activePayload[0].payload.index;
                       setSelectedDy(clickedIdx);
                       setExpandedLn(null);
                     }
@@ -404,14 +419,14 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
               // 動態喜忌轉換規則
               const isDayunGood = daYunQuality === '好運';
               const dynamicRules = getLiunianAndRemedy(
-                GAN_TO_ELEMENT[chart.dayMaster] as any, 
+                GAN_TO_ELEMENT[chart.dayMaster] as FiveElement, 
                 (primaryPattern === '身弱' || primaryPattern === '從弱' ? '身弱' : '身強'),
                 isDayunGood
               );
               
               const lnGanEl = GAN_TO_ELEMENT[ln.gan as keyof typeof GAN_TO_ELEMENT];
               const lnZhiEl = ZHI_TO_ELEMENT[ln.zhi as keyof typeof ZHI_TO_ELEMENT];
-              const isDynamicGood = dynamicRules.goodLiunian.includes(lnGanEl as any) || dynamicRules.goodLiunian.includes(lnZhiEl as any);
+              const isDynamicGood = dynamicRules.goodLiunian.includes(lnGanEl as FiveElement) || dynamicRules.goodLiunian.includes(lnZhiEl as FiveElement);
               
               let quality = isDynamicGood ? '好運' : '壞運';
               if (chart.dayMaster === '癸' && chart.gender === '男' && ln.year === 2026) {

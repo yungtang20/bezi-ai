@@ -5,6 +5,7 @@ import { calculateDaYun, getLiuNian, getDaYunQuality, getTenGodForDaYun } from '
 import { getTimelineGuideline, getLiunianAndRemedy } from '../data';
 import RemedyBrocade from './RemedyBrocade';
 import { GAN_TO_ELEMENT } from '../constants';
+import { FiveElement } from '../types';
 
 interface Props {
   chart: BaziChart;
@@ -55,7 +56,7 @@ export default function CategoryTimelineRemedy({ chart, primaryPattern, favorabl
   
   // Calculate dynamic rules for DaYun
   const activeDaYunRules = getLiunianAndRemedy(
-    GAN_TO_ELEMENT[chart.dayMaster] as any,
+    GAN_TO_ELEMENT[chart.dayMaster] as FiveElement,
     strengthArg,
     daYunQuality === '好運'
   );
@@ -65,7 +66,7 @@ export default function CategoryTimelineRemedy({ chart, primaryPattern, favorabl
 
   // Calculate dynamic rules for LiuNian (also based on elements)
   const activeLiuNianRules = getLiunianAndRemedy(
-    GAN_TO_ELEMENT[chart.dayMaster] as any,
+    GAN_TO_ELEMENT[chart.dayMaster] as FiveElement,
     strengthArg,
     daYunQuality === '好運'
   );

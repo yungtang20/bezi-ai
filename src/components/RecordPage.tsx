@@ -7,9 +7,12 @@ import {
   FileText
 } from 'lucide-react';
 
-import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs, getWeekLogs, savePatternScores, saveNotification } from '../storage';
+import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs, getWeekLogs, savePatternScores, saveNotification, AppNotification } from '../storage';
 import { adjustScores, checkAutoSwitch, calculateAccuracy } from '../calibration';
-import { getPrimaryPattern } from '../pattern';
+import { getPrimaryPattern, PatternScores } from '../pattern';
+import { BaziChart } from '../paipan';
+
+import { DailyEnergy } from '../dailyAnalysis';
 
 export default function RecordPage({ 
   bazi, 
@@ -21,13 +24,13 @@ export default function RecordPage({
   scores,
   onNavigate 
 }: { 
-  bazi: any, 
+  bazi: BaziChart | null, 
   name: string, 
   gender: 'male' | 'female' | null, 
   birthDate: string,
   birthTime: string,
   calibrations: Record<string, string>,
-  scores: any,
+  scores: PatternScores | null,
   onNavigate: (step: number) => void 
 }) {
   const [isRecordOpen, setIsRecordOpen] = useState(false);
@@ -55,8 +58,8 @@ export default function RecordPage({
   });
   const [editOutcome, setEditOutcome] = useState<string>('平穩');
   const [editNote, setEditNote] = useState('');
-  const [dailyEnergy, setDailyEnergy] = useState<any>(null); // For theoretical outcome
-  const [localScores, setLocalScores] = useState<any>(scores);
+  const [dailyEnergy, setDailyEnergy] = useState<DailyEnergy | null>(null); // For theoretical outcome
+  const [localScores, setLocalScores] = useState<PatternScores | null>(scores);
 
   const todayDateStr = new Date().toISOString().split('T')[0];
 
@@ -79,13 +82,13 @@ export default function RecordPage({
   };
 
   useEffect(() => {
-    if (bazi?.chart && localScores) {
+    if (bazi && localScores) {
       const pattern = getPrimaryPattern(localScores);
       import('../pattern').then(p => {
-        const fullResult = p.determinePattern(bazi.chart);
-        const { favorable, unfavorable } = p.getFavorableElements(bazi.chart.dayMaster, pattern);
+        const fullResult = p.determinePattern(bazi);
+        const { favorable, unfavorable } = p.getFavorableElements(bazi.dayMaster, pattern);
         import('../dailyAnalysis').then(da => {
-          const energy = da.getDailyEnergy(bazi.chart, fullResult.weakestElement, favorable, unfavorable, pattern);
+          const energy = da.getDailyEnergy(bazi, fullResult.weakestElement, favorable, unfavorable, pattern);
           setDailyEnergy(energy);
         }).catch(() => {/* [AI MOD] 靜態處理 */});
       }).catch(() => {/* [AI MOD] 靜態處理 */});
@@ -149,7 +152,7 @@ export default function RecordPage({
             newPattern: switchResult,
             createdAt: new Date().toISOString(),
             read: false,
-          } as any);
+          } as AppNotification);
         }
 
         setSubmitted(true);

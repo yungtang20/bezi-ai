@@ -361,7 +361,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // 從後端 API 取得串流並合併為單一字串
-async function fetchFromBackend(messages: any[], systemPrompt: string): Promise<string> {
+async function fetchFromBackend(messages: Array<{ role: string; content: string }>, systemPrompt: string): Promise<string> {
   const apiKey = localStorage.getItem('bazi_api_key') || undefined;
 
   const response = await fetch('/api/chat', {
@@ -411,8 +411,9 @@ async function fetchFromBackend(messages: any[], systemPrompt: string): Promise<
           if (parsed.content) {
             fullContent += parsed.content;
           }
-        } catch (e: any) {
-          if (e.message && !e.message.includes("JSON")) {
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          if (errMsg && !errMsg.includes("JSON")) {
             throw e;
           }
         }

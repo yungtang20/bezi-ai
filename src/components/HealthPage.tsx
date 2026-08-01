@@ -22,6 +22,8 @@ import { calculateDaYun, getLiuNian } from '../dayun';
 import { getHealthRemedy, HEALTH_DATA, HEALTH_PRESERVATION_GUIDE } from '../data';
 import { Solar } from 'lunar-javascript';
 
+import { PartnerInfo } from '../types';
+
 interface Props {
   chart: BaziChart;
   primaryPattern: string;
@@ -29,7 +31,7 @@ interface Props {
   unfavorable: string[];
   weakestElement: string;
   weakestElements: string[];  // 所有最弱五行
-  partners?: any[];
+  partners?: PartnerInfo[];
   onNavigate?: (step: number) => void;
 }
 

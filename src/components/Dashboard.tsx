@@ -158,7 +158,7 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
                 {name ? `${name} 的命理根基` : '命理根基'}
               </h2>
               <button
-                onClick={() => onNavigate?.(1 as any)}
+                onClick={() => onNavigate?.(1)}
                 className="text-[10px] bg-white/10 hover:bg-white/20 text-white/60 hover:text-white px-2 py-0.5 rounded transition-colors"
               >
                 重新編輯

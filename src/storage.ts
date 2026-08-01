@@ -94,8 +94,8 @@ export async function getWeekLogs(): Promise<DailyLog[]> {
   return all.filter(log => log.date >= cutoff.toISOString().split('T')[0]);
 }
 
-// 通知記錄結構 — [AI MOD] 內部型別，不 export
-interface Notification {
+// 通知記錄結構
+export interface AppNotification {
   date: string;
   type: 'pattern_switch';
   title: string;
@@ -122,7 +122,7 @@ export async function getPatternScores(): Promise<PatternScores | null> {
 }
 
 // 儲存通知
-export async function saveNotification(notification: Notification): Promise<void> {
+export async function saveNotification(notification: AppNotification): Promise<void> {
   const db = await openDB();
   const tx = db.transaction('notifications', 'readwrite');
   tx.objectStore('notifications').put(notification);
