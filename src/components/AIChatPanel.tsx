@@ -189,9 +189,10 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
                                       return newMsgs;
                                   });
                               }
-                          } catch (e: any) {
+                          } catch (e: unknown) {
                               // maybe partial JSON or actual error inside stream processing
-                              if (e.message && !e.message.includes("JSON")) {
+                              const msg = e instanceof Error ? e.message : String(e);
+                              if (msg && !msg.includes("JSON")) {
                                   throw e;
                               }
                           }
@@ -201,20 +202,22 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
           }
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[AIChatPanel Error]:", err);
       if (!isMounted.current) return;
 
+      const errName = err instanceof Error ? err.name : '';
+      const errMsg = err instanceof Error ? err.message : String(err);
       const isAbort = 
-        err.name === 'AbortError' || 
-        String(err.name || '').toLowerCase().includes('abort') ||
-        String(err.message || '').toLowerCase().includes('abort') ||
+        errName === 'AbortError' || 
+        String(errName || '').toLowerCase().includes('abort') ||
+        String(errMsg || '').toLowerCase().includes('abort') ||
         String(err || '').toLowerCase().includes('abort');
 
       if (isAbort) {
         setDebugInfo('對談連線逾時（90 秒）或被中斷。由於近期 AI 命理對談伺服器載載量高，請稍候 3-5 秒後再次點擊送出。');
       } else {
-        setDebugInfo(`對談失敗: ${err.message || String(err)}`);
+        setDebugInfo(`對談失敗: ${errMsg}`);
       }
       setStatus(null);
     } finally {
