@@ -62,9 +62,9 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
 
   // 當 bazi 核心資料真的改動時，才給予友善提示或重設對話
   useEffect(() => {
-    const getBaziSignature = (b?: any) => {
+    const getBaziSignature = (b?: BaziDisplay | null) => {
       if (!b) return 'none';
-      return `${b.year || ''}-${b.month || ''}-${b.day || ''}-${b.time || ''}-${b.gender || ''}-${b.chart?.dayMaster || ''}`;
+      return `${b.year || ''}-${b.month || ''}-${b.day || ''}-${b.time || ''}-${b.chart?.gender || ''}-${b.chart?.dayMaster || ''}`;
     };
 
     const sig = getBaziSignature(bazi);

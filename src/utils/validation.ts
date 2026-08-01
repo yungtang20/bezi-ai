@@ -2,17 +2,14 @@
 import { ValidationError } from '../errors';
 
 export interface BirthInput {
-  name: string;
+  name?: string;
   gender: '男' | '女';
   birthDate: string; // YYYY-MM-DD
   birthTime?: string; // HH:mm or empty string
 }
 
 export function validateBirthInput(input: BirthInput): { valid: boolean; error?: string } {
-  if (!input.name || input.name.trim().length === 0) {
-    return { valid: false, error: '姓名不得為空' };
-  }
-  if (input.name.trim().length > 30) {
+  if (input.name && input.name.trim().length > 30) {
     return { valid: false, error: '姓名長度不得超過 30 個字元' };
   }
   if (input.gender !== '男' && input.gender !== '女') {

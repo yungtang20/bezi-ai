@@ -23,6 +23,8 @@ import { calculateChart, BaziChart } from './paipan';
 import { BaziDisplay } from './types';
 import { determinePattern, PatternResult, PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements } from './pattern';
 import { GAN_TO_ELEMENT, getShiChen } from './constants';
+import { CLIENT_CONFIG } from './config';
+import { validateBirthInput } from './utils/validation';
 
 // [AI MOD] 定義有效的步驟型別（供 Sidebar 等元件匯入）
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
@@ -32,7 +34,7 @@ export const KNOWLEDGE_SEARCH_STEP = 11;
 
 export default function App() {
   const [step, setStep] = useState<Step>(() => {
-    const saved = sessionStorage.getItem('bazi_current_step');
+    const saved = sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
     if (saved) {
       const parsed = parseInt(saved, 10);
       if (parsed === 5) {
@@ -52,7 +54,7 @@ export default function App() {
       setStep(4);
       return;
     }
-    sessionStorage.setItem('bazi_current_step', step.toString());
+    sessionStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP, step.toString());
     if (step > 3) {
       import('./storage').then(({ getPatternScores }) => {
         getPatternScores().then(savedScores => {
@@ -79,15 +81,15 @@ export default function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [showAI, setShowAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem('bazi_api_key') || '');
+  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY) || '');
   const [apiKeySaved, setApiKeySaved] = useState(false);
 
   useEffect(() => {
     // Load persisted state from localStorage
-    const savedName = localStorage.getItem('bazi_name');
-    const savedGender = localStorage.getItem('bazi_gender');
-    const savedDate = localStorage.getItem('bazi_date');
-    const savedTime = localStorage.getItem('bazi_time');
+    const savedName = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.NAME);
+    const savedGender = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER);
+    const savedDate = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+    const savedTime = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.TIME);
 
     if (savedName && savedGender && savedDate && savedTime !== null) {
       setName(savedName);
@@ -118,12 +120,12 @@ export default function App() {
           getPatternScores().then(savedScores => {
             if (savedScores) {
               setScores(savedScores);
-              if (!sessionStorage.getItem('bazi_current_step')) {
+              if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
                 setStep(4); // Go to dashboard if already registered
               }
             } else {
               setScores(initPatternScores(patternResult.score));
-              if (!sessionStorage.getItem('bazi_current_step')) {
+              if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
                 setStep(3);
               }
             }
@@ -133,16 +135,16 @@ export default function App() {
           });
         }).catch(() => {/* [AI MOD] 靜態處理 */});
 
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
-        localStorage.removeItem('bazi_date');
+        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
         setStep(1);
-        sessionStorage.removeItem('bazi_current_step');
+        sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
         setIsInitializing(false);
       }
     } else {
       setStep(1);
-      sessionStorage.removeItem('bazi_current_step');
+      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
       setIsInitializing(false);
     }
   }, []);
@@ -153,6 +155,18 @@ export default function App() {
   const handleStart = () => {
     if (!isFormValid || isGenerating) return;
     
+    const isHourUnknown = !birthTime;
+    const validation = validateBirthInput({
+      name: name || '未提供',
+      gender: gender === 'male' ? '男' : '女',
+      birthDate,
+      birthTime: isHourUnknown ? '' : birthTime,
+    });
+    if (!validation.valid) {
+      setErrorMsg(validation.error!);
+      return;
+    }
+
     const [y, m, d] = birthDate.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     const today = new Date();
@@ -168,11 +182,10 @@ export default function App() {
     setIsGenerating(true);
     
     // Save to localStorage (keep birthTime empty if omitted, do not force or prefill)
-    const isHourUnknown = !birthTime;
-    localStorage.setItem('bazi_name', name);
-    localStorage.setItem('bazi_gender', gender ?? '');
-    localStorage.setItem('bazi_date', birthDate);
-    localStorage.setItem('bazi_time', birthTime);
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.NAME, name);
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER, gender ?? '');
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.DATE, birthDate);
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.TIME, birthTime);
     
     try {
       const hour = isHourUnknown ? 12 : parseInt(birthTime, 10);
@@ -194,10 +207,11 @@ export default function App() {
         setStep(3);
       }, 800);
 
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      setErrorMsg("排盤發生錯誤: " + String(e?.message || e));
-      localStorage.removeItem('bazi_date');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      setErrorMsg("排盤發生錯誤: " + errMsg);
+      localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
       setIsGenerating(false);
       setStep(1);
       setIsInitializing(false);
@@ -719,7 +733,7 @@ export default function App() {
         <div className="flex gap-3 mt-5">
           <button
             onClick={() => {
-              localStorage.setItem('bazi_api_key', apiKeyInput);
+              localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY, apiKeyInput);
               setApiKeySaved(true);
               setTimeout(() => setApiKeySaved(false), 2000);
             }}
@@ -730,7 +744,7 @@ export default function App() {
           <button
             onClick={() => {
               setApiKeyInput('');
-              localStorage.removeItem('bazi_api_key');
+              localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY);
               setApiKeySaved(false);
             }}
             className="px-4 py-2.5 bg-white/5 border border-white/10 text-zen-muted rounded-lg text-sm hover:bg-white/10 transition-colors"

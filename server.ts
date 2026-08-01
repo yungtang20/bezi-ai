@@ -4,6 +4,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
 import dotenv from "dotenv";
+import { formatErrorResponse } from "./src/errors";
 
 // [AI MOD] CORS 中介程式：僅允許相同 origin 或明確允許的來源。
 // 預設開放（向後相容），但可透過 ALLOWED_ORIGINS 環境變數限制。
@@ -180,16 +181,15 @@ async function startServer() {
             }
           }
         }
-      } catch (aiErr: any) {
+      } catch (aiErr: unknown) {
         console.error("[SERVER] NVIDIA OpenAI request failed:", aiErr);
-        res.write(`data: ${JSON.stringify({ error: "AI 服務連線失敗：" + (aiErr?.message || "請稍後再試。") })}\n\n`);
+        res.write(`data: ${JSON.stringify(formatErrorResponse(aiErr))}\n\n`);
       }
 
       res.end();
-    } catch (err: any) {
-      // [AI MOD] 記錄完整錯誤於伺服器端，僅回傳通用訊息給客戶端。
+    } catch (err: unknown) {
       console.error("[SERVER ERROR]:", err);
-      res.write(`data: ${JSON.stringify({ error: "伺服器處理異常，請稍後再試。" })}\n\n`);
+      res.write(`data: ${JSON.stringify(formatErrorResponse(err))}\n\n`);
       res.end();
     }
   });
