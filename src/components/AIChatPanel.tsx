@@ -1,6 +1,8 @@
 // src/components/AIChatPanel.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Sparkles, RotateCcw, AlertTriangle } from 'lucide-react';
+import DOMPurify from 'dompurify';
+import { BaziDisplay } from '../types';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -9,7 +11,7 @@ interface Message {
 }
 
 interface AIChatPanelProps {
-  bazi?: any | null;
+  bazi?: BaziDisplay | null;
   userName?: string;
 }
 
@@ -335,7 +337,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
                     : 'bg-black/30 text-zen-text border border-white/5')
                 }
               >
-                {msg.content}
+                {DOMPurify.sanitize(msg.content)}
               </div>
               <span className="text-[9px] text-zen-muted/30 font-mono text-right block pr-1">
                 {formatTime(msg.timestamp)}

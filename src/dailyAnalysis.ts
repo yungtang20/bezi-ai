@@ -1,6 +1,7 @@
 // src/dailyAnalysis.ts
 import { Solar } from 'lunar-javascript';
 import { BaziChart } from './paipan';
+import { PartnerInfo } from './types';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, getTenGod as getTenGodForDaYun, getTenGodType } from './constants';
 import { HARM_MAP, DESTROY_MAP as BREAK_MAP } from './data/rules/taiSui';
 import { checkDayType } from './data/rules/dailyFlowDays';
@@ -214,7 +215,7 @@ function hasChartChong(zhi: string, chart: BaziChart): boolean {
 }
 
 /** 檢查地支是否與任何伴侶命盤相沖 */
-function hasPartnerChong(zhi: string, partners: any[]): boolean {
+function hasPartnerChong(zhi: string, partners: PartnerInfo[]): boolean {
   const chong = CHONG_MAP[zhi];
   return partners.some(p => p.chart && (chong === p.chart.year.zhi || chong === p.chart.day.zhi));
 }
@@ -234,7 +235,7 @@ export function getUpcomingDatesForCategory(
   unfavorable: string[],
   weakestElement: string = '',
   amount: number = 6,
-  partners?: any[],
+  partners?: PartnerInfo[],
   maxDaysToScan: number = 200
 ): UpcomingDay[] {
   const results: UpcomingDay[] = [];

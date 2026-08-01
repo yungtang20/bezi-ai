@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.gitignore
+*.log
+.env*
+tests
+README.md
+LLM_WIKI.md
+AGENTS.md
+GEMINI.md

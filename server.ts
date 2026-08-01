@@ -62,8 +62,19 @@ function rateLimit(req: express.Request, res: express.Response, next: express.Ne
   next();
 }
 
+interface ChatMessage {
+  role?: string;
+  content?: string;
+}
+
+interface ChatInputBody {
+  messages?: ChatMessage[];
+  customPrompt?: string;
+  apiKey?: string;
+}
+
 // [AI MOD] 輸入驗證：限制 messages 數量、單則長度、customPrompt/apiKey 長度
-function validateChatInput(body: any): string | null {
+function validateChatInput(body: ChatInputBody): string | null {
   const { messages, customPrompt, apiKey } = body || {};
   if (!messages || !Array.isArray(messages)) return "無效的歷史訊息格式。";
   if (messages.length > MAX_MESSAGES) return `訊息數量超過上限（${MAX_MESSAGES} 則）。`;
@@ -119,7 +130,12 @@ async function startServer() {
       // [AI MOD] customPrompt 型別淨化：只接受字串，避免物件/陣列被注入。內容不刪改（chat 功能所需）。
       const safeCustomPrompt = typeof customPrompt === "string" ? customPrompt : "";
       const rawUserKey = (userApiKey || "").trim();
-      const nvidiaApiKey = rawUserKey || process.env.NVIDIA_API_KEY || "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";
+      const nvidiaApiKey = rawUserKey || process.env.NVIDIA_API_KEY || "";
+
+      if (!nvidiaApiKey) {
+        res.write(`data: ${JSON.stringify({ error: "未設定 API 金鑰。請在右上角「設定」中填入您的 NVIDIA API Key，或在後端環境設定 NVIDIA_API_KEY。" })}\n\n`);
+        return res.end();
+      }
 
       const openAiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
       if (safeCustomPrompt) {

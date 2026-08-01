@@ -20,6 +20,7 @@ const SynastryPage = lazy(() => import('./components/SynastryPage'));
 const ReferenceTablePage = lazy(() => import('./components/ReferenceTablePage'));
 
 import { calculateChart, BaziChart } from './paipan';
+import { BaziDisplay } from './types';
 import { determinePattern, PatternResult, PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements } from './pattern';
 import { GAN_TO_ELEMENT, getShiChen } from './constants';
 
@@ -71,14 +72,6 @@ export default function App() {
   } = useBirthForm();
 
   const [calibrations, setCalibrations] = useState<{ [year: string]: string }>({});
-  // [AI MOD] 定義 BaziDisplay 介面，取代 any
-  interface BaziDisplay {
-    year: string;
-    month: string;
-    day: string;
-    time: string;
-    chart: BaziChart;
-  }
   const [bazi, setBazi] = useState<BaziDisplay | null>(null);
   const [pattern, setPattern] = useState<PatternResult | null>(null);
   const [scores, setScores] = useState<PatternScores | null>(null);
