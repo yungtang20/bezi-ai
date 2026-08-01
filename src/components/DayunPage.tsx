@@ -1,9 +1,11 @@
 // src/components/DayunPage.tsx
 // [AI MOD] 大運流年頁面 — 大運規則、排法、十神關係、流年斷應、太歲
+import { BaziChart } from '../paipan';
+import { PatternScores } from '../pattern';
 
 interface Props {
-  chart?: any;
-  scores?: any;
+  chart?: BaziChart;
+  scores?: PatternScores;
   primaryPattern?: string;
   favorable?: string[];
   unfavorable?: string[];

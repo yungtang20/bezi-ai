@@ -1,9 +1,11 @@
 // src/components/FoundationPage.tsx
 // [AI MOD] 基礎理論頁面 — 天干地支、十神、地支互動、格局、用神
+import { BaziChart } from '../paipan';
+import { PatternScores } from '../pattern';
 
 interface Props {
-  chart?: any;
-  scores?: any;
+  chart?: BaziChart;
+  scores?: PatternScores;
   primaryPattern?: string;
   favorable?: string[];
   unfavorable?: string[];

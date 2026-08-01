@@ -17,7 +17,7 @@ interface Partner {
   birthDate?: string;
   birthTime?: string;
   gender?: string;
-  chart?: any;
+  chart?: BaziChart;
 }
 
 interface Props {

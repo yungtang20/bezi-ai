@@ -4,16 +4,19 @@ import { BaziChart, calculateChart } from '../paipan';
 import { PartnerChart } from '../matchmaking';
 import { getPartners, savePartner, deletePartner } from '../storage';
 import { checkDayStructureSimilarity, checkCommonSpouseElement, checkSpouseStar } from '../matchmaking';
-import { getPrimaryPattern, determinePattern, initPatternScores } from '../pattern';
+import { getPrimaryPattern, determinePattern, initPatternScores, PatternScores } from '../pattern';
 import { GAN_TO_ELEMENT } from '../constants';
 import { getTenGodType } from '../data';
 import { LECTURE_DATA, getFamilyRole, PARTNER_MATCHING_DATA } from '../data';
 import { getCompatibilityScore } from './CategorySynastry';
+import { SynastryDetail } from '../types';
+
+type RelationshipType = '伴侶' | '合作夥伴' | '家人' | '其他';
 
 interface Props {
   myChart: BaziChart | null;
   myName: string;
-  myScores: any;
+  myScores: PatternScores;
   onNavigate: (step: number) => void;
 }
 
@@ -24,7 +27,7 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
   const [editingPartnerId, setEditingPartnerId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    relationship: '伴侶' as const,
+    relationship: '伴侶' as RelationshipType,
     gender: 'female',
     date: '',
     time: '',
@@ -153,7 +156,7 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
     e.stopPropagation();
     setFormData({
       name: p.name,
-      relationship: p.relationship as any,
+      relationship: p.relationship as RelationshipType,
       gender: p.gender === '男' ? 'male' : 'female',
       date: p.birthDate,
       time: p.birthTime,
@@ -214,7 +217,7 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
                   className="w-full bg-black border border-zinc-800 rounded-lg p-2 text-sm text-white" 
                 />
                 <select 
-                  value={formData.relationship} onChange={e => setFormData({...formData, relationship: e.target.value as any})}
+                  value={formData.relationship} onChange={e => setFormData({...formData, relationship: e.target.value as RelationshipType})}
                   onKeyDown={handleEnterKeyDown}
                   className="w-full bg-black border border-zinc-800 rounded-lg p-2 text-sm text-white"
                 >
@@ -338,8 +341,8 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
 
                       // ====== 2. 十神特徵 (對方) ======
                       const countPGods: Record<string, number> = {};
-                      ['year', 'month', 'day', 'hour'].forEach(k => {
-                        const pG = (selectedPartner.chart as any)[k]?.tenGod;
+                      (['year', 'month', 'day', 'hour'] as const).forEach(k => {
+                        const pG = selectedPartner.chart[k]?.tenGod;
                         if (pG) countPGods[pG] = (countPGods[pG]||0)+1;
                       });
                       const pMaxGod = Object.entries(countPGods).sort((a,b)=>b[1]-a[1])[0]?.[0] || '正財';
@@ -362,7 +365,7 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
                               <span><span className="mr-2">✨</span>五行磁場交流 (契合度 {scoreData.score}%)</span>
                             </h4>
                             <div className="space-y-3">
-                              {scoreData.details.map((detail: any, idx: number) => (
+                              {scoreData.details.map((detail: SynastryDetail, idx: number) => (
                                 <div key={idx} className="bg-black/30 p-3.5 rounded-xl border border-amber-900/20">
                                   <div className="text-[13px] font-bold text-amber-300 mb-1">{detail.factor}</div>
                                   <div className="text-base text-zinc-300 leading-relaxed font-medium mb-1">{detail.desc}</div>
