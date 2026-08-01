@@ -5,6 +5,7 @@ import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, getTenGod as getTenGodForDaYun, getTenG
 import { HARM_MAP, DESTROY_MAP as BREAK_MAP } from './data/rules/taiSui';
 import { checkDayType } from './data/rules/dailyFlowDays';
 import { LECTURE_DATA } from './data/lecture/lectureData';
+import { LiuNian } from './dayun';
 
 export interface DailyEnergy {
   isExtremeDay: boolean;
@@ -295,8 +296,6 @@ export function getUpcomingDatesForCategory(
 
   return results;
 }
-
-import { LiuNian } from './dayun';
 
 // 取得刑沖影響的柱位
 function getAffectedPillars(chart: BaziChart, zhiList: string[]): string[] {

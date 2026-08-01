@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BaziChart, getHiddenTenGodsForZhi, ZHI_HIDE_GAN, DAY_MASTER_PERSONALITY } from '../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern } from '../pattern';
 import { GAN_TO_ELEMENT } from '../constants';
@@ -75,12 +75,12 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
   if (!chart || !scores) return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
 
   const primaryPattern = getPrimaryPattern(scores);
-  const patternResult = determinePattern(chart);
+  const patternResult = useMemo(() => determinePattern(chart), [chart]);
 
   const currentYear = new Date().getFullYear();
-  const daYuns = calculateDaYun(chart);
+  const daYuns = useMemo(() => calculateDaYun(chart), [chart]);
   const currentDaYun = daYuns.find(d => currentYear >= d.startYear && currentYear <= d.endYear);
-  const currentLiuNian = getLiuNian(currentYear, chart.dayMaster);
+  const currentLiuNian = useMemo(() => getLiuNian(currentYear, chart.dayMaster), [currentYear, chart.dayMaster]);
 
   const dayElement = GAN_TO_ELEMENT[chart.dayMaster];
   const myTenGods = Array.from(new Set([chart.year.tenGod, chart.month.tenGod, chart.hour.tenGod].filter(Boolean)));

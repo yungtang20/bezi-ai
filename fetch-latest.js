@@ -104,6 +104,15 @@ function copyRecursiveSync(src, dest) {
       fs.mkdirSync(dest, { recursive: true });
     }
     fs.readdirSync(src).forEach((childItemName) => {
+      // 排除 .env*, node_modules, dist, .git 等不應被覆蓋或備份之目錄/檔案
+      if (
+        childItemName === 'node_modules' ||
+        childItemName === 'dist' ||
+        childItemName === '.git' ||
+        childItemName.startsWith('.env')
+      ) {
+        return;
+      }
       copyRecursiveSync(path.join(src, childItemName), path.join(dest, childItemName));
     });
   } else {

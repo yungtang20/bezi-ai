@@ -80,15 +80,8 @@ function checkWuXingComplement(myChart: BaziChart, partnerChart: BaziChart, myFa
   for (const p of pillars) {
     const e1 = GAN_TO_ELEMENT[p.gan];
     if (e1) countP[e1]++;
-    // 地支暫定以本氣計算（簡化）
-    const zhiMap: Record<string, string> = {
-      '寅': '木', '卯': '木',
-      '巳': '火', '午': '火',
-      '辰': '土', '戌': '土', '丑': '土', '未': '土',
-      '申': '金', '酉': '金',
-      '亥': '水', '子': '水'
-    };
-    const e2 = zhiMap[p.zhi];
+    // 地支以本氣計算五行（使用 ZHI_TO_ELEMENT）
+    const e2 = ZHI_TO_ELEMENT[p.zhi];
     if (e2) countP[e2]++;
   }
 
