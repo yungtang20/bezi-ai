@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#1C211F" />
+    <title>八字能量日誌 Bazi Journal</title>
+    <script>
+      if (typeof window !== 'undefined' && window.fetch) {
+        try {
+          const originalFetch = window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            configurable: true,
+            enumerable: true,
+            get() { return originalFetch; },
+            set(val) { /* ignore to prevent 'Cannot set property fetch' errors */ }
+          });
+        } catch (e) {
+          console.warn('Could not redefine window.fetch', e);
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
