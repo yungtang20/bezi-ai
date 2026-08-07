@@ -76,7 +76,9 @@ export function useBirthForm(): BirthFormData & BirthFormActions {
       return;
     }
 
-    setBirthTime(hour.toString());
+    const minStr = digits.length >= 3 ? digits.slice(2, 4) : '00';
+    const hourStr = digits.slice(0, 2).padStart(2, '0');
+    setBirthTime(`${hourStr}:${minStr}`);
     setHourError('');
   }, []);
 

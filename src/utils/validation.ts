@@ -26,12 +26,19 @@ export function validateBirthInput(input: BirthInput): { valid: boolean; error?:
     return { valid: false, error: '出生月日數值無效' };
   }
   if (input.birthTime && input.birthTime.trim() !== '') {
-    if (!/^\d{1,2}:\d{2}$/.test(input.birthTime.trim())) {
-      return { valid: false, error: '出生時間格式無效（應為 HH:mm）' };
-    }
-    const [h, m] = input.birthTime.split(':').map(Number);
-    if (h < 0 || h > 23 || m < 0 || m > 59) {
-      return { valid: false, error: '時分超出範圍（時：0-23，分：0-59）' };
+    const trimmed = input.birthTime.trim();
+    if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
+      const [h, m] = trimmed.split(':').map(Number);
+      if (h < 0 || h > 23 || m < 0 || m > 59) {
+        return { valid: false, error: '時分超出範圍（時：0-23，分：0-59）' };
+      }
+    } else if (/^\d{1,2}$/.test(trimmed)) {
+      const h = Number(trimmed);
+      if (h < 0 || h > 23) {
+        return { valid: false, error: '小時超出範圍（0-23）' };
+      }
+    } else {
+      return { valid: false, error: '出生時間格式無效（應為 HH:mm 或小時 0-23）' };
     }
   }
   return { valid: true };

@@ -6,18 +6,9 @@ import OpenAI from "openai";
 import dotenv from "dotenv";
 import { formatErrorResponse } from "./src/errors";
 
-// [AI MOD] CORS 中介程式：僅允許相同 origin 或明確允許的來源。
-// 預設開放（向後相容），但可透過 ALLOWED_ORIGINS 環境變數限制。
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+// [AI MOD] CORS 中介程式：允許請求來源存取。
 function corsMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.length > 0 && !ALLOWED_ORIGINS.includes(origin)) {
-    res.status(403).json({ error: "Origin not allowed" });
-    return;
-  }
   res.setHeader("Access-Control-Allow-Origin", origin || "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");

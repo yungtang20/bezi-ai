@@ -3,6 +3,7 @@ import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, getFavorableElements, determinePattern } from '../pattern';
 import { getDailyEnergy } from '../dailyAnalysis';
 import { GAN_TO_ELEMENT } from '../constants';
+import { Solar } from 'lunar-javascript';
 
 interface Props {
   chart: BaziChart;
@@ -26,10 +27,25 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
     while (date.getMonth() === selectedMonth - 1) {
       const dateStr = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
       const energy = getDailyEnergy(chart, weakest, favorable, unfavorable, primaryPattern, new Date(date));
+      
+      const solar = Solar.fromDate(new Date(date));
+      const lunar = solar.getLunar();
+      const jieQi = lunar.getJieQi();
+      let jieQiTime = '';
+      if (jieQi) {
+        const table = lunar.getJieQiTable();
+        const jqDate = table[jieQi];
+        if (jqDate) {
+          jieQiTime = `${jqDate.getHour()}:${String(jqDate.getMinute()).padStart(2, '0')}`;
+        }
+      }
+
       days.push({
         date: new Date(dateStr),
         dateStr,
-        energy
+        energy,
+        jieQi,
+        jieQiTime
       });
       date.setDate(date.getDate() + 1);
     }
@@ -99,6 +115,11 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
                  <span className="text-[9px] text-zinc-500 hidden sm:inline">{day.energy.lunarDate.slice(-2)}</span>
               </div>
               <div className="flex-1 flex flex-col gap-0.5 items-stretch justify-start">
+                 {day.jieQi && (
+                   <span className="text-[9px] sm:text-xs px-1 py-0.5 rounded border bg-purple-500/20 text-purple-300 border-purple-500/30 whitespace-nowrap overflow-hidden max-w-full text-center block leading-none shadow-sm" title={`${day.jieQi} ${day.jieQiTime}`}>
+                     {day.jieQi} {day.jieQiTime}
+                   </span>
+                 )}
                  {day.energy.dayTypes.map((t, idx) => (
                    <React.Fragment key={idx}>{renderShape(t)}</React.Fragment>
                  ))}

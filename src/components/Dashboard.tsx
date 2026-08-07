@@ -167,7 +167,7 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
             {birthDate && (
               <div className="text-xs text-zinc-500 font-medium font-serif space-y-px">
                 <div className="flex items-center flex-wrap">
-                  <span className="w-[150px]">國曆：{birthDate.replace(/-/g, '/')} {birthTime ? `${birthTime.padStart(2, '0')}:00` : ''}</span>
+                  <span className="w-[150px]">國曆：{birthDate.replace(/-/g, '/')} {birthTime ? (birthTime.includes(':') ? birthTime : `${birthTime.padStart(2, '0')}:00`) : ''}</span>
                   <span className="text-zinc-700 mx-1 hidden md:inline">｜</span>
                   <span>性別{gender === 'male' ? '男' : gender === 'female' ? '女' : ''}</span>
                 </div>

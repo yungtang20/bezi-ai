@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
 import { DailyEnergy, getDailyEnergy, getUpcomingDatesForCategory } from '../dailyAnalysis';
+import { generateCalendarICS } from '../utils/calendarExport';
 import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs } from '../storage';
 import MonthlyForecastCalendar from './MonthlyForecastCalendar';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
@@ -32,6 +33,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
   const [canCheckIn, setCanCheckIn] = useState(false);
   const [monthAccuracy, setMonthAccuracy] = useState<number | null>(null);
   const [monthCategoryStats, setMonthCategoryStats] = useState<{name: string, score: number}[]>([]);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
     const d = new Date();
     const tzOffset = d.getTimezoneOffset() * 60000;
@@ -152,6 +154,28 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
     }
   };
 
+  const handleExportCalendar = (mode: 'month' | 'year') => {
+    if (!chart || !scores) return;
+    const year = Number(selectedDateStr.split('-')[0]);
+    const month = Number(selectedDateStr.split('-')[1]);
+    const icsContent = generateCalendarICS({
+      chart,
+      scores,
+      year,
+      month: mode === 'month' ? month : undefined
+    });
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bazi-calendar-${year}${mode === 'month' ? '-' + month : ''}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-2xl mx-auto pb-8">
       <div className="flex justify-between items-center mb-4 md:hidden">
@@ -167,7 +191,28 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
          
          {/* 本月行事曆 */}
-         <h2 className="text-xl font-bold text-zen-text mb-4">本月流日預報</h2>
+         <div className="flex justify-between items-center mb-4">
+           <h2 className="text-xl font-bold text-zen-text">本月流日預報</h2>
+           <div className="relative">
+             <button 
+               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+               onBlur={() => setTimeout(() => setIsExportMenuOpen(false), 200)}
+               className="flex items-center gap-2 text-sm bg-indigo-500/20 text-indigo-300 px-3 py-1.5 rounded-lg border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors cursor-pointer"
+             >
+               📅 加入 Google 日曆
+             </button>
+             {isExportMenuOpen && (
+               <div className="absolute right-0 top-full mt-2 w-32 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-10 overflow-hidden">
+                 <button onClick={() => { setIsExportMenuOpen(false); handleExportCalendar('month'); }} className="block w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition">
+                   下載本月
+                 </button>
+                 <button onClick={() => { setIsExportMenuOpen(false); handleExportCalendar('year'); }} className="block w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition border-t border-zinc-700">
+                   下載全年
+                 </button>
+               </div>
+             )}
+           </div>
+         </div>
          <div className="flex items-center justify-between mb-4">
            <button 
              onClick={() => {
