@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
-import { DailyEnergy, getDailyEnergy, getUpcomingDatesForCategory } from '../dailyAnalysis';
+import { DailyEnergy, getDailyEnergy } from '../dailyAnalysis';
 import { generateCalendarICS } from '../utils/calendarExport';
 import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs } from '../storage';
 import MonthlyForecastCalendar from './MonthlyForecastCalendar';
@@ -22,12 +22,25 @@ interface Props {
   onNavigate?: (step: number) => void;
 }
 
-export default function DailyForecastPage({ chart, scores, onNavigate }: Props) {
+export default function DailyForecastPage(props: Props) {
+  if (!props.chart || !props.scores) {
+    return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
+  }
+
+  return <DailyForecastContent chart={props.chart} scores={props.scores} onNavigate={props.onNavigate} />;
+}
+
+interface DailyForecastContentProps {
+  chart: BaziChart;
+  scores: PatternScores;
+  onNavigate?: (step: number) => void;
+}
+
+function DailyForecastContent({ chart, scores, onNavigate }: DailyForecastContentProps) {
   const [dailyEnergy, setDailyEnergy] = useState<DailyEnergy | null>(null);
   const [categoryFeedback, setCategoryFeedback] = useState<Record<string, 'good' | 'bad' | null>>({
     health: null, career: null, romance: null, wealth: null, family: null, friends: null
   });
-  const [overrideOutcome, setOverrideOutcome] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [canCheckIn, setCanCheckIn] = useState(false);
@@ -39,8 +52,6 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
     const tzOffset = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
   });
-
-  if (!chart || !scores) return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
 
   const primaryPattern = getPrimaryPattern(scores);
   const patternResult = determinePattern(chart);
@@ -119,7 +130,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
       family: categoryFeedback.family,
       friends: categoryFeedback.friends,
       note,
-      theoreticalOutcome: overrideOutcome || dailyEnergy?.theoreticalOutcome || '平穩',
+      theoreticalOutcome: dailyEnergy?.theoreticalOutcome || '平穩',
       dayTenGodType: dailyEnergy?.dayTenGodType,
       createdAt: new Date().toISOString(),
     };

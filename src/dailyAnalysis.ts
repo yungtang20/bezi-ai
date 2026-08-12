@@ -3,10 +3,8 @@ import { Solar } from 'lunar-javascript';
 import { BaziChart } from './paipan';
 import { PartnerInfo } from './types';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, getTenGod as getTenGodForDaYun, getTenGodType } from './constants';
-import { HARM_MAP, DESTROY_MAP as BREAK_MAP } from './data/rules/taiSui';
 import { checkDayType } from './data/rules/dailyFlowDays';
 import { LECTURE_DATA } from './data/lecture/lectureData';
-import { LiuNian } from './dayun';
 
 export interface DailyEnergy {
   isExtremeDay: boolean;
@@ -30,7 +28,7 @@ export function getDailyEnergy(
   weakestElement: string,
   favorable: string[],
   unfavorable: string[],
-  primaryPattern: string,
+  _primaryPattern?: string,
   targetDate?: Date
 ): DailyEnergy {
   const d = targetDate || new Date();
@@ -149,38 +147,7 @@ function checkVillainDay(dayPillar: string, dayMaster: string): boolean {
   return days.includes(dayPillar);
 }
 
-// 事件日判斷 — [AI MOD] 內部使用，不 export
-function getDailyEvents(dayGan: string, dayZhi: string, chart: BaziChart, isMale: boolean, weakestElement: string = '') {
-  const events = [];
-  const el = GAN_TO_ELEMENT[dayGan];
-  const zhiEl = ZHI_TO_ELEMENT[dayZhi];
-  const dayMaster = chart.dayMaster;
-  
-  // 官殺（事業旺日）
-  const careerMap: Record<string, string> = {
-    '木': '金', '火': '水', '土': '木', '金': '火', '水': '土'
-  };
-  // 財星（得財日）
-  const wealthMap: Record<string, string> = {
-    '木': '土', '火': '金', '土': '水', '金': '木', '水': '火'
-  };
-  
-  const myEl = GAN_TO_ELEMENT[dayMaster];
-  
-  if (el === careerMap[myEl]) events.push({ type: '事業旺日', desc: '適合安排重要會議、提案或決策' });
-  if (el === wealthMap[myEl]) events.push({ type: '財運日', desc: '適合理財、談判、收帳' });
-  
-  // 桃花日（男看財星，女看官殺）
-  const romanceEl = isMale ? wealthMap[myEl] : careerMap[myEl];
-  if (el === romanceEl) events.push({ type: '桃花日', desc: '利於感情互動、結識新氣象' });
 
-  // 補養日
-  if (weakestElement && (el === weakestElement || zhiEl === weakestElement)) {
-     events.push({ type: '健康加分日', desc: `今日五行補足了您命盤最弱的「${weakestElement}」，是極佳的養生休息日` });
-  }
-
-  return events;
-}
 
 // [AI MOD] 內部型別，不 export
 interface UpcomingDay {
@@ -296,99 +263,4 @@ export function getUpcomingDatesForCategory(
   }
 
   return results;
-}
-
-// 取得刑沖影響的柱位
-function getAffectedPillars(chart: BaziChart, zhiList: string[]): string[] {
-  const affected = [];
-  if (zhiList.includes(chart.year.zhi)) affected.push('年柱（祖輩/長官）');
-  if (zhiList.includes(chart.month.zhi)) affected.push('月柱（父母/工作環境）');
-  if (zhiList.includes(chart.day.zhi)) affected.push('日柱（自己/伴侶）');
-  if (zhiList.includes(chart.hour.zhi)) affected.push('時柱（子女/下屬）');
-  return affected;
-}
-
-// 檢查相害與相破 — [AI MOD] 內部使用，不 export
-function checkHarmAndBreak(chart: BaziChart, zhi: string): { type: string; warning: string; affected: string[] }[] {
-  const results = [];
-
-  const chartZhi = [
-    { z: chart.year.zhi, p: '年柱（長輩/外部）' },
-    { z: chart.month.zhi, p: '月柱（父母/主管）' },
-    { z: chart.day.zhi, p: '日柱（伴侶/自己）' },
-    { z: chart.hour.zhi, p: '時柱（子女/下屬）' },
-  ];
-
-  // 相害
-  if (HARM_MAP[zhi]) {
-    const affected = chartZhi.filter(c => c.z === HARM_MAP[zhi]).map(c => c.p);
-    if (affected.length > 0) {
-      results.push({
-        type: '相害',
-        warning: '易有人際摩擦、遭人嫉妒或暗中阻撓，情緒較易不悅。',
-        affected,
-      });
-    }
-  }
-
-  // 相破
-  if (BREAK_MAP[zhi]) {
-    const affected = chartZhi.filter(c => c.z === BREAK_MAP[zhi]).map(c => c.p);
-    if (affected.length > 0) {
-      results.push({
-        type: '相破',
-        warning: '突如其來的阻力、計畫生變或物品損壞，但影響力較輕。',
-        affected,
-      });
-    }
-  }
-  
-  return results;
-}
-
-// 檢查自刑 — [AI MOD] 內部使用，不 export
-function checkSelfPunishment(chart: BaziChart): string[] {
-  const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
-  const counts: Record<string, number> = {};
-  for (const z of zhis) counts[z] = (counts[z] || 0) + 1;
-  
-  const selfZhis = ['辰', '午', '酉', '亥'];
-  const warnings = [];
-  for (const sz of selfZhis) {
-    if (counts[sz] >= 2) {
-      warnings.push(`${sz}${sz}自刑`);
-    }
-  }
-  return warnings;
-}
-// [AI MOD] 內部使用，不 export
-function checkTriplePunishment(
-  chart: BaziChart,
-  liuNian: LiuNian
-): { hasTriple: boolean; type: string; warning: string; affected: string[] } {
-  const allZhi = [
-    chart.year.zhi,
-    chart.month.zhi,
-    chart.day.zhi,
-    chart.hour.zhi,
-    liuNian.zhi,
-  ];
-  
-  const rules = [
-    { zhis: ['寅', '巳', '申'], type: '寅巳申三刑', warning: '注意車關、外傷、跌倒、突發性心血管問題' },
-    { zhis: ['丑', '戌', '未'], type: '丑戌未三刑', warning: '注意腫瘤、結石、婦科問題、精神壓力' }
-  ];
-
-  const matchedRule = rules.find(rule => rule.zhis.every(z => allZhi.includes(z)));
-  
-  if (matchedRule) {
-    return {
-      hasTriple: true,
-      type: matchedRule.type,
-      warning: matchedRule.warning,
-      affected: getAffectedPillars(chart, matchedRule.zhis),
-    };
-  }
-  
-  return { hasTriple: false, type: '', warning: '', affected: [] };
 }

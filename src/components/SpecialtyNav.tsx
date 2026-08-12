@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
 import HealthPage from './HealthPage';
@@ -36,7 +36,7 @@ const TABS = [
   { key: 'romance', label: '💕 姻緣篇', shortLabel: '姻緣' },
 ] as const;
 
-export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props) {
+export default function SpecialtyNav({ chart, scores, onNavigate }: Props) {
   const [activeTab, setActiveTab] = useState('health');
   // [AI MOD] 使用 Partner 型別取代 any[]
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -55,7 +55,6 @@ export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props)
   const primaryPattern = getPrimaryPattern(scores);
   const patternResult = determinePattern(chart);
 
-  const allElements = ['木', '火', '土', '金', '水'];
   const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
 
   const renderComponent = () => {

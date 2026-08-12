@@ -100,8 +100,7 @@ async function startServer() {
   // [AI MOD] CORS 套用
   app.use(corsMiddleware);
 
-  // Secure Server-side API Route with Streaming (SSE) supporting both LongCat and Gemini
-  app.options("/api/chat", corsMiddleware, (req, res) => res.status(204).end());
+  // Secure server-side API route with NVIDIA GLM streaming via SSE
   app.post("/api/chat", rateLimit, async (req, res) => {
     // Set headers for SSE Server-Sent Events
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -195,7 +194,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

@@ -246,7 +246,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
             onClick={() => setShowKeyConfig(!showKeyConfig)}
             className="flex items-center gap-1 text-[10px] text-zen-muted hover:text-amber-400 transition-colors font-mono uppercase tracking-wider focus:outline-none"
           >
-            <span>🔑 {showKeyConfig ? '收起 API 金鑰設定' : '設定 API 金鑰 (LongCat / Gemini)'}</span>
+            <span>🔑 {showKeyConfig ? '收起 API 金鑰設定' : '設定 NVIDIA API 金鑰'}</span>
             <span className="text-[9px] text-amber-500/80">
               {localApiKey ? '（已設定）' : '（將使用伺服器預設）'}
             </span>
@@ -283,7 +283,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
               </button>
             </div>
             <p className="text-[9px] text-zen-muted/50 leading-normal">
-              金鑰僅儲存於本地。如未輸入，系統將使用預設的 AI 服務器（NVIDIA GLM 命理模型）進行對談。
+              金鑰會儲存於本地；送出 AI 對談時會傳送至本專案後端，以呼叫 NVIDIA GLM 命理模型。未輸入時則使用伺服器預設金鑰。
             </p>
           </div>
         )}

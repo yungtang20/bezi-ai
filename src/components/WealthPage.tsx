@@ -1,15 +1,14 @@
 // src/components/WealthPage.tsx
 // [AI MOD] 財富深度解析 — 遵循學術級講義體系，精確推演六大核心維度
 import CategoryPageTemplate from './CategoryPageTemplate';
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { 
   Coins, 
   Compass, 
   ShieldAlert, 
   Sparkles, 
   Calendar, 
-  TrendingUp, 
-  Inbox, 
+  TrendingUp,
   Info,
   Layers,
   Sparkle,
@@ -17,13 +16,12 @@ import {
   Users,
   Target,
   Wrench,
-  DollarSign
 } from 'lucide-react';
 import { BaziChart } from '../paipan';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../constants';
-import { calculateDaYun, getLiuNian, getTenGodForDaYun } from '../dayun';
+import { calculateDaYun, getLiuNian } from '../dayun';
 import { Solar } from 'lunar-javascript';
-import { WEALTH_GUIDELINES, WEALTH_PILLAR_MEANINGS, NO_WEALTH_REMEDIES, SOLVE_MONEY_LOSS, WEALTH_LOST_TIMING } from '../data/charts/wealthGuidelines';
+import { WEALTH_GUIDELINES, NO_WEALTH_REMEDIES } from '../data/charts/wealthGuidelines';
 import { LECTURE_DATA } from '../data/lecture/lectureData';
 
 import { PartnerInfo } from '../types';
@@ -39,7 +37,7 @@ interface Props {
   onNavigate?: (step: number) => void;
 }
 
-export default function WealthPage({ chart, primaryPattern, favorable, unfavorable, weakestElement, weakestElements, partners, onNavigate }: Props) {
+export default function WealthPage({ chart, primaryPattern, favorable, unfavorable, weakestElements }: Props) {
   
   // 1. 判斷依據：命盤十神分布（天干與地支本氣）
   // 統計天干十神與地支主氣，不計支藏干中餘氣，天干3個+地支本氣4個，共計7個十神關係
@@ -72,7 +70,6 @@ export default function WealthPage({ chart, primaryPattern, favorable, unfavorab
   const topGod1 = sortedTenGods[0]?.[0] || '無';
   const topCount1 = sortedTenGods[0]?.[1] || 0;
   const topGod2 = sortedTenGods[1]?.[0] || '';
-  const topCount2 = sortedTenGods[1]?.[1] || 0;
 
   // 2. 先天財富特質
   // 檢查四柱中財星的位置
@@ -86,13 +83,11 @@ export default function WealthPage({ chart, primaryPattern, favorable, unfavorab
     ];
 
     pillars.forEach((item) => {
-      let found = false;
-      let types: string[] = [];
+      const types: string[] = [];
 
       // 檢查天干
       if (item.p.tenGod === '正財' || item.p.tenGod === '偏財') {
         types.push(item.p.tenGod);
-        found = true;
       }
       // 檢查地支
       if (item.p.hiddenTenGods) {

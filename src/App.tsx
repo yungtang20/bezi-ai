@@ -1,7 +1,6 @@
-import { Solar } from 'lunar-javascript';
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, Compass, Moon, Sun, Github, X, Sparkles, Settings } from 'lucide-react';
+import { ArrowRight, Compass, Moon, Sun, Github, Sparkles, Settings } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import NavigationBar from './components/NavigationBar';
 import AIChatPanel from './components/AIChatPanel';
@@ -19,7 +18,7 @@ const TimelinePage = lazy(() => import('./components/TimelinePage'));
 const SynastryPage = lazy(() => import('./components/SynastryPage'));
 const ReferenceTablePage = lazy(() => import('./components/ReferenceTablePage'));
 
-import { calculateChart, BaziChart } from './paipan';
+import { calculateChart } from './paipan';
 import { BaziDisplay } from './types';
 import { determinePattern, PatternResult, PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements } from './pattern';
 import { GAN_TO_ELEMENT, getShiChen } from './constants';
@@ -716,7 +715,7 @@ export default function App() {
         {/* API Key 設定 */}
         <div className="space-y-2">
           <label className="block text-xs text-zen-muted tracking-wide">
-            LongCat API 金鑰
+            NVIDIA API 金鑰
           </label>
           <input
             type="password"
@@ -726,7 +725,7 @@ export default function App() {
             className="w-full px-3 py-2.5 bg-zen-surface/60 border border-zen-border rounded-lg text-zen-text text-sm placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
           />
           <p className="text-[11px] text-zen-muted/50 leading-relaxed">
-            金鑰僅儲存於瀏覽器本地，不會上傳至任何伺服器。
+            金鑰會儲存於瀏覽器本地，並在 AI 對談時傳送至本專案後端以呼叫 NVIDIA 服務。
             </p>
         </div>
 

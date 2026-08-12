@@ -8,6 +8,8 @@ declare module 'lunar-javascript' {
     getYear(): number;
     getMonth(): number;
     getDay(): number;
+    getHour(): number;
+    getMinute(): number;
     getLunar(): Lunar;
   }
 
@@ -37,6 +39,7 @@ declare module 'lunar-javascript' {
     getZhi(): string;
     getEightChar(): EightChar;
     getJieQi(): string;
+    getJieQiTable(): Record<string, Solar>;
     getYun(gender: number, sect?: number): Yun;
     getDayYi(sect?: number): string[];
     getDayJi(sect?: number): string[];
