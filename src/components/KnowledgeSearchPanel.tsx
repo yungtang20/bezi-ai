@@ -1,5 +1,5 @@
 // src/components/KnowledgeSearchPanel.tsx
-// [AI MOD] 知識搜尋面板 — 整合 LongCat API 白話解釋與追問功能
+// 知識搜尋面板 — 提供命理知識的白話解釋與追問功能
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 

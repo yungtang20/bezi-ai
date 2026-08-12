@@ -6,7 +6,7 @@
 
 本專案提供全功能的子平八字排盤、五行格局分析、十年大運與流年推算、合盤配對，以及基於 NVIDIA OpenAI GLM-5.2 的 SSE 即時 AI 命理解析服務。
 
-主要儲存庫：https://github.com/yungtang20/bezi
+主要儲存庫：https://github.com/yungtang20/bezi-ai
 
 ---
 

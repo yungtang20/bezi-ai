@@ -302,7 +302,7 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
           
           <div className="h-[140px] w-full relative mb-6">
             {isChartReady && (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={140}>
                 <AreaChart
                   data={chartData}
                   margin={{ top: 5, right: 0, left: -20, bottom: 0 }}

@@ -691,14 +691,14 @@ export default function App() {
               <p className="mb-1">本工具僅供娛樂與自我探索參考，所有分析結果不具醫療、法律或財務建議效力。</p>
               <p className="mb-4">如有健康疑慮請諮詢專業醫師，重大財務或法律決策請尋求相關專業人士協助。</p>
               <a 
-                href="https://github.com/yungtang20/bezi" 
+                href="https://github.com/yungtang20/bezi-ai"
                 target="_blank" 
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zen-muted/5 hover:bg-zen-muted/10 text-zen-muted/50 hover:text-zen-accent transition-colors"
                 title="View on GitHub"
               >
                 <Github size={14} />
-                <span>https://github.com/yungtang20/bezi</span>
+                <span>https://github.com/yungtang20/bezi-ai</span>
               </a>
             </div>
           </footer>
