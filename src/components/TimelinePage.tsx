@@ -3,12 +3,12 @@ import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, getFavorableElements } from '../pattern';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../constants';
 import { calculateDaYun, getDaYunQuality, getFutureLiuNian, getTenGodForDaYun } from '../dayun';
-import { Compass, Calendar, ChevronDown, ChevronUp, ArrowLeft, GitCommit, Activity, Sparkles, Map } from 'lucide-react';
+import { Compass, Calendar, ChevronDown, ArrowLeft, GitCommit, Activity, Sparkles, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import RemedyBrocade from './RemedyBrocade';
 import { checkSanHui, checkSanHe, checkLiuHe, checkLiuChong, checkXiangXing, checkLiuPo, checkLiuHai } from '../matchmaking';
 import { getTimelineGuideline, checkTaiSui, getTaiSuiAdvice, getLiunianAndRemedy } from '../data';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, ReferenceDot, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, CartesianGrid } from 'recharts';
 
 const getElementColorClass = (element: string) => {
   switch (element) {
@@ -160,7 +160,7 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
   return null;
 };
 
-export default function TimelinePage({ chart, scores, name, onNavigate }: Props) {
+export default function TimelinePage({ chart, scores, onNavigate }: Props) {
   const currentYear = new Date().getFullYear();
   const [selectedDy, setSelectedDy] = useState<number | undefined>(undefined);
   const [expandedLn, setExpandedLn] = useState<number | null>(currentYear);
@@ -412,7 +412,7 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
           </h3>
 
           <div className="space-y-4">
-            {liuNianList.map((ln, index) => {
+            {liuNianList.map((ln) => {
               const isCurrentYear = ln.year === currentYear;
               const lnTenGod = getTenGodForDaYun(chart.dayMaster, ln.gan);
               

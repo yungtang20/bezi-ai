@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { BaziChart, getHiddenTenGodsForZhi, ZHI_HIDE_GAN, DAY_MASTER_PERSONALITY } from '../paipan';
-import { PatternScores, getPrimaryPattern, determinePattern } from '../pattern';
+import { PatternScores, getPrimaryPattern } from '../pattern';
 import { GAN_TO_ELEMENT } from '../constants';
 import { TEN_GOD_TRAITS } from '../data';
 import { calculateDaYun, getLiuNian } from '../dayun';
@@ -75,8 +75,6 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
   if (!chart || !scores) return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
 
   const primaryPattern = getPrimaryPattern(scores);
-  const patternResult = useMemo(() => determinePattern(chart), [chart]);
-
   const currentYear = new Date().getFullYear();
   const daYuns = useMemo(() => calculateDaYun(chart), [chart]);
   const currentDaYun = daYuns.find(d => currentYear >= d.startYear && currentYear <= d.endYear);

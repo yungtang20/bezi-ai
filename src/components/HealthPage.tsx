@@ -1,7 +1,7 @@
 // src/components/HealthPage.tsx
 // [AI MOD] 健康深度解析 — 遵循學術級講義體系，精確推演八大核心維度
 import CategoryPageTemplate from './CategoryPageTemplate';
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { 
   Heart, 
   Activity, 
@@ -9,10 +9,8 @@ import {
   Sparkles, 
   Calendar, 
   TrendingUp, 
-  Inbox, 
-  Eye, 
+  Inbox,
   Info,
-  Layers,
   Sparkle,
   Compass
 } from 'lucide-react';
@@ -35,7 +33,7 @@ interface Props {
   onNavigate?: (step: number) => void;
 }
 
-export default function HealthPage({ chart, primaryPattern, weakestElement, weakestElements, favorable, unfavorable, partners, onNavigate }: Props) {
+export default function HealthPage({ chart, weakestElements }: Props) {
   const dmEl = GAN_TO_ELEMENT[chart.dayMaster] || '土';
   
   // 1. 命盤五行分佈（純個數盤點，天干+地支本氣，不數支藏干）

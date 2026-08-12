@@ -2,10 +2,9 @@
 // [AI MOD] 家人篇深度解析 — 打造與健康篇完全一致的精緻目錄導覽與流暢滾動體驗，融合講義最完整之家庭/手足/子息宮軟裝配置
 
 import CategoryPageTemplate from './CategoryPageTemplate';
-import { useState, useEffect } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores } from '../pattern';
-import { getFamilyRole, SIBLING_RELATIONS, FAMILY_CHANGES } from '../data';
+import { SIBLING_RELATIONS } from '../data';
 import { getUpcomingDatesForCategory } from '../dailyAnalysis';
 import { checkLiuChong, checkLiuHai, checkLiuPo, checkXiangXing } from '../matchmaking';
 import CategoryTimelineRemedy from './CategoryTimelineRemedy';
@@ -21,10 +20,7 @@ import {
   Layers, 
   Sparkle, 
   Activity, 
-  Heart,
   Baby,
-  TrendingUp,
-  Info,
   ShieldCheck,
   AlertTriangle,
   Gift
@@ -169,8 +165,7 @@ const CHILD_PALACE_DECOR: Record<string, Record<'male' | 'female', DecorGuide>> 
   }
 };
 
-export default function FamilyPage({ chart, primaryPattern, favorable, unfavorable, weakestElement, weakestElements, partners, onNavigate }: Props) {
-  const [activeSection, setActiveSection] = useState('judgment');
+export default function FamilyPage({ chart, primaryPattern, favorable, unfavorable, weakestElement, weakestElements, partners }: Props) {
   const isMale = chart.gender === '男';
   const pillars = [chart.year, chart.month, chart.day, chart.hour];
   const dayElement = chart.dayMaster ? (chart.dayMaster === '甲' || chart.dayMaster === '乙' ? '木' :
@@ -180,23 +175,12 @@ export default function FamilyPage({ chart, primaryPattern, favorable, unfavorab
 
   const upcomingMoveInDays = getUpcomingDatesForCategory(chart, 'move_in', favorable, unfavorable, weakestElement, 4, partners);
 
-  // 統計十神數量
   const tenGodCount: Record<string, number> = {};
   for (const p of pillars) {
     if (p.tenGod) {
       tenGodCount[p.tenGod] = (tenGodCount[p.tenGod] || 0) + 1;
     }
   }
-
-  // 找最多的十神類型
-  let maxGod = '';
-  let maxCount = 0;
-  for (const [god, count] of Object.entries(tenGodCount)) {
-    if (count > maxCount) { maxCount = count; maxGod = god; }
-  }
-  
-  // 取得家人相處策略
-  const familyRole = getFamilyRole(maxGod);
 
   // 子女星 — 來源：家人相處.pdf L515
   // 男命：官殺代表兒子、食傷代表女兒

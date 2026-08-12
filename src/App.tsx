@@ -28,8 +28,6 @@ import { validateBirthInput } from './utils/validation';
 // [AI MOD] 定義有效的步驟型別（供 Sidebar 等元件匯入）
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 const VALID_STEPS: Step[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-// [AI MOD] step 11 為側邊欄知識搜尋，不在主要導航中
-export const KNOWLEDGE_SEARCH_STEP = 11;
 
 export default function App() {
   const [step, setStep] = useState<Step>(() => {

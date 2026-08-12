@@ -2,21 +2,16 @@
 import { useState, useMemo } from "react";
 import { 
   Search, 
-  UserCheck, 
-  Heart, 
-  HelpCircle,
-  HelpCircle as HelpIcon,
-  ChevronRight,
   Sparkle
 } from "lucide-react";
-import { spouseTraits, SpouseTrait } from "../data/charts/spouseTraits";
+import { spouseTraits } from "../data/charts/spouseTraits";
 
 interface Props {
   defaultPillar: string; // e.g. "甲子"
   title: string;
 }
 
-export default function RomanceJiaziHandbook({ defaultPillar, title }: Props) {
+export default function RomanceJiaziHandbook({ defaultPillar }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPillar, setSelectedPillar] = useState<string>(defaultPillar || "甲子");
 

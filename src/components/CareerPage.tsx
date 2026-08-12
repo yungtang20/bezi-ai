@@ -2,26 +2,19 @@
 // [AI MOD] 事業深度解析 — 打造與健康篇、財富篇完全一致的精緻目錄導覽與流暢滾動體驗，融合講義最完整的生肖搭配/轉職時機/事業風水/十神團隊對照
 
 import CategoryPageTemplate from './CategoryPageTemplate';
-import { useState, useMemo, useEffect } from 'react';
-import { Solar } from 'lunar-javascript';
+import { useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores } from '../pattern';
-import { getUpcomingDatesForCategory } from '../dailyAnalysis';
 import CategoryTimelineRemedy from './CategoryTimelineRemedy';
 import CategorySynastry from './CategorySynastry';
-import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../constants';
+import { GAN_TO_ELEMENT } from '../constants';
 import { calculateDaYun, getTenGodForDaYun } from '../dayun';
 import { 
   getWealthCareer, 
   getCareerRole, 
-  LECTURE_DATA, 
-  CAREER_REMEDIES_DATA, 
-  getHomeDecorGuide, 
-  getFlyingStarsForYear 
+  LECTURE_DATA
 } from '../data';
 import DailyForecastCard from './DailyForecastCard';
-import FlyingStarsDisplay from './FlyingStarsDisplay';
-import PersonalizedFengShui from './PersonalizedFengShui';
 import ElementRemedyCard from './ElementRemedyCard';
 import { 
   Compass, 
@@ -31,11 +24,8 @@ import {
   Layers, 
   Sparkle, 
   Target, 
-  ShieldAlert, 
   CheckCircle2, 
-  TrendingUp, 
   Users, 
-  ArrowRight,
   Shuffle,
   BookOpen
 } from 'lucide-react';
@@ -54,8 +44,7 @@ interface Props {
   partners?: PartnerInfo[];
 }
 
-export default function CareerPage({ chart, primaryPattern, favorable, unfavorable, weakestElement, weakestElements, onNavigate, partners }: Props) {
-    const [flyingStarYear, setFlyingStarYear] = useState(2026);
+export default function CareerPage({ chart, primaryPattern, favorable, unfavorable, weakestElements, partners }: Props) {
 
   // 1. 統計十神，找出前兩名最多的類型 (僅計算天干 3 個及地支本氣 4 個，排除中餘氣，共計最多 7 個十神關係)
   const tenGodCount = useMemo(() => {

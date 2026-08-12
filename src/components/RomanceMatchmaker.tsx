@@ -2,17 +2,9 @@
 import { useState, useMemo } from "react";
 import { 
   Heart, 
-  Sparkles, 
-  Users, 
-  HelpCircle,
-  TrendingUp,
-  Award,
-  CheckCircle,
-  AlertTriangle
 } from "lucide-react";
 import { BaziChart } from "../paipan";
-import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from "../constants";
-import { checkXiangXing } from "../matchmaking";
+import { GAN_TO_ELEMENT } from "../constants";
 
 interface Props {
   chart: BaziChart;
@@ -31,15 +23,6 @@ export default function RomanceMatchmaker({ chart, primaryPattern }: Props) {
   };
 
   const selfZhi = chart.year.zhi;
-  const selfZodiac = useMemo(() => {
-    const map: Record<string, string> = {
-      子: "鼠", 丑: "牛", 寅: "虎", 卯: "兔",
-      辰: "龍", 巳: "蛇", 午: "馬", 未: "羊",
-      申: "猴", 酉: "雞", 戌: "狗", 亥: "豬"
-    };
-    return map[selfZhi] || "鼠";
-  }, [selfZhi]);
-
   const pZhi = zodiacZhiMap[partnerZodiac] || "子";
 
   const compatibilityResult = useMemo(() => {

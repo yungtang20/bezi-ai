@@ -1,4 +1,4 @@
-import type { HeavenlyStem, FiveElement, YinYang } from './types';
+import type { HeavenlyStem, FiveElement } from './types';
 
 export interface TenGodRelation {
   elementGroup: string; // "我剋者", "剋我者", etc.
