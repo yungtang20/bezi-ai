@@ -1,25 +1,22 @@
-import { Solar } from 'lunar-javascript';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Compass, Moon, Sun, Github, X, Sparkles, Settings } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import NavigationBar from './components/NavigationBar';
-import AIChatPanel from './components/AIChatPanel';
 import Modal from './components/Modal';
 import Drawer from './components/Drawer';
 import { SkeletonPage } from './components/Skeleton';
 import { useBirthForm } from './hooks/useBirthForm';
 
 // [AI MOD] Lazy-loaded page components
-// Dashboard 已精簡為先天命局，直接 import（非 lazy）
-import Dashboard from './components/Dashboard';
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const AIChatPanel = lazy(() => import('./components/AIChatPanel'));
 const SpecialtyNav = lazy(() => import('./components/SpecialtyNav'));
 const DailyForecastPage = lazy(() => import('./components/DailyForecastPage'));
 const TimelinePage = lazy(() => import('./components/TimelinePage'));
 const SynastryPage = lazy(() => import('./components/SynastryPage'));
 const ReferenceTablePage = lazy(() => import('./components/ReferenceTablePage'));
 
-import { calculateChart, BaziChart } from './paipan';
 import { BaziDisplay } from './types';
 import { determinePattern, PatternResult, PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements } from './pattern';
 import { GAN_TO_ELEMENT, getShiChen } from './constants';
@@ -85,14 +82,26 @@ export default function App() {
   const [apiKeySaved, setApiKeySaved] = useState(false);
 
   useEffect(() => {
-    // Load persisted state from localStorage
-    const savedName = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.NAME);
-    const savedGender = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER);
-    const savedDate = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
-    const savedTime = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.TIME);
-    const persistedTime = savedTime ?? '';
+    let cancelled = false;
 
-    if ((savedGender === 'male' || savedGender === 'female') && savedDate) {
+    const resetToLanding = () => {
+      if (cancelled) return;
+      setStep(1);
+      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+      setIsInitializing(false);
+    };
+
+    const restorePersistedState = async () => {
+      const savedName = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.NAME);
+      const savedGender = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER);
+      const savedDate = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+      const persistedTime = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.TIME) ?? '';
+
+      if ((savedGender !== 'male' && savedGender !== 'female') || !savedDate) {
+        resetToLanding();
+        return;
+      }
+
       const persistedInput = validateBirthInput({
         name: savedName ?? undefined,
         gender: savedGender === 'male' ? '男' : '女',
@@ -101,79 +110,71 @@ export default function App() {
       });
       if (!persistedInput.valid) {
         localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
-        setStep(1);
-        sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
-        setIsInitializing(false);
+        resetToLanding();
         return;
       }
 
-      setName(savedName ?? '');
-      setGender(savedGender as 'male' | 'female');
-      setBirthDate(savedDate);
-      setBirthTime(persistedTime);
-      setBirthTimeInput(persistedTime);
-      
       try {
+        const { calculateChart } = await import('./paipan');
         const [y, m, d] = savedDate.split('-').map(Number);
         const isHourUnknown = !persistedTime;
         const hour = parseBirthHour(persistedTime) ?? 12;
-        const g = savedGender === 'male' ? '男' : '女';
-        const chart = calculateChart(y, m, d, hour, g, isHourUnknown);
+        const chart = calculateChart(
+          y,
+          m,
+          d,
+          hour,
+          savedGender === 'male' ? '男' : '女',
+          isHourUnknown,
+        );
         const patternResult = determinePattern(chart);
-        
+        if (cancelled) return;
+
+        setName(savedName ?? '');
+        setGender(savedGender);
+        setBirthDate(savedDate);
+        setBirthTime(persistedTime);
+        setBirthTimeInput(persistedTime);
         setBazi({
           year: chart.year.gan + chart.year.zhi,
           month: chart.month.gan + chart.month.zhi,
           day: chart.day.gan + chart.day.zhi,
           time: chart.hour.gan + chart.hour.zhi,
-          chart: chart
+          chart,
         });
         setPattern(patternResult);
 
-        // Load scores securely from IndexedDB
-        import('./storage').then(({ getPatternScores }) => {
-          getPatternScores().then(savedScores => {
-            if (savedScores) {
-              setScores(savedScores);
-              if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
-                setStep(4); // Go to dashboard if already registered
-              }
-            } else {
-              setScores(initPatternScores(patternResult.score));
-              if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
-                setStep(3);
-              }
-            }
-            setIsInitializing(false);
-          }).catch(() => {
-             setScores(initPatternScores(patternResult.score));
-             setStep(3);
-             setIsInitializing(false);
-          });
-        }).catch(() => {
+        try {
+          const { getPatternScores } = await import('./storage');
+          const savedScores = await getPatternScores();
+          if (cancelled) return;
+          setScores(savedScores ?? initPatternScores(patternResult.score));
+          if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
+            setStep(savedScores ? 4 : 3);
+          }
+        } catch {
+          if (cancelled) return;
           setScores(initPatternScores(patternResult.score));
           setStep(3);
-          setIsInitializing(false);
-        });
-
-      } catch (e: unknown) {
-        console.error(e);
-        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
-        setStep(1);
-        sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+        }
         setIsInitializing(false);
+      } catch (error: unknown) {
+        console.error(error);
+        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+        resetToLanding();
       }
-    } else {
-      setStep(1);
-      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
-      setIsInitializing(false);
-    }
+    };
+
+    void restorePersistedState();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!isFormValid || isGenerating) return;
     
     const isHourUnknown = !birthTime;
@@ -209,6 +210,9 @@ export default function App() {
     localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.TIME, birthTime);
     
     try {
+      // The calendar engine is only needed after submission. Keeping it out of
+      // the landing bundle materially reduces first-load JavaScript.
+      const { calculateChart } = await import('./paipan');
       const hour = parseBirthHour(birthTime) ?? 12;
       const chart = calculateChart(y, m, d, hour, gender === 'male' ? '男' : '女', isHourUnknown);
       const patternResult = determinePattern(chart);
@@ -352,15 +356,17 @@ export default function App() {
                transition={{ duration: 1.5, ease: 'easeOut' }}
                className="w-full relative"
             >
-              <Dashboard
-                bazi={bazi}
-                name={name}
-                onNavigate={handleNavigate}
-                scores={scores}
-                birthDate={birthDate}
-                birthTime={birthTime}
-                gender={gender}
-              />
+              <Suspense fallback={<SkeletonPage />}>
+                <Dashboard
+                  bazi={bazi}
+                  name={name}
+                  onNavigate={handleNavigate}
+                  scores={scores}
+                  birthDate={birthDate}
+                  birthTime={birthTime}
+                  gender={gender}
+                />
+              </Suspense>
             </motion.div>
           )}
 
@@ -495,8 +501,9 @@ export default function App() {
                     {/* Input Group: Name */}
                     <div className="relative pl-6">
                       <div className="absolute left-[-4px] top-[12px] w-2 h-2 rounded-full bg-zen-sage border-2 border-white shadow-sm"></div>
-                      <label className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-1 font-medium">您的稱呼</label>
+                      <label htmlFor="name" className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-1 font-medium">您的稱呼</label>
                       <input 
+                        id="name"
                         type="text" 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -511,6 +518,8 @@ export default function App() {
                        <label className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-2 font-medium">生理性別 <span className="text-red-400">*</span></label>
                        <div className="flex gap-3">
                          <button
+                           type="button"
+                           aria-pressed={gender === 'male'}
                            onClick={() => setGender('male')}
                            className={`flex-1 py-2 md:py-2.5 px-3 md:px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 border ${
                              gender === 'male'
@@ -522,6 +531,8 @@ export default function App() {
                            <span className="font-medium text-sm">男</span>
                          </button>
                          <button
+                           type="button"
+                           aria-pressed={gender === 'female'}
                            onClick={() => setGender('female')}
                            className={`flex-1 py-2 md:py-2.5 px-3 md:px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 border ${
                              gender === 'female'
@@ -542,9 +553,10 @@ export default function App() {
 
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
                           <div>
-                            <label className="block text-xs text-zen-muted mb-1 font-medium">日期 (年/月/日)</label>
+                            <label htmlFor="birth-date" className="block text-xs text-zen-muted mb-1 font-medium">日期 (年/月/日)</label>
                             <div className="bg-white/5 rounded-xl border border-zen-muted/20 px-3 py-2 md:py-2.5 focus-within:border-zen-sage transition-colors">
                               <input 
+                                id="birth-date"
                                 type="text"
                                 inputMode="numeric"
                                 value={birthDate}
@@ -556,9 +568,10 @@ export default function App() {
                           </div>
                           
                           <div>
-                            <label className="block text-xs text-zen-muted mb-1 font-medium">時間 (選填)</label>
+                            <label htmlFor="birth-time" className="block text-xs text-zen-muted mb-1 font-medium">時間 (選填)</label>
                             <div className="bg-white/5 rounded-xl border border-zen-muted/20 px-3 py-2 md:py-2.5 focus-within:border-zen-sage transition-colors">
                               <input 
+                                id="birth-time"
                                 ref={timeInputRef}
                                   type="text"
                                   inputMode="numeric"
@@ -597,6 +610,7 @@ export default function App() {
                   <div className="pt-1 md:pt-2">
                     {errorMsg && <p className="text-rose-400 text-sm text-center mb-2 font-medium">{errorMsg}</p>}
                     <button
+                      type="button"
                       id="start-calculation-btn"
                       onClick={handleStart}
                       disabled={!isFormValid || isGenerating}
@@ -783,7 +797,11 @@ export default function App() {
           title="AI 智能問答"
           icon={<Sparkles size={16} className="text-zen-gold" />}
         >
-          <AIChatPanel bazi={bazi} userName={name} />
+          {showAI && (
+            <Suspense fallback={<SkeletonPage />}>
+              <AIChatPanel bazi={bazi} userName={name} />
+            </Suspense>
+          )}
         </Drawer>
       )}
     </div>

@@ -15,7 +15,7 @@
 ```
 ┌────────────────────────────────────────────────────────┐
 │                  Client-Side (React 19 + Vite + Tailwind)│
-│  ├─ Core Paipan Engine (paipan.ts, pattern.ts, dayun.ts)│
+│  ├─ Core Paipan Engine + source-backed domain modules   │
 │  ├─ Interactive UI (Dashboard, Synastry, Timeline)      │
 │  └─ SSE Chat Client (AIChatPanel.tsx + DOMPurify Sanit) │
 └───────────────────────────▲────────────────────────────┘
@@ -28,7 +28,8 @@
 ```
 
 - **前端框架**：React 19 + Vite + Tailwind CSS + Lucide Icons + Motion
-- **命理排盤引擎**：`lunar-javascript` 農曆日曆轉換 + 專門封裝的 `paipan.ts`、`pattern.ts`、`dayun.ts`、`dailyAnalysis.ts`
+- **命理排盤引擎**：`lunar-javascript` 農曆日曆轉換 + `paipan.ts`、`pattern.ts`、`dayun.ts`、`dailyAnalysis.ts`
+- **規則來源層**：`src/domain/` 封裝藏干、合化與格局權重；來源雜湊、頁面與未決歧義見 [`docs/domain-sources.md`](docs/domain-sources.md)，統一術語見 [`CONTEXT.md`](CONTEXT.md)
 - **後端服務**：Express Node Server 處理 SSE 即時串流與限流防護
 - **資安與防禦**：
   - 後端嚴格校驗訊息數量、內容長度與系統提示格式
@@ -128,7 +129,7 @@ npm run dev
 
 ## 🧪 測試與品質檢驗 (Testing & Linting)
 
-專案整合了 **Vitest** 單元測試與 TypeScript 靜態型別檢查。
+專案整合 **Vitest** 單元測試、Node API contract 測試、Playwright Chromium E2E 與 TypeScript 靜態型別檢查。
 
 ```bash
 # 執行 TypeScript 靜態型別與語法檢查
@@ -139,6 +140,12 @@ npm test
 
 # 執行後端 API contract / CORS / 輸入邊界測試
 npm run test:api
+
+# 首次執行 E2E 前安裝 Chromium
+npx playwright install chromium
+
+# 啟動完整 Express + Vite 並執行核心瀏覽器流程
+npm run test:e2e
 ```
 
 ---
@@ -150,3 +157,4 @@ npm run test:api
 3. **輸入消毒**：請求到達 LLM 前，伺服器驗證角色、訊息長度、總長度、筆數與請求頻率。
 4. **CORS fail closed**：Production 只接受 `ALLOWED_ORIGINS` 明列的瀏覽器來源。
 5. **共用金鑰明確啟用**：伺服器環境金鑰只有在 `ALLOW_SERVER_API_KEY=true` 時使用；BYOK 維持可用。
+6. **瀏覽器安全標頭**：Production 回應包含 CSP、HSTS、frame-ancestors/X-Frame-Options、nosniff、Referrer-Policy 與 Permissions-Policy。

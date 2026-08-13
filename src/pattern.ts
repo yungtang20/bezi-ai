@@ -2,8 +2,18 @@
 // [AI MOD] 依照定格局.pdf 完整改寫排盤判斷格局邏輯
 // 來源講義：定格局.pdf（10頁）、天干地支合化條件.pdf（2頁）、天干地支含刑沖破害.pdf（10頁）
 
-import { BaziChart } from './paipan';
-import { GAN_TO_ELEMENT, YANG_GANS, getYinYang, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
+import type { BaziChart } from './paipan';
+import { GAN_TO_ELEMENT, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
+import { ZHI_HIDDEN } from './domain/baziRules';
+import {
+  evaluateHarmonies,
+  getPillarPairKey,
+  type FiveElement,
+  type HarmonyInteraction,
+} from './domain/harmony';
+import { calculatePatternSupportScore } from './domain/patternScoring';
+
+export { ZHI_HIDDEN } from './domain/baziRules';
 
 // ==================== 基礎對應表 ====================
 
@@ -13,95 +23,11 @@ export const ZHI_TYPE: Record<string, string> = {
   '辰': '墓庫', '戌': '墓庫', '丑': '墓庫', '未': '墓庫',
 };
 
-// ==================== 藏干（依照講義精確百分比） ====================
-
-// 來源：天干地支合化條件.pdf P1
-// [AI MOD] 內部型別，不 export
-interface HiddenStemRatio {
-  gan: string;
-  ratio: number;  // 百分比
-}
-
-// [AI MOD] 內部常數，不 export（外部使用 ZHI_HIDDEN）
-const ZHI_HIDDEN_DETAIL: Record<string, HiddenStemRatio[]> = {
-  '子': [{ gan: '癸', ratio: 100 }],
-  '丑': [{ gan: '己', ratio: 34 }, { gan: '辛', ratio: 33 }, { gan: '癸', ratio: 33 }],
-  '寅': [{ gan: '甲', ratio: 50 }, { gan: '丙', ratio: 40 }, { gan: '戊', ratio: 10 }],
-  '卯': [{ gan: '乙', ratio: 100 }],
-  '辰': [{ gan: '戊', ratio: 33 }, { gan: '乙', ratio: 33 }, { gan: '癸', ratio: 33 }],
-  '巳': [{ gan: '丙', ratio: 50 }, { gan: '戊', ratio: 40 }, { gan: '庚', ratio: 10 }],
-  '午': [{ gan: '丁', ratio: 50 }, { gan: '己', ratio: 50 }],
-  '未': [{ gan: '己', ratio: 40 }, { gan: '丁', ratio: 40 }, { gan: '乙', ratio: 20 }],
-  '申': [{ gan: '庚', ratio: 50 }, { gan: '壬', ratio: 40 }, { gan: '戊', ratio: 10 }],
-  '酉': [{ gan: '辛', ratio: 100 }],
-  '戌': [{ gan: '戊', ratio: 45 }, { gan: '辛', ratio: 10 }, { gan: '丁', ratio: 45 }],
-  '亥': [{ gan: '壬', ratio: 60 }, { gan: '甲', ratio: 40 }],
-};
-
-// 簡易藏干列表（向後相容 paipan.ts 使用）
-export const ZHI_HIDDEN: Record<string, string[]> = Object.fromEntries(
-  Object.entries(ZHI_HIDDEN_DETAIL).map(([zhi, stems]) => [zhi, stems.map(s => s.gan)])
-);
-
-// ==================== 濕土 / 燥土 ====================
-// 來源：定格局.pdf P4 — 濕土：丑、辰（會生金）；燥土：未、戌
-
-const WET_SOIL = ['丑', '辰'];
-const DRY_SOIL = ['未', '戌'];
-
-function isWetSoil(zhi: string): boolean {
-  return WET_SOIL.includes(zhi);
-}
-
-function isDrySoil(zhi: string): boolean {
-  return DRY_SOIL.includes(zhi);
-}
-
-// ==================== 天干五合 ====================
-// 來源：天干地支合化條件.pdf P1
-
-// ==================== 天干五合 / 地支六合 ====================
-// 來源：天干地支合化條件.pdf P1
-
-interface Harmony {
-  pair: [string, string];
-  result: string;  // 合化五行
-  requiredMonth?: string[];  // 需在辰戌丑未月（僅天干五合）
-}
-
-function findHarmonyInList(list: Harmony[], a: string, b: string): Harmony | null {
-  return list.find(h =>
-    (h.pair[0] === a && h.pair[1] === b) || (h.pair[0] === b && h.pair[1] === a)
-  ) || null;
-}
-
-const STEM_HARMONIES: Harmony[] = [
-  { pair: ['甲', '己'], result: '土', requiredMonth: ['辰', '戌', '丑', '未'] },
-  { pair: ['乙', '庚'], result: '金', requiredMonth: ['申', '酉'] },
-  { pair: ['丙', '辛'], result: '水' },
-  { pair: ['丁', '壬'], result: '木' },
-  { pair: ['戊', '癸'], result: '火' },
-];
-
-function findStemHarmony(gan1: string, gan2: string): Harmony | null {
-  return findHarmonyInList(STEM_HARMONIES, gan1, gan2);
-}
-
-const BRANCH_HARMONIES: Harmony[] = [
-  { pair: ['子', '丑'], result: '土' },   // 合化濕土
-  { pair: ['寅', '亥'], result: '木' },   // 合化木
-  { pair: ['卯', '戌'], result: '火' },   // 合化火
-  { pair: ['辰', '酉'], result: '金' },   // 合化金
-  { pair: ['巳', '申'], result: '水' },   // 合化水
-  { pair: ['午', '未'], result: '火' },   // 合化燥火
-];
-
-function findBranchHarmony(zhi1: string, zhi2: string): Harmony | null {
-  return findHarmonyInList(BRANCH_HARMONIES, zhi1, zhi2);
-}
+// 藏干與合化規則已移至 source-backed domain modules，避免排盤模組與
+// 格局模組彼此循環依賴。來源與雜湊見 docs/domain-sources.md。
 
 // ==================== 三合局 / 三會局 ====================
-// 來源：天干地支合化條件.pdf P5
+// 來源：1-2 地支互動表講義.pdf
 
 // [AI MOD] 內部型別，不 export
 interface TriadFormation {
@@ -215,11 +141,6 @@ function isSupporting(dayElement: string, other: string): boolean {
   return other === dayElement || ELEMENT_GENERATES[other] === dayElement;
 }
 
-/** 判斷某五行是否為日主的「剋洩耗」（剋我、我剋、我生） */
-function isDraining(dayElement: string, other: string): boolean {
-  return other !== dayElement && ELEMENT_GENERATES[other] !== dayElement;
-}
-
 /** 取得生我的五行（印星五行） */
 function getGeneratingElement(dayElement: string): string {
   return Object.entries(ELEMENT_GENERATES).find(([_, v]) => v === dayElement)?.[0] || '';
@@ -241,14 +162,13 @@ interface PillarInteraction {
  */
 function scanInteractions(chart: BaziChart): {
   interactions: PillarInteraction[];
-  damagedPillars: Set<number>;
-  harmonyResults: Map<number, string>;  // 柱位 → 合化後五行
+  stemTransformations: ReadonlyMap<number, readonly FiveElement[]>;
+  branchTransformations: ReadonlyMap<number, readonly FiveElement[]>;
 } {
   const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
   const interactions: PillarInteraction[] = [];
-  const damagedPillars = new Set<number>();
-  const harmonyResults = new Map<number, string>();
+  const blockedBranchPairs = new Set<string>();
 
   // 所有柱位配對（只算相鄰+年日、月時，共6組）
   const pairs: [number, number][] = [
@@ -259,9 +179,7 @@ function scanInteractions(chart: BaziChart): {
   for (const [i, j] of pairs) {
     const zhiA = zhis[i];
     const zhiB = zhis[j];
-    const ganA = gans[i];
-    const ganB = gans[j];
-    if (!zhiA || !zhiB || !ganA || !ganB) continue;
+    if (!zhiA || !zhiB) continue;
 
     // 1. 刑（最高優先級）
     const isPunishment = MUTUAL_PUNISHMENTS.some(p =>
@@ -276,8 +194,7 @@ function scanInteractions(chart: BaziChart): {
         pillars: [i, j],
         description: `${zhiA}${zhiB}相刑`
       });
-      damagedPillars.add(i);
-      damagedPillars.add(j);
+      blockedBranchPairs.add(getPillarPairKey(i, j));
       continue;  // 刑優先，跳過後續判斷
     }
 
@@ -288,72 +205,25 @@ function scanInteractions(chart: BaziChart): {
         pillars: [i, j],
         description: `${zhiA}${zhiB}相沖`
       });
-      damagedPillars.add(i);
-      damagedPillars.add(j);
+      blockedBranchPairs.add(getPillarPairKey(i, j));
       continue;  // 沖優先於合
     }
-
-    // 3. 合（地支六合）
-    const branchHarmony = findBranchHarmony(zhiA, zhiB);
-    if (branchHarmony) {
-      // 檢查合化條件（是否相鄰、是否透干、化神是否被剋）
-      const isAdjacent = Math.abs(i - j) === 1;
-      if (isAdjacent) {
-        // 檢查透干：合化五行需透出天干
-        const resultElement = branchHarmony.result;
-        const resultGans = Object.entries(GAN_TO_ELEMENT)
-          .filter(([_, el]) => el === resultElement)
-          .map(([gan, _]) => gan);
-        const hasTouGan = resultGans.some(gan => gans.includes(gan));
-
-        // 檢查化神是否被剋
-        const controllingElement = Object.entries(ELEMENT_CONTROLS)
-          .find(([_, controlled]) => controlled === resultElement)?.[0];
-        const controllingGans = Object.entries(GAN_TO_ELEMENT)
-          .filter(([_, el]) => el === controllingElement)
-          .map(([gan, _]) => gan);
-        const isControlled = controllingGans.some(gan => gans.includes(gan));
-
-        if (hasTouGan && !isControlled) {
-          // 合化成功
-          interactions.push({
-            type: '合',
-            pillars: [i, j],
-            result: resultElement,
-            description: `${zhiA}${zhiB}合化${resultElement}`
-          });
-          harmonyResults.set(i, resultElement);
-          harmonyResults.set(j, resultElement);
-        } else {
-          // 合絆（合而不化）
-          interactions.push({
-            type: '合',
-            pillars: [i, j],
-            description: `${zhiA}${zhiB}合絆（不合化）`
-          });
-          damagedPillars.add(i);
-          damagedPillars.add(j);
-        }
-      }
-      continue;
-    }
   }
 
-  // 天干五合（獨立於地支）
-  for (const [i, j] of pairs) {
-    const stemHarmony = findStemHarmony(gans[i], gans[j]);
-    if (stemHarmony) {
-      // 天干合化條件較寬鬆，這裡記錄但不一定成立
-      interactions.push({
-        type: '合',
-        pillars: [i, j],
-        result: stemHarmony.result,
-        description: `${gans[i]}${gans[j]}合化${stemHarmony.result}`
-      });
-    }
-  }
+  const harmony = evaluateHarmonies({ gans, zhis }, blockedBranchPairs);
+  const toPillarInteraction = (item: HarmonyInteraction): PillarInteraction => ({
+    type: '合',
+    pillars: [item.pillars[0], item.pillars[1]],
+    result: item.status === 'transformed' ? item.resultElements.join('/') : undefined,
+    description: item.description,
+  });
+  interactions.push(...harmony.interactions.map(toPillarInteraction));
 
-  return { interactions, damagedPillars, harmonyResults };
+  return {
+    interactions,
+    stemTransformations: harmony.stemTransformations,
+    branchTransformations: harmony.branchTransformations,
+  };
 }
 
 // ==================== 三合/半合/三會掃描 ====================
@@ -632,17 +502,15 @@ function getAllElementsInChart(chart: BaziChart): Record<string, number> {
 // ==================== 核心：determinePattern ====================
 
 /**
- * 判定格局 — 依照定格局.pdf 完整規則
+ * 判定格局 — 依照定格局.pdf 的已驗證權重與邊界
  *
  * 步驟：
  * 1. 掃描天干地支的所有互動（刑、沖、合）
- * 2. 根據優先級（刑 > 沖 > 合）決定哪些位置的能量被破壞或牽制
- * 3. 判斷互動後的「新屬性」是否為日主的「印比」
- * 4. 只有當新屬性是「印比」時，才執行「負變正」加分
- * 5. 計算加分項（生我、同我）的精確權重
- * 6. 計算扣分項（剋我、我剋、我生）
- * 7. 貪生忘剋、透干、庫、三合半合三會
- * 8. 依總分判定格局
+ * 2. 同一地支配對依刑 > 沖 > 合決定互動類型
+ * 3. 只有合化成功才以化神替換原干／支五行
+ * 4. 依七字權重計算生我、同我的加分占比
+ * 5. 保留貪生忘剋、透干、庫、三合半合三會為未定量理由
+ * 6. 依 20/45/80 邊界判定格局
  */
 export function determinePattern(chart: BaziChart): PatternResult {
   const dayMaster = chart.dayMaster;
@@ -650,21 +518,18 @@ export function determinePattern(chart: BaziChart): PatternResult {
 
   const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
-  const isHourEmpty = !chart.hour.gan || !chart.hour.zhi;
+  if (!dayElement) {
+    throw new Error(`未知日主天干：${dayMaster || '空值'}`);
+  }
 
-  // 權重（來源：定格局.pdf P1）
-  // 天干：5% 5% 5% 5%（年/月/日/時）
-  // 地支：10% 20% 35% 20%（年/月/日/時）
-  const ganWeights = [5, 5, 5, isHourEmpty ? 0 : 5];
-  const zhiWeights = [10, 20, 35, isHourEmpty ? 0 : 20];
-
-  // 總分 = 加分項百分比（0~100）
-  let positiveScore = 0;
-  let negativeScore = 0;
   const reasons: string[] = [];
 
   // 1. 掃描刑沖合
-  const { interactions, damagedPillars, harmonyResults } = scanInteractions(chart);
+  const {
+    interactions,
+    stemTransformations,
+    branchTransformations,
+  } = scanInteractions(chart);
 
   // 2. 掃描三合/半合/三會
   const formations = scanCombinedFormations(chart);
@@ -678,115 +543,64 @@ export function determinePattern(chart: BaziChart): PatternResult {
   // 5. 貪生忘剋
   const shengWangKe = checkShengWangKe(chart);
 
-  // 6. 逐柱計算
-  for (let i = 0; i < 4; i++) {
-    const ganEl = GAN_TO_ELEMENT[gans[i]];
-    const zhiMain = ZHI_TO_ELEMENT[zhis[i]];
-    const hiddenEls = (ZHI_HIDDEN[zhis[i]] || []).map(h => GAN_TO_ELEMENT[h]);
+  // 6. 依講義欄位計算七字的生我/同我加分。天干與地支各自使用
+  // 獨立的合化/合絆狀態，避免地支互動誤改天干屬性。
+  const scoreBreakdown = calculatePatternSupportScore({
+    dayElement,
+    gans,
+    zhis,
+    stemTransformations,
+    branchTransformations,
+  });
+  const finalScore = scoreBreakdown.score;
+  reasons.push(
+    `七字加分${scoreBreakdown.rawSupport}/${scoreBreakdown.capacity}`,
+    ...interactions.map(({ description }) => description),
+  );
 
-    // 檢查此柱是否被合化
-    const harmonyResult = harmonyResults.get(i);
-    const isDamaged = damagedPillars.has(i);
-
-    // 天干加分/扣分
-    let ganSupport = 0;
-    if (harmonyResult) {
-      // 合化後的新屬性
-      if (isSupporting(dayElement, harmonyResult)) {
-        ganSupport += ganWeights[i];
-        reasons.push(`P${i+1}天干合化${harmonyResult}（印比）→ 負變正加分`);
-      }
-    } else if (!isDamaged) {
-      if (isSupporting(dayElement, ganEl)) {
-        ganSupport += ganWeights[i];
-      } else {
-        // 扣分項：剋我、我剋、我生
-        negativeScore += ganWeights[i] * 0.5;
-      }
-    }
-
-    // 地支加分/扣分
-    let zhiSupport = 0;
-    if (harmonyResult) {
-      if (isSupporting(dayElement, harmonyResult)) {
-        zhiSupport += zhiWeights[i];
-        reasons.push(`P${i+1}地支合化${harmonyResult}（印比）→ 負變正加分`);
-      }
-    } else if (!isDamaged) {
-      if (isSupporting(dayElement, zhiMain)) {
-        zhiSupport += zhiWeights[i];
-      } else {
-        negativeScore += zhiWeights[i] * 0.5;
-      }
-
-      // 藏干加分
-      hiddenEls.forEach(h => {
-        if (isSupporting(dayElement, h)) {
-          zhiSupport += zhiWeights[i] * 0.3;  // 藏干權重較低
-        }
-      });
-    }
-
-    positiveScore += ganSupport + zhiSupport;
-  }
-
-  // 7. 三合/三會加分（只計算對日主加分的）
+  // 7. 下列訊號在講義中有方向、但沒有百分比。保留可解釋性，
+  // 不再使用任意 +15/+10/+5/+3 污染 0-100 基礎分數。
   for (const formation of formations) {
     if (isSupporting(dayElement, formation.result)) {
-      const bonus = formation.type === '三會' ? 15 : (formation.type === '三合' ? 10 : 5);
-      positiveScore += bonus;
-      reasons.push(`${formation.type}(${formation.branches.join('')})→${formation.result}（印比）+${bonus}`);
+      reasons.push(`${formation.type}(${formation.branches.join('')})→${formation.result}（印比，未定量）`);
     }
   }
 
-  // 8. 庫的加分
+  // 8. 庫的定性訊號
   for (const tomb of tombs) {
     if (tomb.activated) {
-      // 庫被啟動，檢查啟動後的五行是否為日主加分
       const actualElement = tomb.tombType.replace('庫', '');
       if (isSupporting(dayElement, actualElement)) {
-        positiveScore += 5;
-        reasons.push(`${tomb.zhi}啟動為${tomb.tombType}（印比）+5`);
+        reasons.push(`${tomb.zhi}啟動為${tomb.tombType}（印比，未定量）`);
       }
     }
   }
 
-  // 9. 透干加分
+  // 9. 透干定性訊號
   for (const tg of touGan) {
     if (tg.appearsInGan) {
       const hElement = GAN_TO_ELEMENT[tg.hiddenStem];
       if (isSupporting(dayElement, hElement)) {
-        positiveScore += 3;
-        reasons.push(`${tg.zhi}藏${tg.hiddenStem}透干於P${tg.ganPosition!+1}+3`);
+        reasons.push(`${tg.zhi}藏${tg.hiddenStem}透干於P${tg.ganPosition!+1}（印比，未定量）`);
       }
     }
   }
 
-  // 10. 貪生忘剋（化解扣分）
+  // 10. 貪生忘剋定性訊號
   for (const swk of shengWangKe) {
-    negativeScore -= 2;
-    reasons.push(`貪生忘剋：P${swk.from+1}→P${swk.via+1}→P${swk.to+1}（化解${swk.element}相剋）`);
+    reasons.push(`貪生忘剋：P${swk.from+1}→P${swk.via+1}→P${swk.to+1}（化解${swk.element}相剋，未定量）`);
   }
 
-  // 11. 最終分數
-  const scale = isHourEmpty ? (105 / 80) : 1;
-  const scaledPositive = positiveScore * scale;
-  const scaledNegative = negativeScore * scale;
-  const finalScore = Math.max(0, Math.min(100, scaledPositive - scaledNegative));
-
-  // 12. 判定格局
+  // 11. 依講義明示的 20/45/80 邊界判定格局。
   let pattern: '身強' | '身弱' | '從強' | '從弱';
   let reason: string;
 
-  // 從格嚴格判斷：需檢查是否有根
-  const hasRoot = zhis.some(z => z && isSupporting(dayElement, ZHI_TO_ELEMENT[z]));
-
-  if (finalScore > 80 && !hasRoot) {
+  if (finalScore > 80) {
     pattern = '從強';
-    reason = `加分項超過80%且無強根 → 從強格（分數：${finalScore.toFixed(1)}）`;
-  } else if (finalScore < 20 && !hasRoot) {
+    reason = `加分項超過80% → 從強格（分數：${finalScore.toFixed(1)}）`;
+  } else if (finalScore < 20) {
     pattern = '從弱';
-    reason = `加分項少於20%且無強根 → 從弱格（分數：${finalScore.toFixed(1)}）`;
+    reason = `加分項少於20% → 從弱格（分數：${finalScore.toFixed(1)}）`;
   } else if (finalScore >= 45) {
     pattern = '身強';
     reason = `加分項${finalScore.toFixed(1)}%（≥45%）→ 身強`;
@@ -796,7 +610,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   }
 
   if (reasons.length > 0) {
-    reason += ` | ${reasons.slice(0, 5).join('；')}`;
+    reason += ` | ${[...new Set(reasons)].slice(0, 12).join('；')}`;
   }
 
   const { favorable, unfavorable } = getFavorableElements(dayMaster, pattern);

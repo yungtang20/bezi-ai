@@ -4,6 +4,8 @@ dist/
 coverage/
 .DS_Store
 *.log
+tests/e2e/reports/
+tests/e2e/test-results/
 .env*
 !.env.example
 .claude/

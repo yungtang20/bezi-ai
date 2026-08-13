@@ -42,14 +42,14 @@ describe('Pattern Determination (Ge Ju)', () => {
   it('blocks a branch transformation when a visible element controls the result', () => {
     // 子丑合化土；甲木是「剋土」的元素，應阻止合化。
     const controlled = determinePattern(
-      makeChart(['甲', '己', '戊', '庚'], ['子', '丑', '辰', '巳'])
+      makeChart(['戊', '己', '甲', '庚'], ['子', '丑', '辰', '巳'])
     );
     const unblocked = determinePattern(
-      makeChart(['庚', '己', '戊', '辛'], ['子', '丑', '辰', '巳'])
+      makeChart(['戊', '己', '庚', '辛'], ['子', '丑', '辰', '巳'])
     );
 
-    expect(unblocked.reason).toContain('合化土');
-    expect(controlled.reason).not.toContain('合化土');
+    expect(unblocked.reason).toContain('子丑合化土');
+    expect(controlled.reason).toContain('子丑合絆');
   });
 
   it('evaluates every activation rule for the same tomb branch', () => {

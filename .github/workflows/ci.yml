@@ -32,6 +32,12 @@ jobs:
     - name: Run API Validation Tests
       run: npm run test:api
 
+    - name: Install Playwright Chromium
+      run: npx playwright install --with-deps chromium
+
+    - name: Run Browser End-to-End Tests
+      run: npm run test:e2e
+
     - name: Build Production Bundle
       run: npm run build
       env:

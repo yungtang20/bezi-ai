@@ -139,6 +139,24 @@ test('server API key is disabled unless explicitly opted in', async () => {
   assert.match(body.error, /API Key/);
 });
 
+test('applies production browser security headers to API errors', async () => {
+  const response = await postJson({ messages: [] });
+  await readJson(response);
+
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(response.headers.get('x-frame-options'), 'DENY');
+  assert.equal(response.headers.get('cross-origin-opener-policy'), 'same-origin');
+  assert.equal(response.headers.get('x-powered-by'), null);
+  assert.match(
+    response.headers.get('content-security-policy') || '',
+    /default-src 'self'/,
+  );
+  assert.match(
+    response.headers.get('strict-transport-security') || '',
+    /max-age=31536000/,
+  );
+});
+
 test('allows configured CORS origins on preflight', async () => {
   const response = await fetch(`${baseUrl}/api/chat`, {
     method: 'OPTIONS',

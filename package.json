@@ -13,7 +13,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:api": "node --test tests/api-chat-validation.test.mjs"
+    "test:api": "node --test tests/api-chat-validation.test.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
