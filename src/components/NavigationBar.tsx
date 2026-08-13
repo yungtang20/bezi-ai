@@ -1,4 +1,3 @@
-import React from 'react';
 import { Home, LineChart, Cpu, Calendar, Users, BookOpen } from 'lucide-react';
 import NavButton from './NavButton';
 

@@ -1,11 +1,9 @@
 // src/components/RomancePage.tsx
 // [AI MOD] 姻緣深度解析 — 遵循學術級講義體系，精確推演九大核心維度
 import CategoryPageTemplate from './CategoryPageTemplate';
-import { useState, useMemo, useEffect } from "react";
-import { Solar } from "lunar-javascript";
+import { useMemo } from "react";
 import { 
   Heart, 
-  Activity, 
   ShieldAlert, 
   Sparkles, 
   Calendar, 
@@ -14,32 +12,19 @@ import {
   Layers, 
   Sparkle, 
   Compass, 
-  UserCheck, 
-  Flame, 
-  Star,
-  Users,
-  AlertTriangle,
-  Compass as CompassIcon,
-  HelpCircle
 } from "lucide-react";
 import { BaziChart } from "../paipan";
 import { PatternScores } from "../pattern";
-import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from "../constants";
-import { getUpcomingDatesForCategory } from "../dailyAnalysis";
+import { GAN_TO_ELEMENT } from "../constants";
 import { calculateDaYun, getTenGodForDaYun, getDaYunQuality, getLiuNian } from "../dayun";
 import { checkXiangXing } from "../matchmaking";
 import { 
-  getSpouseTrait, 
-  TEN_GOD_TRAITS, 
   getCompatibilityRule, 
-  PEACH_BLOSSOM_CRISIS, 
   LECTURE_DATA, 
   ZHI_TO_ZODIAC, 
-  ZODIAC_TRIPLE_MAP 
 } from "../data";
 
 import DailyForecastCard from './DailyForecastCard';
-import FlyingStarsDisplay from './FlyingStarsDisplay';
 import ElementRemedyCard from './ElementRemedyCard';
 import CategoryTimelineRemedy from "./CategoryTimelineRemedy";
 import CategorySynastry from "./CategorySynastry";
@@ -74,12 +59,9 @@ export default function RomancePage({
   primaryPattern,
   favorable,
   unfavorable,
-  weakestElement,
   weakestElements,
   partners,
-  onNavigate,
 }: Props) {
-    const [flyingStarYear, setFlyingStarYear] = useState(2026);
 
   const isMale = chart.gender === "男";
   const dayZhi = chart.day.zhi;
@@ -178,9 +160,6 @@ export default function RomancePage({
   }, [pillars, isMale]);
 
   const traitsTargetGanZhi = spouseStarScan?.pillarGanZhi || `${chart.day.gan}${chart.day.zhi}`;
-  const spouseTrait = getSpouseTrait(traitsTargetGanZhi);
-  const spouseTenGodForTraits = spouseStarScan?.tenGod || (chart.day.hiddenTenGods && chart.day.hiddenTenGods[0]);
-  const tenGodTraitInfo = spouseTenGodForTraits ? TEN_GOD_TRAITS[spouseTenGodForTraits] : null;
 
   // 夫妻宮地支沖、刑、害判定
   const monthZhi = chart.month.zhi;
@@ -203,7 +182,6 @@ export default function RomancePage({
   const hasHarm = harmPairs[dayBranch] === monthZhi || harmPairs[dayBranch] === hourZhi;
 
   let spouseStarHasClash = false;
-  let spouseStarHasPunishment = false;
 
   if (spouseStarScan && spouseStarScan.index !== null) {
     const sZhi = pillars[spouseStarScan.index].zhi;
@@ -212,11 +190,9 @@ export default function RomancePage({
     
     if (sIdx > 0) {
       if (clutchPairs[sZhi] === zhiArr[sIdx - 1]) spouseStarHasClash = true;
-      if (checkXiangXing(sZhi, zhiArr[sIdx - 1])) spouseStarHasPunishment = true;
     }
     if (sIdx < 3) {
       if (clutchPairs[sZhi] === zhiArr[sIdx + 1]) spouseStarHasClash = true;
-      if (checkXiangXing(sZhi, zhiArr[sIdx + 1])) spouseStarHasPunishment = true;
     }
   }
 

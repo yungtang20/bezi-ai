@@ -2,7 +2,7 @@
 // [AI MOD] 人際篇深度解析 — 打造與健康篇、財富篇完全一致的精緻目錄導覽與流暢滾動體驗，融合講義最完整之社交/互補生肖/合夥判定與事業貴人位軟裝配置
 
 import CategoryPageTemplate from './CategoryPageTemplate';
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores } from '../pattern';
 import { getUpcomingDatesForCategory } from '../dailyAnalysis';
@@ -18,12 +18,7 @@ import {
   Layers, 
   Sparkle,
   Briefcase,
-  AlertTriangle,
-  Flame,
-  TrendingUp,
-  Lightbulb,
   ShieldCheck,
-  UserCheck,
   Award,
   Crown
 } from 'lucide-react';
@@ -246,13 +241,8 @@ export default function FriendsPage({
   unfavorable, 
   weakestElement, 
   weakestElements, 
-  partners, 
-  onNavigate 
+  partners
 }: Props) {
-  const [activeSection, setActiveSection] = useState('judgment');
-  const isMale = chart.gender === '男';
-  const pillars = [chart.year, chart.month, chart.day, chart.hour];
-
   // 計算日主五行
   const dayMaster = chart.dayMaster || '庚';
   const dayElement = (dayMaster === '甲' || dayMaster === '乙') ? '木' :

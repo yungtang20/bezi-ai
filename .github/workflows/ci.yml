@@ -21,13 +21,16 @@ jobs:
         cache: 'npm'
 
     - name: Install Dependencies
-      run: npm ci || npm install
+      run: npm ci
 
     - name: Run Type & Lint Check
       run: npm run lint
 
     - name: Run Unit Tests
       run: npm test
+
+    - name: Run API Integration Tests
+      run: npm run test:integration
 
     - name: Build Production Bundle
       run: npm run build

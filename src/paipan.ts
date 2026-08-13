@@ -1,10 +1,5 @@
 import { Solar } from 'lunar-javascript';
-import {
-  GAN_TO_ELEMENT,
-  getTenGod,
-  YANG_GANS,
-  isSameYinYang,
-} from './constants';
+import { getTenGod } from './constants';
 import { ZHI_HIDDEN } from './pattern';
 
 // [AI MOD] 生肖對照表（移到模組頂層，避免每次呼叫 calculateChart 時重建）
@@ -95,7 +90,6 @@ export function calculateChart(
   const hourGanZhi = translateGanZhi(lunar.getTimeInGanZhi());    // 時柱
 
   // 3. 取得各柱的詳細八字物件
-  const baZi = lunar.getEightChar();
   
   // 取得每一柱的天干、地支、藏干列表
   const yearPillar = buildPillar(yearGanZhi);

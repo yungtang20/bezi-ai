@@ -6,10 +6,35 @@ import OpenAI from "openai";
 import dotenv from "dotenv";
 import { formatErrorResponse } from "./src/errors";
 
-// [AI MOD] CORS 中介程式：允許請求來源存取。
+dotenv.config({ path: ".env.local" });
+dotenv.config();
+
+// [AI MOD] CORS 中介程式：只允許設定的前端來源存取。
+// 同源請求不會帶 Origin，直接放行；跨來源請求則必須列在 CORS_ALLOWED_ORIGINS。
+const allowedCorsOrigins = new Set(
+  [
+    process.env.APP_URL,
+    ...(process.env.CORS_ALLOWED_ORIGINS || "http://localhost:3000,http://127.0.0.1:3000").split(","),
+  ]
+    .map((origin) => origin?.trim())
+    .filter((origin): origin is string => Boolean(origin)),
+);
+
 function corsMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
   const origin = req.headers.origin;
-  res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  if (origin && !allowedCorsOrigins.has(origin)) {
+    if (req.method === "OPTIONS") {
+      res.status(403).end();
+    } else {
+      res.status(403).json({ error: "不允許的請求來源。" });
+    }
+    return;
+  }
+
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") {
@@ -18,9 +43,6 @@ function corsMiddleware(req: express.Request, res: express.Response, next: expre
   }
   next();
 }
-
-// Load local environment variables if in local debug
-dotenv.config();
 
 // [AI MOD] Rate limiting & input validation 常數
 // 每 60 秒 per-IP 最多 30 次 /api/chat 請求；一般聊天不會超，可擋惡意刷量。
@@ -35,9 +57,21 @@ const MAX_USER_API_KEY_LEN = 200;
 // [AI MOD] 輕量 in-memory rate limiter（per-IP，滑動視窗取樣）
 // 單一 server instance 適用；多 instance 部署需改用 Redis-backed 限流。
 const ipHits = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_CLEANUP_INTERVAL_MS = 5 * 60_000;
+let nextRateLimitCleanupAt = 0;
+
+function cleanupRateLimitEntries(now: number) {
+  if (now < nextRateLimitCleanupAt) return;
+  for (const [ip, entry] of ipHits) {
+    if (now >= entry.resetAt) ipHits.delete(ip);
+  }
+  nextRateLimitCleanupAt = now + RATE_LIMIT_CLEANUP_INTERVAL_MS;
+}
+
 function rateLimit(req: express.Request, res: express.Response, next: express.NextFunction) {
   const ip = req.ip || req.socket.remoteAddress || "unknown";
   const now = Date.now();
+  cleanupRateLimitEntries(now);
   let entry = ipHits.get(ip);
   if (!entry || now > entry.resetAt) {
     entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
@@ -46,6 +80,7 @@ function rateLimit(req: express.Request, res: express.Response, next: express.Ne
   entry.count++;
   if (entry.count > RATE_LIMIT_MAX) {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)));
     res.status(429);
     res.write(`data: ${JSON.stringify({ error: "請求過於頻繁，請稍後再試。" })}\n\n`);
     res.end();
@@ -100,8 +135,7 @@ async function startServer() {
   // [AI MOD] CORS 套用
   app.use(corsMiddleware);
 
-  // Secure Server-side API Route with Streaming (SSE) supporting both LongCat and Gemini
-  app.options("/api/chat", corsMiddleware, (req, res) => res.status(204).end());
+  // Secure server-side API route with NVIDIA GLM streaming via SSE
   app.post("/api/chat", rateLimit, async (req, res) => {
     // Set headers for SSE Server-Sent Events
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -195,7 +229,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

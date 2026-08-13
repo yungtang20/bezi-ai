@@ -10,9 +10,9 @@ import {
   CAREER_GUIDELINES, BRANCH_CAREER_SUITABILITY, CAREER_CROSS_MATCHING, JOB_TRANSFER_TIMING,
   DEFICIENT_ELEMENT_REMEDIES, RELATIVES_MAPPING,
   DAY_MASTER_TRAITS, BRANCH_GROUP_TRAITS, BRANCH_INTERACTIONS,
-  SPOUSE_TRAITS_MAPPING, NO_SPOUSE_STAR_BRANCHES, PEACH_BLOSSOM_RULES, SPOUSE_STAR_POSITION, SPOUSE_STAR_CLASHES, PARTNER_TEN_GODS_TRAITS,
+  SPOUSE_STAR_POSITION, SPOUSE_STAR_CLASHES, PARTNER_TEN_GODS_TRAITS,
   HEALTH_DATA, CHILDREN_GUIDELINES, SIBLING_RELATIONS, FAMILY_CHANGES,
-  PARTNER_MATCHING_DATA, MATCHING_TYPES, FENG_SHUI_2026, getHomeDecorGuide, getFlyingStarsForYear,
+  PARTNER_MATCHING_DATA, MATCHING_TYPES, getHomeDecorGuide, getFlyingStarsForYear,
 } from "../data";
 
 // ... (keep HEAVENLY_STEMS and getTenGod here) ...
@@ -531,7 +531,6 @@ export default function ReferenceTablePage({ onNavigate }: { onNavigate?: (step:
                   if (!strongRule || !weakRule) return null;
 
                   const renderTree = (rule: typeof strongRule) => {
-                    const isStrong = rule.strength === '身強';
                     const goodDayun = rule.goodElements;
                     const badDayun = rule.badElements;
                     

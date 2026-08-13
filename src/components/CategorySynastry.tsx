@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import { checkMutualComplement } from '../matchmaking';
 import { PartnerInfo, SynastryDetail } from '../types';
 
-export function getCompatibilityScore(chart1: BaziChart, chart2: BaziChart, relationship: string) {
+export function getCompatibilityScore(chart1: BaziChart, chart2: BaziChart, _relationship: string) {
   let score = 70; // baseline
   const details = [];
 

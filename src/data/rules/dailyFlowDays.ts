@@ -1,4 +1,4 @@
-import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../../constants';
+import { GAN_TO_ELEMENT } from '../../constants';
 import { LECTURE_DATA } from '../lecture';
 
 export function checkDayType(

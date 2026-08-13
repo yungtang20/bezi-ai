@@ -6,7 +6,7 @@
 
 本專案提供全功能的子平八字排盤、五行格局分析、十年大運與流年推算、合盤配對，以及基於 NVIDIA OpenAI GLM-5.2 的 SSE 即時 AI 命理解析服務。
 
-主要儲存庫：https://github.com/yungtang20/bezi
+主要儲存庫：https://github.com/yungtang20/bezi-ai
 
 ---
 
@@ -14,7 +14,7 @@
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│                  Client-Side (React 18 + Vite + Tailwind)│
+│                  Client-Side (React 19 + Vite + Tailwind)│
 │  ├─ Core Paipan Engine (paipan.ts, pattern.ts, dayun.ts)│
 │  ├─ Interactive UI (Dashboard, Synastry, Timeline)      │
 │  └─ SSE Chat Client (AIChatPanel.tsx + DOMPurify Sanit) │
@@ -27,13 +27,14 @@
 └────────────────────────────────────────────────────────┘
 ```
 
-- **前端框架**：React 18 + Vite + Tailwind CSS + Lucide Icons + Motion
+- **前端框架**：React 19 + Vite + Tailwind CSS + Lucide Icons + Motion
 - **命理排盤引擎**：`lunar-javascript` 農曆日曆轉換 + 專門封裝的 `paipan.ts`、`pattern.ts`、`dayun.ts`、`dailyAnalysis.ts`
 - **後端服務**：Express Node Server 處理 SSE 即時串流與限流防護
 - **資安與防禦**：
   - 後端嚴格校驗訊息數量、內容長度與系統提示格式
   - XSS 防護：使用 `DOMPurify` 洗淨 AI 渲染內容
   - API 金鑰安全：金鑰絕不硬編碼於原始碼中，支援環境變數或使用者安全注入
+  - CORS：跨來源請求必須列在 `CORS_ALLOWED_ORIGINS`，未列入的來源會被拒絕
 
 ---
 
@@ -66,9 +67,9 @@ Content-Type: text/event-stream; charset=utf-8
 Cache-Control: no-cache
 Connection: keep-alive
 
-data: "您好，根據您的命盤..."
-data: "目前的流年走到..."
-data: [DONE]
+data: {"content":"您好，根據您的命盤..."}
+data: {"content":"目前的流年走到..."}
+data: {"error":"錯誤訊息（若請求失敗）"}
 ```
 
 ---
@@ -77,7 +78,7 @@ data: [DONE]
 
 ### 1. 環境準備
 - **Node.js**: v18+ (建議 v20 LTS)
-- **NPM / Bun**: 最新版本
+- **npm**: 隨 Node.js 安裝，建議使用最新版本
 
 ### 2. 安裝相依套件
 ```bash
@@ -93,6 +94,7 @@ cp .env.example .env.local
 編輯 `.env.local`：
 ```env
 NVIDIA_API_KEY=your_nvidia_api_key_here
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
 
 ### 4. 啟動開發伺服器
@@ -113,6 +115,12 @@ npm run lint
 
 # 執行單元測試套件（排盤、格局、大運流年與十神常數測試）
 npm test
+
+# 執行 API integration tests（輸入驗證、CORS preflight、body size）
+npm run test:integration
+
+# 執行全部測試
+npm run test:all
 ```
 
 ---

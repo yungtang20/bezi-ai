@@ -1,25 +1,23 @@
-import { Solar } from 'lunar-javascript';
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, Compass, Moon, Sun, Github, X, Sparkles, Settings } from 'lucide-react';
+import { ArrowRight, Compass, Moon, Sun, Github, Sparkles, Settings } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import NavigationBar from './components/NavigationBar';
-import AIChatPanel from './components/AIChatPanel';
 import Modal from './components/Modal';
 import Drawer from './components/Drawer';
 import { SkeletonPage } from './components/Skeleton';
 import { useBirthForm } from './hooks/useBirthForm';
 
 // [AI MOD] Lazy-loaded page components
-// Dashboard 已精簡為先天命局，直接 import（非 lazy）
-import Dashboard from './components/Dashboard';
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const AIChatPanel = lazy(() => import('./components/AIChatPanel'));
 const SpecialtyNav = lazy(() => import('./components/SpecialtyNav'));
 const DailyForecastPage = lazy(() => import('./components/DailyForecastPage'));
 const TimelinePage = lazy(() => import('./components/TimelinePage'));
 const SynastryPage = lazy(() => import('./components/SynastryPage'));
 const ReferenceTablePage = lazy(() => import('./components/ReferenceTablePage'));
 
-import { calculateChart, BaziChart } from './paipan';
+import { calculateChart } from './paipan';
 import { BaziDisplay } from './types';
 import { determinePattern, PatternResult, PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements } from './pattern';
 import { GAN_TO_ELEMENT, getShiChen } from './constants';
@@ -29,8 +27,6 @@ import { validateBirthInput } from './utils/validation';
 // [AI MOD] 定義有效的步驟型別（供 Sidebar 等元件匯入）
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 const VALID_STEPS: Step[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-// [AI MOD] step 11 為側邊欄知識搜尋，不在主要導航中
-export const KNOWLEDGE_SEARCH_STEP = 11;
 
 export default function App() {
   const [step, setStep] = useState<Step>(() => {
@@ -331,15 +327,17 @@ export default function App() {
                transition={{ duration: 1.5, ease: 'easeOut' }}
                className="w-full relative"
             >
-              <Dashboard
-                bazi={bazi}
-                name={name}
-                onNavigate={handleNavigate}
-                scores={scores}
-                birthDate={birthDate}
-                birthTime={birthTime}
-                gender={gender}
-              />
+              <Suspense fallback={<SkeletonPage />}>
+                <Dashboard
+                  bazi={bazi}
+                  name={name}
+                  onNavigate={handleNavigate}
+                  scores={scores}
+                  birthDate={birthDate}
+                  birthTime={birthTime}
+                  gender={gender}
+                />
+              </Suspense>
             </motion.div>
           )}
 
@@ -692,14 +690,14 @@ export default function App() {
               <p className="mb-1">本工具僅供娛樂與自我探索參考，所有分析結果不具醫療、法律或財務建議效力。</p>
               <p className="mb-4">如有健康疑慮請諮詢專業醫師，重大財務或法律決策請尋求相關專業人士協助。</p>
               <a 
-                href="https://github.com/yungtang20/bezi" 
+                href="https://github.com/yungtang20/bezi-ai"
                 target="_blank" 
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zen-muted/5 hover:bg-zen-muted/10 text-zen-muted/50 hover:text-zen-accent transition-colors"
                 title="View on GitHub"
               >
                 <Github size={14} />
-                <span>https://github.com/yungtang20/bezi</span>
+                <span>https://github.com/yungtang20/bezi-ai</span>
               </a>
             </div>
           </footer>
@@ -716,7 +714,7 @@ export default function App() {
         {/* API Key 設定 */}
         <div className="space-y-2">
           <label className="block text-xs text-zen-muted tracking-wide">
-            LongCat API 金鑰
+            NVIDIA API 金鑰
           </label>
           <input
             type="password"
@@ -726,7 +724,7 @@ export default function App() {
             className="w-full px-3 py-2.5 bg-zen-surface/60 border border-zen-border rounded-lg text-zen-text text-sm placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
           />
           <p className="text-[11px] text-zen-muted/50 leading-relaxed">
-            金鑰僅儲存於瀏覽器本地，不會上傳至任何伺服器。
+            金鑰會儲存於瀏覽器本地，並在 AI 對談時傳送至本專案後端以呼叫 NVIDIA 服務。
             </p>
         </div>
 
@@ -762,7 +760,9 @@ export default function App() {
           title="AI 智能問答"
           icon={<Sparkles size={16} className="text-zen-gold" />}
         >
-          <AIChatPanel bazi={bazi} userName={name} />
+          <Suspense fallback={<SkeletonPage />}>
+            <AIChatPanel bazi={bazi} userName={name} />
+          </Suspense>
         </Drawer>
       )}
     </div>

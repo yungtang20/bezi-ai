@@ -1,5 +1,5 @@
 import { BaziChart } from './paipan';
-import { PatternScores, getPrimaryPattern, determinePattern, countTenGods, initPatternScores, TRIAD_MEETINGS, TRIAD_GROUPS } from './pattern';
+import { getPrimaryPattern, determinePattern, initPatternScores, TRIAD_MEETINGS, TRIAD_GROUPS } from './pattern';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, ELEMENT_CONTROLS } from './constants';
 
 // 伴侶資料結構
@@ -66,37 +66,6 @@ const HAI_PAIRS: [string, string][] = [['子', '未'], ['丑', '午'], ['寅', '
 
 export const checkLiuPo = (z1: string, z2: string) => checkPairRelation(z1, z2, PO_PAIRS, '破');
 export const checkLiuHai = (z1: string, z2: string) => checkPairRelation(z1, z2, HAI_PAIRS, '害');
-
-// 五行互補判斷 — [AI MOD] 內部使用，不 export
-function checkWuXingComplement(myChart: BaziChart, partnerChart: BaziChart, myFavorable?: string[]) {
-  const myPat = determinePattern(myChart);
-  const pPat = determinePattern(partnerChart);
-
-  const myFav = myFavorable || myPat.favorable;
-  const pFav = pPat.favorable;
-
-  const countP: Record<string, number> = { '木': 0, '火': 0, '土': 0, '金': 0, '水': 0 };
-  const pillars = [partnerChart.year, partnerChart.month, partnerChart.day, partnerChart.hour];
-  for (const p of pillars) {
-    const e1 = GAN_TO_ELEMENT[p.gan];
-    if (e1) countP[e1]++;
-    // 地支以本氣計算五行（使用 ZHI_TO_ELEMENT）
-    const e2 = ZHI_TO_ELEMENT[p.zhi];
-    if (e2) countP[e2]++;
-  }
-
-  // 排序伴侶五行強度
-  const pTopElements = Object.entries(countP).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => x[0]);
-
-  // 我的喜用神是否在對方的最強五行中
-  const isComplement = myFav.some(f => pTopElements.includes(f));
-  
-  return {
-    isComplement,
-    myFavorable: myFav,
-    partnerStrongest: pTopElements
-  };
-}
 
 // 五行互補組合 (身強/身弱互補)
 export function checkMutualComplement(myChart: BaziChart, pChart: BaziChart) {
@@ -176,13 +145,4 @@ export function checkSpouseStar(myChart: BaziChart, partnerChart: BaziChart): st
   }
   
   return null;
-}
-
-// 先天感情運判斷 — [AI MOD] 內部使用，不 export
-function checkDestinyRomance(chart: BaziChart): boolean {
-  const myEl = GAN_TO_ELEMENT[chart.dayMaster];
-  const zhiEl = ZHI_TO_ELEMENT[chart.day.zhi];
-  // ELEMENT_CONTROLS: key 剋 value — 男命看財星(我剋)，女命看官殺(剋我)
-  if (chart.gender === '男') return ELEMENT_CONTROLS[myEl] === zhiEl;
-  return ELEMENT_CONTROLS[zhiEl] === myEl;
 }

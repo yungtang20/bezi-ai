@@ -4,7 +4,7 @@ import { BaziChart, calculateChart } from '../paipan';
 import { PartnerChart } from '../matchmaking';
 import { getPartners, savePartner, deletePartner } from '../storage';
 import { checkDayStructureSimilarity, checkCommonSpouseElement, checkSpouseStar } from '../matchmaking';
-import { getPrimaryPattern, determinePattern, initPatternScores, PatternScores } from '../pattern';
+import { PatternScores } from '../pattern';
 import { GAN_TO_ELEMENT } from '../constants';
 import { getTenGodType } from '../data';
 import { LECTURE_DATA, getFamilyRole, PARTNER_MATCHING_DATA } from '../data';
@@ -20,7 +20,7 @@ interface Props {
   onNavigate: (step: number) => void;
 }
 
-export default function SynastryPage({ myChart, myName, myScores, onNavigate }: Props) {
+export default function SynastryPage({ myChart, myName, onNavigate }: Props) {
   const [partners, setPartners] = useState<PartnerChart[]>([]);
   const [selectedPartner, setSelectedPartner] = useState<PartnerChart | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -336,9 +336,6 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
                         if (p?.gan) { const el = GAN_TO_ELEMENT[p.gan]; if (el) countP[el as keyof typeof countP]++; }
                         if (p?.zhi) { const el = mapZhi(p.zhi); if (el) countP[el as keyof typeof countP]++; }
                       });
-                      const myStrongest = Object.entries(countMy).sort((a,b)=>b[1]-a[1])[0][0];
-                      const partnerStrongest = Object.entries(countP).sort((a,b)=>b[1]-a[1])[0][0];
-
                       // ====== 2. 十神特徵 (對方) ======
                       const countPGods: Record<string, number> = {};
                       (['year', 'month', 'day', 'hour'] as const).forEach(k => {

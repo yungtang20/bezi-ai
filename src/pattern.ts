@@ -3,7 +3,7 @@
 // 來源講義：定格局.pdf（10頁）、天干地支合化條件.pdf（2頁）、天干地支含刑沖破害.pdf（10頁）
 
 import { BaziChart } from './paipan';
-import { GAN_TO_ELEMENT, YANG_GANS, getYinYang, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
+import { GAN_TO_ELEMENT, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
 
 // ==================== 基礎對應表 ====================
 
@@ -42,20 +42,6 @@ const ZHI_HIDDEN_DETAIL: Record<string, HiddenStemRatio[]> = {
 export const ZHI_HIDDEN: Record<string, string[]> = Object.fromEntries(
   Object.entries(ZHI_HIDDEN_DETAIL).map(([zhi, stems]) => [zhi, stems.map(s => s.gan)])
 );
-
-// ==================== 濕土 / 燥土 ====================
-// 來源：定格局.pdf P4 — 濕土：丑、辰（會生金）；燥土：未、戌
-
-const WET_SOIL = ['丑', '辰'];
-const DRY_SOIL = ['未', '戌'];
-
-function isWetSoil(zhi: string): boolean {
-  return WET_SOIL.includes(zhi);
-}
-
-function isDrySoil(zhi: string): boolean {
-  return DRY_SOIL.includes(zhi);
-}
 
 // ==================== 天干五合 ====================
 // 來源：天干地支合化條件.pdf P1
@@ -213,11 +199,6 @@ interface TenGodCount {
 /** 判斷某五行是否為日主的「印比」（生我或同我） */
 function isSupporting(dayElement: string, other: string): boolean {
   return other === dayElement || ELEMENT_GENERATES[other] === dayElement;
-}
-
-/** 判斷某五行是否為日主的「剋洩耗」（剋我、我剋、我生） */
-function isDraining(dayElement: string, other: string): boolean {
-  return other !== dayElement && ELEMENT_GENERATES[other] !== dayElement;
 }
 
 /** 取得生我的五行（印星五行） */
@@ -486,7 +467,6 @@ function checkTouGan(chart: BaziChart): TouGanInfo[] {
  */
 function checkShengWangKe(chart: BaziChart): { from: number; to: number; via: number; element: string }[] {
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
-  const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
   const resolved: { from: number; to: number; via: number; element: string }[] = [];
 
   // 簡化版：檢查天干
@@ -662,7 +642,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   const reasons: string[] = [];
 
   // 1. 掃描刑沖合
-  const { interactions, damagedPillars, harmonyResults } = scanInteractions(chart);
+  const { damagedPillars, harmonyResults } = scanInteractions(chart);
 
   // 2. 掃描三合/半合/三會
   const formations = scanCombinedFormations(chart);

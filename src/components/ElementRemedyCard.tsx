@@ -478,8 +478,6 @@ function renderHealthRemedy(
   chart: BaziChart,
   weakestElements: string[],
   accentColor: string,
-  accentBg: string,
-  accentBorder: string,
 ) {
   const dmEl = GAN_TO_ELEMENT[chart.dayMaster] || '土';
 
@@ -619,7 +617,7 @@ export default function ElementRemedyCard({
         <span>🧭</span> {title}
       </h3>
 
-      {category === 'health' && renderHealthRemedy(chart, weakestElements, accentColor, accentBg, accentBorder)}
+      {category === 'health' && renderHealthRemedy(chart, weakestElements, accentColor)}
       {category === 'wealth' && renderWealthRemedy(chart, accentColor, accentBg, accentBorder)}
       {category === 'career' && renderCareerRemedy(chart, accentColor, accentBg, accentBorder)}
       {category === 'family' && renderFamilyRemedy(chart, primaryPattern, weakestElements, accentColor, accentBg, accentBorder)}

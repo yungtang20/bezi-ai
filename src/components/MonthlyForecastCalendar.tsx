@@ -1,8 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, getFavorableElements, determinePattern } from '../pattern';
 import { getDailyEnergy } from '../dailyAnalysis';
-import { GAN_TO_ELEMENT } from '../constants';
 import { Solar } from 'lunar-javascript';
 
 interface Props {
@@ -15,7 +14,6 @@ interface Props {
 }
 
 export default function MonthlyForecastCalendar({ chart, scores, selectedYear, selectedMonth, onDateClick, selectedDateStr }: Props) {
-  const dmElement = GAN_TO_ELEMENT[chart.dayMaster];
   const primaryPattern = getPrimaryPattern(scores);
   const patternResult = determinePattern(chart);
   const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
