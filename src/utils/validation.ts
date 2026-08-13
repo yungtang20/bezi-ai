@@ -8,6 +8,17 @@ export interface BirthInput {
   birthTime?: string; // HH:mm or empty string
 }
 
+/**
+ * Convert the accepted birth-time formats (H, HH, H:mm, HH:mm) to an hour.
+ * An empty value means the hour is unknown and is represented by null.
+ * Call validateBirthInput before using this for persisted or user input.
+ */
+export function parseBirthHour(input?: string): number | null {
+  const trimmed = input?.trim() ?? '';
+  if (!trimmed) return null;
+  return Number(trimmed.split(':', 1)[0]);
+}
+
 export function validateBirthInput(input: BirthInput): { valid: boolean; error?: string } {
   if (input.name && input.name.trim().length > 30) {
     return { valid: false, error: '姓名長度不得超過 30 個字元' };
@@ -24,6 +35,14 @@ export function validateBirthInput(input: BirthInput): { valid: boolean; error?:
   }
   if (month < 1 || month > 12 || day < 1 || day > 31) {
     return { valid: false, error: '出生月日數值無效' };
+  }
+  const calendarDate = new Date(year, month - 1, day, 12, 0, 0);
+  if (
+    calendarDate.getFullYear() !== year ||
+    calendarDate.getMonth() !== month - 1 ||
+    calendarDate.getDate() !== day
+  ) {
+    return { valid: false, error: '出生日期不存在' };
   }
   if (input.birthTime && input.birthTime.trim() !== '') {
     const trimmed = input.birthTime.trim();

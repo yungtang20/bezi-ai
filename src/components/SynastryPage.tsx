@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Users, Edit2 } from 'lucide-react';
 import { BaziChart, calculateChart } from '../paipan';
+import { parseBirthHour, validateBirthInput } from '../utils/validation';
 import { PartnerChart } from '../matchmaking';
 import { getPartners, savePartner, deletePartner } from '../storage';
 import { checkDayStructureSimilarity, checkCommonSpouseElement, checkSpouseStar } from '../matchmaking';
@@ -119,12 +120,19 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
       return;
     }
     try {
-      const [y, m, d] = formData.date.split('-').map(Number);
-      if (isNaN(y) || isNaN(m) || isNaN(d) || formData.date.length < 10) {
-        alert('請輸入完整的出生日期 (YYYYMMDD)');
+      const validation = validateBirthInput({
+        name: formData.name,
+        gender: formData.gender === 'male' ? '男' : '女',
+        birthDate: formData.date,
+        birthTime: formData.time,
+      });
+      if (!validation.valid) {
+        alert(validation.error);
         return;
       }
-      const hour = parseInt(formData.time, 10);
+      const [y, m, d] = formData.date.split('-').map(Number);
+      const hour = parseBirthHour(formData.time);
+      if (hour === null) return;
       const pChart = calculateChart(y, m, d, hour, formData.gender === 'male' ? '男' : '女');
       
       const newPartner: PartnerChart = {

@@ -3,6 +3,18 @@ import { PatternScores, getPrimaryPattern, getFavorableElements, determinePatter
 import { getDailyEnergy } from '../dailyAnalysis';
 import { Solar } from 'lunar-javascript';
 
+interface JieQiSolarTime {
+  getYear(): number;
+  getMonth(): number;
+  getDay(): number;
+  getHour(): number;
+  getMinute(): number;
+}
+
+interface LunarWithJieQiTable {
+  getJieQiTable(): Record<string, JieQiSolarTime>;
+}
+
 export interface CalendarExportOptions {
   chart: BaziChart;
   scores: PatternScores;
@@ -111,19 +123,18 @@ function getSolarTermsForYear(year: number) {
   // lunar-javascript's JieQiTable returns terms for a lunar year.
   // To get all terms in a solar year, we can just check the JieQiTable of the solar year's Jan 1st and Dec 31st.
   const solarStart = Solar.fromDate(new Date(year, 0, 15));
-  const table1 = solarStart.getLunar().getJieQiTable();
+  const table1 = (
+    solarStart.getLunar() as unknown as LunarWithJieQiTable
+  ).getJieQiTable();
   
   const solarEnd = Solar.fromDate(new Date(year, 11, 15));
-  const table2 = solarEnd.getLunar().getJieQiTable();
-
-  const allNames = [
-    '小寒', '大寒', '立春', '雨水', '惊蛰', '春分', '清明', '谷雨', '立夏', '小满', '芒种', '夏至',
-    '小暑', '大暑', '立秋', '处暑', '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至'
-  ];
+  const table2 = (
+    solarEnd.getLunar() as unknown as LunarWithJieQiTable
+  ).getJieQiTable();
 
   const added = new Set<string>();
 
-  const processTable = (table: any) => {
+  const processTable = (table: Record<string, JieQiSolarTime>) => {
     // Only pick the 12 main terms that mark the start of a month, or all of them?
     // The user mentioned "交節月" - usually this refers to the 12 terms (立春, 惊蛰, 清明, 立夏, 芒种, 小暑, 立秋, 白露, 寒露, 立冬, 大雪, 小寒).
     // Let's filter to just these 12.

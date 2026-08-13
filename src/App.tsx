@@ -24,7 +24,7 @@ import { BaziDisplay } from './types';
 import { determinePattern, PatternResult, PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements } from './pattern';
 import { GAN_TO_ELEMENT, getShiChen } from './constants';
 import { CLIENT_CONFIG } from './config';
-import { validateBirthInput } from './utils/validation';
+import { parseBirthHour, validateBirthInput } from './utils/validation';
 
 // [AI MOD] 定義有效的步驟型別（供 Sidebar 等元件匯入）
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
@@ -90,18 +90,33 @@ export default function App() {
     const savedGender = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER);
     const savedDate = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
     const savedTime = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.TIME);
+    const persistedTime = savedTime ?? '';
 
-    if (savedName && savedGender && savedDate && savedTime !== null) {
-      setName(savedName);
+    if ((savedGender === 'male' || savedGender === 'female') && savedDate) {
+      const persistedInput = validateBirthInput({
+        name: savedName ?? undefined,
+        gender: savedGender === 'male' ? '男' : '女',
+        birthDate: savedDate,
+        birthTime: persistedTime,
+      });
+      if (!persistedInput.valid) {
+        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+        setStep(1);
+        sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+        setIsInitializing(false);
+        return;
+      }
+
+      setName(savedName ?? '');
       setGender(savedGender as 'male' | 'female');
       setBirthDate(savedDate);
-      setBirthTime(savedTime);
-      setBirthTimeInput(savedTime);
+      setBirthTime(persistedTime);
+      setBirthTimeInput(persistedTime);
       
       try {
         const [y, m, d] = savedDate.split('-').map(Number);
-        const isHourUnknown = !savedTime;
-        const hour = isHourUnknown ? 12 : parseInt(savedTime, 10);
+        const isHourUnknown = !persistedTime;
+        const hour = parseBirthHour(persistedTime) ?? 12;
         const g = savedGender === 'male' ? '男' : '女';
         const chart = calculateChart(y, m, d, hour, g, isHourUnknown);
         const patternResult = determinePattern(chart);
@@ -131,9 +146,15 @@ export default function App() {
             }
             setIsInitializing(false);
           }).catch(() => {
+             setScores(initPatternScores(patternResult.score));
+             setStep(3);
              setIsInitializing(false);
           });
-        }).catch(() => {/* [AI MOD] 靜態處理 */});
+        }).catch(() => {
+          setScores(initPatternScores(patternResult.score));
+          setStep(3);
+          setIsInitializing(false);
+        });
 
       } catch (e: unknown) {
         console.error(e);
@@ -188,7 +209,7 @@ export default function App() {
     localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.TIME, birthTime);
     
     try {
-      const hour = isHourUnknown ? 12 : parseInt(birthTime, 10);
+      const hour = parseBirthHour(birthTime) ?? 12;
       const chart = calculateChart(y, m, d, hour, gender === 'male' ? '男' : '女', isHourUnknown);
       const patternResult = determinePattern(chart);
 
@@ -716,7 +737,7 @@ export default function App() {
         {/* API Key 設定 */}
         <div className="space-y-2">
           <label className="block text-xs text-zen-muted tracking-wide">
-            LongCat API 金鑰
+             自訂 AI API 金鑰
           </label>
           <input
             type="password"
@@ -726,7 +747,7 @@ export default function App() {
             className="w-full px-3 py-2.5 bg-zen-surface/60 border border-zen-border rounded-lg text-zen-text text-sm placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
           />
           <p className="text-[11px] text-zen-muted/50 leading-relaxed">
-            金鑰僅儲存於瀏覽器本地，不會上傳至任何伺服器。
+            金鑰會儲存於此瀏覽器；開始對談時，會連同請求送至本站的 AI 代理伺服器。
             </p>
         </div>
 

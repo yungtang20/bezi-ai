@@ -1,4 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import type { BaziChart } from '../../src/paipan';
+
+const { determinePatternMock } = vi.hoisted(() => ({
+  determinePatternMock: vi.fn(),
+}));
+
+vi.mock('../../src/pattern', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/pattern')>();
+  return { ...actual, determinePattern: determinePatternMock };
+});
+
 import {
   checkLiuChong,
   checkLiuHe,
@@ -7,7 +18,25 @@ import {
   checkXiangXing,
   checkLiuPo,
   checkLiuHai,
+  checkMutualComplement,
 } from '../../src/matchmaking';
+
+function makeChart(dayMaster: string): BaziChart {
+  const pillar = { gan: dayMaster, zhi: '子', hiddenGan: [], tenGod: '', hiddenTenGods: [] };
+  return {
+    year: { ...pillar },
+    month: { ...pillar },
+    day: { ...pillar },
+    hour: { ...pillar },
+    dayMaster,
+    gender: '男',
+    birthYear: 2000,
+    birthMonth: 1,
+    birthDay: 1,
+    birthHour: 0,
+    zodiac: '龍',
+  };
+}
 
 describe('Matchmaking Module (compatibility and branch interactions)', () => {
   it('correctly identifies Liu Chong (六沖)', () => {
@@ -51,5 +80,29 @@ describe('Matchmaking Module (compatibility and branch interactions)', () => {
     expect(checkLiuHai('子', '未')).toBe('子未害');
     expect(checkLiuHai('丑', '午')).toBe('丑午害');
     expect(checkLiuPo('子', '未')).toBeNull();
+  });
+
+  it('preserves root-aware patterns instead of re-inferring them from scores', () => {
+    determinePatternMock
+      .mockReturnValueOnce({
+        pattern: '身弱',
+        score: 10,
+        favorable: ['水', '木'],
+        unfavorable: ['火', '土', '金'],
+        weakestElement: '火',
+        weakestElements: ['火'],
+      })
+      .mockReturnValueOnce({
+        pattern: '身強',
+        score: 90,
+        favorable: ['木', '火', '土'],
+        unfavorable: ['金', '水'],
+        weakestElement: '水',
+        weakestElements: ['水'],
+      });
+
+    expect(checkMutualComplement(makeChart('甲'), makeChart('庚'))).toBe(
+      '身強身弱互補，能夠截長補短。'
+    );
   });
 });

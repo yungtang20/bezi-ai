@@ -1,5 +1,5 @@
 import { BaziChart } from './paipan';
-import { PatternScores, getPrimaryPattern, determinePattern, countTenGods, initPatternScores, TRIAD_MEETINGS, TRIAD_GROUPS } from './pattern';
+import { determinePattern, TRIAD_MEETINGS, TRIAD_GROUPS } from './pattern';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, ELEMENT_CONTROLS } from './constants';
 
 // 伴侶資料結構
@@ -103,8 +103,8 @@ export function checkMutualComplement(myChart: BaziChart, pChart: BaziChart) {
   const myPat = determinePattern(myChart);
   const pPat = determinePattern(pChart);
   
-  const myPri = getPrimaryPattern(initPatternScores(myPat.score));
-  const pPri = getPrimaryPattern(initPatternScores(pPat.score));
+  const myPri = myPat.pattern;
+  const pPri = pPat.pattern;
 
   const myEl = GAN_TO_ELEMENT[myChart.dayMaster];
   const pEl = GAN_TO_ELEMENT[pChart.dayMaster];

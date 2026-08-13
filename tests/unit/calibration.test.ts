@@ -38,22 +38,19 @@ describe('Calibration Module (scores adjustment, auto switch, accuracy)', () => 
     expect(updated.weak).toBeGreaterThan(baseScores.weak);
   });
 
-  it('detects auto switch when another pattern exceeds current primary by > 5', () => {
+  it('detects auto switch when another pattern exceeds the current pattern by > 5', () => {
     const scores: PatternScores = {
-      strong: 50,
-      weak: 56, // exceeds strong by > 5
-      followStrong: 10,
-      followWeak: 10,
-    };
-    // strong was primary if we test a case where best > currentScore + 5
-    const testScores: PatternScores = {
       strong: 40,
       weak: 48,
       followStrong: 10,
       followWeak: 10,
     };
-    const switched = checkAutoSwitch(testScores);
-    expect(switched).toBeNull(); // Because weak is already primary (48 > 40)
+
+    expect(checkAutoSwitch(scores, '身強')).toBe('身弱');
+  });
+
+  it('does not switch when the current pattern is already the leader', () => {
+    expect(checkAutoSwitch(baseScores, '身強')).toBeNull();
   });
 
   it('calculates accuracy based on matching good/bad theoretical outcomes', () => {

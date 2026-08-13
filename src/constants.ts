@@ -16,14 +16,19 @@ export const ZHI_TO_ELEMENT: Record<string, string> = {
 };
 
 export const YANG_GANS = ['甲', '丙', '戊', '庚', '壬'];
+const YIN_GANS = ['乙', '丁', '己', '辛', '癸'];
 
 export function isSameYinYang(gan1: string, gan2: string): boolean {
-  return YANG_GANS.includes(gan1) === YANG_GANS.includes(gan2);
+  const yinYang1 = getYinYang(gan1);
+  const yinYang2 = getYinYang(gan2);
+  return yinYang1 !== null && yinYang2 !== null && yinYang1 === yinYang2;
 }
 
-/** 取得天干陰陽：0=陽, 1=陰 */
-export function getYinYang(gan: string): number {
-  return YANG_GANS.includes(gan) ? 0 : 1;
+/** 取得天干陰陽：0=陽, 1=陰, null=未知 */
+export function getYinYang(gan: string): 0 | 1 | null {
+  if (YANG_GANS.includes(gan)) return 0;
+  if (YIN_GANS.includes(gan)) return 1;
+  return null;
 }
 
 // 五行相生：key 生 value
@@ -58,26 +63,29 @@ export function getTenGod(dayGan: string, otherGan: string): string {
   const otherElement = GAN_TO_ELEMENT[otherGan];
   if (!dayElement || !otherElement) return '未知';
 
-  const base = BASE_TEN_GOD_MAP[dayElement]?.[otherElement] ?? '比肩';
+  const base = BASE_TEN_GOD_MAP[dayElement]?.[otherElement];
+  if (!base) return '未知';
   return isSameYinYang(dayGan, otherGan) ? base : (YIN_YANG_TEN_GOD_SWAP[base] ?? base);
 }
 
 /**
  * 十神分類（財星、官殺、食傷、印星、比劫）
  */
-export function getTenGodCategory(tenGod: string): string {
-  const map: Record<string, string> = {
+type TenGodCategory = '財星' | '官殺' | '食傷' | '印星' | '比劫';
+
+export function getTenGodCategory(tenGod: string): TenGodCategory | '未知' {
+  const map: Record<string, TenGodCategory> = {
     '正財': '財星', '偏財': '財星',
     '正官': '官殺', '七殺': '官殺',
     '食神': '食傷', '傷官': '食傷',
     '正印': '印星', '偏印': '印星',
     '比肩': '比劫', '劫財': '比劫',
   };
-  return map[tenGod] || '比劫';
+  return map[tenGod] ?? '未知';
 }
 
 // Alias for backward compatibility
-export function getTenGodType(tenGod: string): string {
+export function getTenGodType(tenGod: string): TenGodCategory | '未知' {
   return getTenGodCategory(tenGod);
 }
 

@@ -70,6 +70,12 @@ export function useBirthForm(): BirthFormData & BirthFormActions {
       return;
     }
 
+    if (digits.length === 3) {
+      setBirthTime('');
+      setHourError('請輸入完整的分鐘 (HHmm)');
+      return;
+    }
+
     if (digits.length >= 3 && parseInt(digits.slice(2, 4), 10) > 59) {
       setBirthTime('');
       setHourError('請輸入有效的分鐘 (00-59)');

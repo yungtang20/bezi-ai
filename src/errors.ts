@@ -32,6 +32,8 @@ export interface ErrorResponse {
   timestamp?: number;
 }
 
+const PUBLIC_UNEXPECTED_ERROR_MESSAGE = '伺服器處理異常，請稍後再試。';
+
 export function formatErrorResponse(err: unknown): ErrorResponse {
   if (err instanceof BaziError) {
     return {
@@ -50,6 +52,28 @@ export function formatErrorResponse(err: unknown): ErrorResponse {
   return {
     error: '發生未知錯誤',
     code: 'UNKNOWN_ERROR',
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Formats errors for an untrusted HTTP/SSE client. Expected BaziError messages
+ * are safe to expose; provider, SDK, and programming errors are deliberately
+ * reduced to a stable public contract so internal details never cross the API
+ * boundary.
+ */
+export function formatPublicErrorResponse(err: unknown): ErrorResponse {
+  if (err instanceof BaziError) {
+    return {
+      error: err.message,
+      code: err.code,
+      timestamp: Date.now(),
+    };
+  }
+
+  return {
+    error: PUBLIC_UNEXPECTED_ERROR_MESSAGE,
+    code: 'INTERNAL_ERROR',
     timestamp: Date.now(),
   };
 }

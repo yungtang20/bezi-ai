@@ -307,7 +307,8 @@ function scanInteractions(chart: BaziChart): {
         const hasTouGan = resultGans.some(gan => gans.includes(gan));
 
         // 檢查化神是否被剋
-        const controllingElement = ELEMENT_CONTROLS[resultElement];
+        const controllingElement = Object.entries(ELEMENT_CONTROLS)
+          .find(([_, controlled]) => controlled === resultElement)?.[0];
         const controllingGans = Object.entries(GAN_TO_ELEMENT)
           .filter(([_, el]) => el === controllingElement)
           .map(([gan, _]) => gan);
@@ -427,14 +428,15 @@ function checkTombActivation(chart: BaziChart): TombInfo[] {
   const tombs: TombInfo[] = [];
 
   zhis.forEach((zhi, idx) => {
-    const activation = TOMB_ACTIVATIONS.find(a => a.zhi === zhi);
-    if (activation) {
-      const hasTrigger = activation.trigger.some(gan => allGans.includes(gan));
+    const activations = TOMB_ACTIVATIONS.filter(a => a.zhi === zhi);
+    if (activations.length > 0) {
+      const activation = activations.find(a => a.trigger.some(gan => allGans.includes(gan)));
+      const hasTrigger = Boolean(activation);
       tombs.push({
         zhi,
         pillarIndex: idx,
         activated: hasTrigger,
-        tombType: hasTrigger ? activation.result : '未啟動',
+        tombType: activation?.result ?? '未啟動',
         element: ZHI_TO_ELEMENT[zhi],
       });
     }
