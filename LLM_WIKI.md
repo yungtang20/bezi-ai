@@ -321,13 +321,8 @@
 
 | 概念 | 來源檔案 | 實現檔案 | 變數 |
 |------|----------|----------|------|
-| 家人互動 | 家人相處.docx | `src/data/charts/familyInteraction.ts` | `FAMILY_INTERACTIONS` |
-| 十神家庭角色 | 家人相處.docx | `src/data/charts/familyInteraction.ts` | `FAMILY_ROLES` |
-| 子女緣份 | 家人相處.docx | `src/data/charts/familyInteraction.ts` | `FERTILITY_INFO` |
-| 子女時機 | 家人相處.docx | `src/data/charts/familyInteraction.ts` | `FERTILITY_TIMING` |
 | 手足關係 | 家人相處.docx | `src/data/charts/familyRoles.ts` | `SIBLING_RELATIONS` |
 | 家庭變動 | 家人相處.docx | `src/data/charts/familyRoles.ts` | `FAMILY_CHANGES` |
-| 家人健康警訊 | 家人相處.docx | `src/data/charts/familyInteraction.ts` | `FAMILY_HEALTH_WARNINGS` |
 | 親屬對應 | 家人相處.docx | `src/data/charts/familyRoles.ts` | `RELATIVES_MAPPING` |
 | 朋友貴人 | 朋友助力.docx | `src/data/charts/friendSupport.ts` | `COMPANION_MATCHING` |
 | 合夥選擇 | 朋友助力.docx | `src/data/charts/friendSupport.ts` | `BUSINESS_PATTERN` |
@@ -351,7 +346,6 @@
 
 | 概念 | 來源檔案 | 實現檔案 | 變數 |
 |------|----------|----------|------|
-| 大運流年補運架構 | 大運流年補運架構/ | `src/data/rules/dayunLiunian.ts` | `DAYUN_LIUNIAN_GUIDES` |
 | 大運流年斷應 | 大運流年補運架構/ | `src/data/rules/timelineGuidelines.ts` | `TIMELINE_GUIDELINES` |
 | 大運排法 | 大運流年補運架構/ | `src/dayun.ts` | `calculateDaYun()` |
 | 流年斷應 | 2000-2030 流年五行對照表 | `src/dayun.ts` | `getLiuNian()`, `getFutureLiuNian()` |
@@ -410,14 +404,12 @@
 | 1 | 五行健康補運 | `src/data/charts/healthRemedies.ts` | ⚠️ 05_健康 無內容 | 應更新 05_健康.md |
 | 2 | 五行軟裝添運 | `src/data/charts/homeDecorGuide.ts` | ⚠️ 07_軟裝風水 無內容 | 應更新 07_軟裝風水.md |
 | 3 | 2026 飛星 | `src/data/charts/fengShui2026.ts` | ⚠️ 07_軟裝風水 無內容 | 應更新 07_軟裝風水.md |
-| 4 | 大運流年補運架構 | `src/data/rules/dayunLiunian.ts` | ⚠️ 08_大運流年 無內容 | 應更新 08_大運流年.md |
 | 5 | 每日流日分析 | `src/data/rules/dailyFlowDays.ts` | ⚠️ 無對應 Wiki | 應新增至 05_健康 或 08_大運流年 |
 | 6 | 每日能量分析 | `src/dailyAnalysis.ts` | ⚠️ 無對應 Wiki | 應新增至 05_健康 或 08_大運流年 |
 | 7 | 太歲判斷 | `src/data/rules/taiSui.ts` | ⚠️ 無對應 Wiki | 應新增至 08_大運流年 |
 | 8 | 合盤五行互補 | `src/data/rules/partnerMatching.ts` | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md |
 | 9 | 十神相處策略 | `src/data/charts/spouseGuidelines.ts` | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md |
 | 10 | 子女生育指南 | `src/data/rules/childrenGuidelines.ts` | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md |
-| 11 | 十神家庭角色 | `src/data/charts/familyInteraction.ts` | ⚠️ 06_人際 無內容 | 應更新 06_人際.md |
 | 12 | 朋友貴人 | `src/data/charts/friendSupport.ts` | ⚠️ 06_人際 無內容 | 應更新 06_人際.md |
 | 13 | 財星與職業 | `src/data/charts/wealthCareers.ts` | ⚠️ 02_財運 無內容 | 應更新 02_財運.md |
 | 14 | 事業補運 | `src/data/charts/careerRemediesData.ts` | ⚠️ 03_事業 無內容 | 應更新 03_事業.md |
@@ -492,8 +484,8 @@
 
 1. **05_健康.md** — 已有 `healthData.ts`, `healthRemedies.ts` 完整資料
 2. **04_感情姻緣.md** — 已有 `spouseGuidelines.ts`, `spouseTraits.ts`, `romanceRemediesData.ts` 完整資料
-3. **06_人際.md** — 已有 `familyInteraction.ts`, `familyRoles.ts`, `friendSupport.ts` 完整資料
-4. **08_大運流年.md** — 已有 `dayunLiunian.ts`, `timelineGuidelines.ts` 完整資料
+3. **06_人際.md** — 已有 `familyRoles.ts`, `friendSupport.ts` 完整資料
+4. **08_大運流年.md** — 已有 `timelineGuidelines.ts` 完整資料
 5. **03_事業.md** — 已有 `careerGuidelines.ts`, `careerRoles.ts`, `careerRemediesData.ts` 完整資料
 6. **07_軟裝風水.md** — 已有 `homeDecorGuide.ts`, `fengShui2026.ts` 完整資料
 
@@ -637,7 +629,6 @@ D:\徐玉蘭\八字\
     │   │   │   ├── spouseGuidelines.ts
     │   │   │   ├── spouseTraits.ts
     │   │   │   ├── romanceRemediesData.ts
-    │   │   │   ├── familyInteraction.ts
     │   │   │   ├── familyRoles.ts
     │   │   │   ├── friendSupport.ts
     │   │   │   ├── homeDecorGuide.ts
@@ -645,7 +636,6 @@ D:\徐玉蘭\八字\
     │   │   │   └── workplaceStrategies.ts
     │   │   ├── rules/
     │   │   │   ├── index.ts
-    │   │   │   ├── dayunLiunian.ts
     │   │   │   ├── timelineGuidelines.ts
     │   │   │   ├── partnerMatching.ts
     │   │   │   ├── peachBlossomTiming.ts
@@ -687,13 +677,11 @@ D:\徐玉蘭\八字\
 | `src/data/charts/spouseGuidelines.ts` | 04_感情姻緣 |
 | `src/data/charts/spouseTraits.ts` | 04_感情姻緣 |
 | `src/data/charts/romanceRemediesData.ts` | 04_感情姻緣 |
-| `src/data/charts/familyInteraction.ts` | 06_人際 |
 | `src/data/charts/familyRoles.ts` | 06_人際 |
 | `src/data/charts/friendSupport.ts` | 06_人際 |
 | `src/data/charts/homeDecorGuide.ts` | 07_軟裝風水 |
 | `src/data/charts/fengShui2026.ts` | 07_軟裝風水 |
 | `src/data/charts/workplaceStrategies.ts` | 03_事業, 06_人際 |
-| `src/data/rules/dayunLiunian.ts` | 08_大運流年 |
 | `src/data/rules/timelineGuidelines.ts` | 08_大運流年 |
 | `src/data/rules/partnerMatching.ts` | 04_感情姻緣 |
 | `src/data/rules/peachBlossomTiming.ts` | 04_感情姻緣 |
@@ -779,14 +767,12 @@ D:\徐玉蘭\八字\
 | 五行健康補運 | `src/data/charts/healthRemedies.ts` | ⚠️ 05_健康 無內容 | 應更新 05_健康.md |
 | 五行軟裝添運 | `src/data/charts/homeDecorGuide.ts` | ⚠️ 07_軟裝風水 無內容 | 應更新 07_軟裝風水.md |
 | 2026 飛星 | `src/data/charts/fengShui2026.ts` | ⚠️ 07_軟裝風水 無內容 | 應更新 07_軟裝風水.md |
-| 大運流年補運架構 | `src/data/rules/dayunLiunian.ts` | ⚠️ 08_大運流年 無內容 | 應更新 08_大運流年.md |
 | 每日流日分析 | `src/data/rules/dailyFlowDays.ts` | ⚠️ 無對應 Wiki | 應新增至 05_健康 或 08_大運流年 |
 | 每日能量分析 | `src/dailyAnalysis.ts` | ⚠️ 無對應 Wiki | 應新增至 05_健康 或 08_大運流年 |
 | 太歲判斷 | `src/data/rules/taiSui.ts` | ⚠️ 無對應 Wiki | 應新增至 08_大運流年 |
 | 合盤五行互補 | `src/data/rules/partnerMatching.ts` | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md |
 | 十神相處策略 | `src/data/charts/spouseGuidelines.ts` | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md |
 | 子女生育指南 | `src/data/rules/childrenGuidelines.ts` | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md |
-| 十神家庭角色 | `src/data/charts/familyInteraction.ts` | ⚠️ 06_人際 無內容 | 應更新 06_人際.md |
 | 朋友貴人 | `src/data/charts/friendSupport.ts` | ⚠️ 06_人際 無內容 | 應更新 06_人際.md |
 | 財星與職業 | `src/data/charts/wealthCareers.ts` | ⚠️ 02_財運 無內容 | 應更新 02_財運.md |
 | 事業補運 | `src/data/charts/careerRemediesData.ts` | ⚠️ 03_事業 無內容 | 應更新 03_事業.md |
@@ -857,8 +843,8 @@ D:\徐玉蘭\八字\
 
 1. **05_健康.md** — 已有 `healthData.ts`, `healthRemedies.ts` 完整資料，只需提取並格式化
 2. **04_感情姻緣.md** — 已有 `spouseGuidelines.ts`, `spouseTraits.ts`, `romanceRemediesData.ts` 完整資料
-3. **06_人際.md** — 已有 `familyInteraction.ts`, `familyRoles.ts`, `friendSupport.ts` 完整資料
-4. **08_大運流年.md** — 已有 `dayunLiunian.ts`, `timelineGuidelines.ts` 完整資料
+3. **06_人際.md** — 已有 `familyRoles.ts`, `friendSupport.ts` 完整資料
+4. **08_大運流年.md** — 已有 `timelineGuidelines.ts` 完整資料
 5. **03_事業.md** — 已有 `careerGuidelines.ts`, `careerRoles.ts`, `careerRemediesData.ts` 完整資料
 6. **07_軟裝風水.md** — 已有 `homeDecorGuide.ts`, `fengShui2026.ts` 完整資料
 

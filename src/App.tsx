@@ -3,15 +3,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Compass, Moon, Sun, Github, Sparkles, Settings } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import NavigationBar from './components/NavigationBar';
-import AIChatPanel from './components/AIChatPanel';
 import Modal from './components/Modal';
 import Drawer from './components/Drawer';
 import { SkeletonPage } from './components/Skeleton';
 import { useBirthForm } from './hooks/useBirthForm';
 
 // [AI MOD] Lazy-loaded page components
-// Dashboard 已精簡為先天命局，直接 import（非 lazy）
-import Dashboard from './components/Dashboard';
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const AIChatPanel = lazy(() => import('./components/AIChatPanel'));
 const SpecialtyNav = lazy(() => import('./components/SpecialtyNav'));
 const DailyForecastPage = lazy(() => import('./components/DailyForecastPage'));
 const TimelinePage = lazy(() => import('./components/TimelinePage'));
@@ -328,15 +327,17 @@ export default function App() {
                transition={{ duration: 1.5, ease: 'easeOut' }}
                className="w-full relative"
             >
-              <Dashboard
-                bazi={bazi}
-                name={name}
-                onNavigate={handleNavigate}
-                scores={scores}
-                birthDate={birthDate}
-                birthTime={birthTime}
-                gender={gender}
-              />
+              <Suspense fallback={<SkeletonPage />}>
+                <Dashboard
+                  bazi={bazi}
+                  name={name}
+                  onNavigate={handleNavigate}
+                  scores={scores}
+                  birthDate={birthDate}
+                  birthTime={birthTime}
+                  gender={gender}
+                />
+              </Suspense>
             </motion.div>
           )}
 
@@ -759,7 +760,9 @@ export default function App() {
           title="AI 智能問答"
           icon={<Sparkles size={16} className="text-zen-gold" />}
         >
-          <AIChatPanel bazi={bazi} userName={name} />
+          <Suspense fallback={<SkeletonPage />}>
+            <AIChatPanel bazi={bazi} userName={name} />
+          </Suspense>
         </Drawer>
       )}
     </div>

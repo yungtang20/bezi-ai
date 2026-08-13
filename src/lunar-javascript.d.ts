@@ -47,13 +47,6 @@ declare module 'lunar-javascript' {
     getMonthJi(): string[];
     getYearYi(): string[];
     getYearJi(): string[];
-    getDayYi(sect?: number): string[];
-    getDayJi(sect?: number): string[];
-    getDayJiShen(): string;
-    getMonthYi(): string[];
-    getMonthJi(): string[];
-    getYearYi(): string[];
-    getYearJi(): string[];
     getDayJiShen(): string;
   }
 
