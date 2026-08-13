@@ -1,6 +1,7 @@
 // server.ts
 import express from "express";
 import path from "path";
+import { randomUUID } from "node:crypto";
 import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
 import dotenv from "dotenv";
@@ -8,27 +9,13 @@ import {
   BaziError,
   formatPublicErrorResponse,
 } from "./src/errors";
+import { loadRuntimeConfig } from "./src/server/runtimeConfig";
 
 // Load file-based development configuration before reading any environment
 // values. Existing process variables keep precedence over both files.
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
-const ALLOW_SERVER_API_KEY = process.env.ALLOW_SERVER_API_KEY?.trim().toLowerCase() === "true";
-const CONFIGURED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-const ALLOWED_ORIGINS = new Set(
-  CONFIGURED_ORIGINS.length > 0
-    ? CONFIGURED_ORIGINS
-    : IS_PRODUCTION
-      ? []
-      : ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173"],
-);
-
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 30;
+const RUNTIME = loadRuntimeConfig(process.env);
 const MAX_MESSAGES = 50;
 const MAX_MSG_CONTENT_LEN = 8_000;
 const MAX_TOTAL_CONTENT_LEN = 100_000;
@@ -81,7 +68,7 @@ const rateLimitSweep = setInterval(() => {
   for (const [ip, entry] of ipHits) {
     if (now >= entry.resetAt) ipHits.delete(ip);
   }
-}, RATE_LIMIT_WINDOW_MS);
+}, RUNTIME.rateLimitWindowMs);
 rateLimitSweep.unref();
 
 function sendJsonError(res: express.Response, error: BaziError): void {
@@ -104,12 +91,38 @@ function securityHeaders(
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
 
-  if (IS_PRODUCTION) {
+  if (RUNTIME.isProduction) {
     res.setHeader("Content-Security-Policy", PRODUCTION_CONTENT_SECURITY_POLICY);
     res.setHeader(
       "Strict-Transport-Security",
       "max-age=31536000; includeSubDomains",
     );
+  }
+
+  next();
+}
+
+function requestContext(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+): void {
+  const requestId = randomUUID();
+  const startedAt = Date.now();
+  res.setHeader("X-Request-ID", requestId);
+
+  if (req.path.startsWith("/api/") || req.path.startsWith("/health/")) {
+    res.once("finish", () => {
+      console.log(JSON.stringify({
+        level: "info",
+        event: "http_request",
+        requestId,
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt,
+      }));
+    });
   }
 
   next();
@@ -124,7 +137,7 @@ function corsMiddleware(
   res.vary("Origin");
 
   if (origin) {
-    if (!ALLOWED_ORIGINS.has(origin)) {
+    if (!RUNTIME.allowedOrigins.has(origin)) {
       sendJsonError(
         res,
         new BaziError("此來源未獲允許。", "ORIGIN_NOT_ALLOWED", 403),
@@ -134,8 +147,12 @@ function corsMiddleware(
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
 
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "X-Request-ID, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After",
+  );
   res.setHeader("Access-Control-Max-Age", "600");
 
   if (req.method === "OPTIONS") {
@@ -156,12 +173,19 @@ function rateLimit(
   let entry = ipHits.get(ip);
 
   if (!entry || now >= entry.resetAt) {
-    entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+    entry = { count: 0, resetAt: now + RUNTIME.rateLimitWindowMs };
     ipHits.set(ip, entry);
   }
 
   entry.count += 1;
-  if (entry.count > RATE_LIMIT_MAX) {
+  res.setHeader("RateLimit-Limit", String(RUNTIME.rateLimitMax));
+  res.setHeader(
+    "RateLimit-Remaining",
+    String(Math.max(0, RUNTIME.rateLimitMax - entry.count)),
+  );
+  res.setHeader("RateLimit-Reset", String(Math.ceil(entry.resetAt / 1_000)));
+
+  if (entry.count > RUNTIME.rateLimitMax) {
     const retryAfterSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1_000));
     res.setHeader("Retry-After", String(retryAfterSeconds));
     sendJsonError(
@@ -249,15 +273,6 @@ function validateChatInput(body: unknown): BaziError | null {
   return null;
 }
 
-function resolvePort(rawPort: string | undefined): number {
-  if (!rawPort) return 3000;
-  const port = Number(rawPort);
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new Error(`Invalid PORT value: ${rawPort}`);
-  }
-  return port;
-}
-
 function writeSse(
   res: express.Response,
   event: "message" | "error" | "done",
@@ -292,21 +307,31 @@ function handleJsonParserError(
 
 async function startServer(): Promise<void> {
   const app = express();
-  const port = resolvePort(process.env.PORT);
+  const port = RUNTIME.port;
 
   app.disable("x-powered-by");
 
-  const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || "0");
-  if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) {
-    app.set("trust proxy", trustProxyHops);
+  if (RUNTIME.trustProxyHops > 0) {
+    app.set("trust proxy", RUNTIME.trustProxyHops);
   }
 
   // CORS runs before body parsing so parser failures keep the same origin and
   // error-response contract as normal API failures.
   app.use(securityHeaders);
+  app.use(requestContext);
   app.use(corsMiddleware);
   app.use(express.json({ limit: "1mb" }));
   app.use(handleJsonParserError);
+
+  app.get("/health/live", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({ status: "ok" });
+  });
+
+  app.get("/health/ready", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({ status: "ready" });
+  });
 
   app.post("/api/chat", rateLimit, async (req, res) => {
     const validationError = validateChatInput(req.body as unknown);
@@ -317,9 +342,7 @@ async function startServer(): Promise<void> {
 
     const input = req.body as ChatInputBody;
     const userApiKey = input.apiKey?.trim() || "";
-    const serverApiKey = ALLOW_SERVER_API_KEY
-      ? process.env.NVIDIA_API_KEY?.trim() || ""
-      : "";
+    const serverApiKey = RUNTIME.allowServerApiKey ? RUNTIME.serverApiKey : "";
     const nvidiaApiKey = userApiKey || serverApiKey;
 
     if (!nvidiaApiKey) {
@@ -417,7 +440,7 @@ async function startServer(): Promise<void> {
     }
   });
 
-  if (!IS_PRODUCTION) {
+  if (!RUNTIME.isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

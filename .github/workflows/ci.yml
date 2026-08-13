@@ -6,9 +6,17 @@ on:
   pull_request:
     branches: [ main, master, develop ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
     - name: Checkout Repository
@@ -22,6 +30,9 @@ jobs:
 
     - name: Install Dependencies
       run: npm ci
+
+    - name: Audit Dependencies
+      run: npm audit --audit-level=high
 
     - name: Run Type & Lint Check
       run: npm run lint
@@ -42,3 +53,6 @@ jobs:
       run: npm run build
       env:
         NODE_ENV: production
+
+    - name: Build Production Container
+      run: docker build --tag bezi-ai:ci .

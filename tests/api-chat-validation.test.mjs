@@ -23,8 +23,8 @@ async function waitForServer() {
     }
 
     try {
-      await fetch(`${baseUrl}/`, { method: 'GET' });
-      return;
+      const response = await fetch(`${baseUrl}/health/ready`, { method: 'GET' });
+      if (response.ok) return;
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -139,6 +139,28 @@ test('server API key is disabled unless explicitly opted in', async () => {
   assert.match(body.error, /API Key/);
 });
 
+test('exposes liveness and readiness without caching deployment details', async () => {
+  for (const path of ['/health/live', '/health/ready']) {
+    const response = await fetch(`${baseUrl}${path}`);
+    const body = await readJson(response);
+
+    assert.equal(response.status, 200);
+    assert.match(body.status, /^(ok|ready)$/);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.match(response.headers.get('x-request-id') || '', /^[0-9a-f-]{36}$/i);
+  }
+});
+
+test('returns request tracing and rate-limit budget headers', async () => {
+  const response = await postJson({ messages: [] });
+  await readJson(response);
+
+  assert.match(response.headers.get('x-request-id') || '', /^[0-9a-f-]{36}$/i);
+  assert.equal(response.headers.get('ratelimit-limit'), '30');
+  assert.match(response.headers.get('ratelimit-remaining') || '', /^\d+$/);
+  assert.match(response.headers.get('ratelimit-reset') || '', /^\d+$/);
+});
+
 test('applies production browser security headers to API errors', async () => {
   const response = await postJson({ messages: [] });
   await readJson(response);
@@ -219,4 +241,21 @@ test('rejects an empty messages array before opening an SSE stream', async () =>
   assert.equal(response.status, 422);
   assertErrorContract(body, 'VALIDATION_ERROR');
   assert.match(body.error, /至少需要一則訊息/);
+});
+
+test('enforces the request budget and returns retry guidance', async () => {
+  let limitedResponse;
+  for (let attempt = 0; attempt < 35; attempt += 1) {
+    const response = await postJson({ messages: [] });
+    if (response.status === 429) {
+      limitedResponse = response;
+      break;
+    }
+  }
+
+  assert.ok(limitedResponse, 'expected the configured request budget to be enforced');
+  const body = await readJson(limitedResponse);
+  assertErrorContract(body, 'RATE_LIMITED');
+  assert.match(limitedResponse.headers.get('retry-after') || '', /^\d+$/);
+  assert.equal(limitedResponse.headers.get('ratelimit-remaining'), '0');
 });

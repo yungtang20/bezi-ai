@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
+  await page.goto('/');
+  await page.evaluate(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
   });
-  await page.goto('/');
+  await page.reload();
 });
 
 test('rejects an impossible calendar date on the real landing page', async ({ page }) => {
@@ -33,6 +34,12 @@ test('completes chart creation and calibration without an API key', async ({ pag
   await favorableChoices.nth(0).click();
   await favorableChoices.nth(1).click();
 
+  await expect(
+    page.getByRole('heading', { name: 'E2E 測試 的命盤' }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('八字格局 · 五行能量 · 人生藍圖')).toBeVisible();
+
+  await page.reload();
   await expect(
     page.getByRole('heading', { name: 'E2E 測試 的命盤' }),
   ).toBeVisible({ timeout: 30_000 });

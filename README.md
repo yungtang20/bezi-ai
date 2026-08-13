@@ -85,6 +85,15 @@ Content-Type: application/json; charset=utf-8
 
 若 provider 在串流開始後失敗，伺服器會送出 `event: error`，再以
 `event: done` / `[DONE]` 結束串流。內部 SDK 錯誤不會回傳給瀏覽器。
+每個回應都包含 `X-Request-ID`；受限流保護的端點另回傳
+`RateLimit-Limit`、`RateLimit-Remaining` 與 `RateLimit-Reset`。
+
+### Runtime health
+
+- `GET /health/live`：程序存活探針。
+- `GET /health/ready`：啟動設定已通過驗證、可接收流量的就緒探針。
+
+兩個端點均回傳 `Cache-Control: no-store`，不揭露金鑰或部署設定。
 
 ---
 
@@ -118,6 +127,12 @@ PORT=3000
 `ALLOWED_ORIGINS`，所有帶 `Origin` 的瀏覽器請求會 fail closed；不會反射
 任意來源。反向代理部署只有在明確知道 hop 數時才設定
 `TRUST_PROXY_HOPS`。
+
+伺服器會在啟動時一次驗證所有環境設定；若明確啟用共用金鑰卻沒有
+設定 `NVIDIA_API_KEY`，或 port、proxy hop、限流數值無效，程序會停止而
+不是帶著不完整設定接收流量。單機限流可透過
+`RATE_LIMIT_WINDOW_MS`、`RATE_LIMIT_MAX` 調整；多實例公開部署仍應改用
+共享的限流 adapter。
 
 ### 4. 啟動開發伺服器
 ```bash
@@ -158,3 +173,4 @@ npm run test:e2e
 4. **CORS fail closed**：Production 只接受 `ALLOWED_ORIGINS` 明列的瀏覽器來源。
 5. **共用金鑰明確啟用**：伺服器環境金鑰只有在 `ALLOW_SERVER_API_KEY=true` 時使用；BYOK 維持可用。
 6. **瀏覽器安全標頭**：Production 回應包含 CSP、HSTS、frame-ancestors/X-Frame-Options、nosniff、Referrer-Policy 與 Permissions-Policy。
+7. **可追蹤與可探測**：API 回應包含不可由客戶端指定的 request ID，伺服器輸出不含訊息內容的結構化完成紀錄，容器具備 readiness healthcheck。
