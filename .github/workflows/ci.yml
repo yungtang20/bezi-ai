@@ -62,5 +62,5 @@ jobs:
         docker run --detach --name bezi-ai-ci --publish 3300:3000 bezi-ai:ci
         trap 'docker logs bezi-ai-ci; docker rm --force bezi-ai-ci' EXIT
         curl --fail --silent --show-error \
-          --retry 15 --retry-delay 1 --retry-connrefused \
+          --retry 15 --retry-delay 1 --retry-all-errors \
           http://127.0.0.1:3300/health/ready
