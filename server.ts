@@ -105,6 +105,17 @@ function securityHeaders(
   next();
 }
 
+function isSameOriginRequest(req: express.Request, origin: string): boolean {
+  try {
+    const parsedOrigin = new URL(origin);
+    const requestHost = req.get("host")?.toLowerCase();
+    return parsedOrigin.protocol === `${req.protocol}:`
+      && parsedOrigin.host.toLowerCase() === requestHost;
+  } catch {
+    return false;
+  }
+}
+
 function requestContext(
   req: express.Request,
   res: express.Response,
@@ -140,7 +151,9 @@ function corsMiddleware(
   res.vary("Origin");
 
   if (origin) {
-    if (!RUNTIME.allowedOrigins.has(origin)) {
+    const originAllowed = isSameOriginRequest(req, origin)
+      || RUNTIME.allowedOrigins.has(origin);
+    if (!originAllowed) {
       sendJsonError(
         res,
         new BaziError("此來源未獲允許。", "ORIGIN_NOT_ALLOWED", 403),
