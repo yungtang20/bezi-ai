@@ -78,11 +78,15 @@ export default function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [showAI, setShowAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY) || '');
+  const [apiKeyInput, setApiKeyInput] = useState('');
   const [apiKeySaved, setApiKeySaved] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+
+    // Remove API keys persisted by older releases. Secrets now live only in
+    // React memory and disappear when the tab is refreshed or closed.
+    localStorage.removeItem('bazi_api_key');
 
     const resetToLanding = () => {
       if (cancelled) return;
@@ -317,10 +321,7 @@ export default function App() {
         {step >= 4 && (
           <div className="md:hidden fixed top-4 right-4 z-40">
             <button
-              onClick={() => {
-                setApiKeyInput(localStorage.getItem('bazi_api_key') || '');
-                setShowSettings(true);
-              }}
+              onClick={() => setShowSettings(true)}
               className="p-2.5 rounded-full bg-zinc-950/80 border border-white/10 text-zen-gold shadow-lg backdrop-blur-md hover:bg-zinc-900 transition-all active:scale-95 flex items-center justify-center focus:outline-none"
               title="系統設定"
             >
@@ -761,25 +762,24 @@ export default function App() {
             className="w-full px-3 py-2.5 bg-zen-surface/60 border border-zen-border rounded-lg text-zen-text text-sm placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
           />
           <p className="text-[11px] text-zen-muted/50 leading-relaxed">
-            金鑰會儲存於此瀏覽器；開始對談時，會連同請求送至本站的 AI 代理伺服器。
+            金鑰只保留在目前分頁的記憶體中；重新整理或關閉分頁後即清除。開始對談時，會連同請求送至本站的 AI 代理伺服器。
             </p>
         </div>
 
         <div className="flex gap-3 mt-5">
           <button
             onClick={() => {
-              localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY, apiKeyInput);
+              setApiKeyInput(apiKeyInput.trim());
               setApiKeySaved(true);
               setTimeout(() => setApiKeySaved(false), 2000);
             }}
             className="flex-1 py-2.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors"
           >
-            {apiKeySaved ? '✓ 已儲存' : '儲存金鑰'}
+            {apiKeySaved ? '✓ 已套用' : '套用金鑰'}
           </button>
           <button
             onClick={() => {
               setApiKeyInput('');
-              localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY);
               setApiKeySaved(false);
             }}
             className="px-4 py-2.5 bg-white/5 border border-white/10 text-zen-muted rounded-lg text-sm hover:bg-white/10 transition-colors"
@@ -799,7 +799,12 @@ export default function App() {
         >
           {showAI && (
             <Suspense fallback={<SkeletonPage />}>
-              <AIChatPanel bazi={bazi} userName={name} />
+              <AIChatPanel
+                bazi={bazi}
+                userName={name}
+                apiKey={apiKeyInput}
+                onApiKeyChange={setApiKeyInput}
+              />
             </Suspense>
           )}
         </Drawer>

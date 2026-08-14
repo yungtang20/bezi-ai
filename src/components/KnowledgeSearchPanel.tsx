@@ -361,9 +361,11 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // 從後端 API 取得串流並合併為單一字串
-async function fetchFromBackend(messages: Array<{ role: string; content: string }>, systemPrompt: string): Promise<string> {
-  const apiKey = localStorage.getItem('bazi_api_key') || undefined;
-
+async function fetchFromBackend(
+  messages: Array<{ role: string; content: string }>,
+  systemPrompt: string,
+  apiKey?: string,
+): Promise<string> {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: {
@@ -372,7 +374,7 @@ async function fetchFromBackend(messages: Array<{ role: string; content: string 
     body: JSON.stringify({
       messages,
       customPrompt: systemPrompt,
-      apiKey
+      apiKey: apiKey?.trim() || undefined,
     })
   });
 
@@ -425,7 +427,7 @@ async function fetchFromBackend(messages: Array<{ role: string; content: string 
 }
 
 // 用於「AI 白話解釋」
-async function fetchAIExplanation(title: string, snippet: string, ref: string): Promise<string> {
+async function fetchAIExplanation(title: string, snippet: string, ref: string, apiKey?: string): Promise<string> {
   const systemPrompt = '你是一位八字命理專家，請用簡單白話的方式解釋下列八字命理概念。解釋要：1) 簡單易懂 2) 舉例說明 3) 提供實際應用建議。請用繁體中文回答。';
   const messages = [
     {
@@ -434,14 +436,15 @@ async function fetchAIExplanation(title: string, snippet: string, ref: string): 
     },
   ];
 
-  return fetchFromBackend(messages, systemPrompt);
+  return fetchFromBackend(messages, systemPrompt, apiKey);
 }
 
 // 用於「追問」
 async function fetchAIFollowUp(
   title: string,
   previousExplanation: string,
-  question: string
+  question: string,
+  apiKey?: string,
 ): Promise<string> {
   const systemPrompt = '你是一位八字命理專家，請用簡單白話的方式回答問題。請用繁體中文回答。';
   const messages = [
@@ -455,13 +458,17 @@ async function fetchAIFollowUp(
     },
   ];
 
-  return fetchFromBackend(messages, systemPrompt);
+  return fetchFromBackend(messages, systemPrompt, apiKey);
 }
 
 // 標籤捷徑
 const TAG_SHORTCUTS = ['財運', '桃花', '健康', '事業', '太歲', '貴人', '小人', '化解'];
 
-export default function KnowledgeSearchPanel() {
+interface KnowledgeSearchPanelProps {
+  apiKey?: string;
+}
+
+export default function KnowledgeSearchPanel({ apiKey }: KnowledgeSearchPanelProps) {
   // 搜尋狀態
   const [query, setQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -532,7 +539,7 @@ export default function KnowledgeSearchPanel() {
     }));
 
     try {
-      const explanation = await fetchAIExplanation(item.title, item.snippet, item.ref);
+      const explanation = await fetchAIExplanation(item.title, item.snippet, item.ref, apiKey);
       setAiResponses((prev) => ({
         ...prev,
         [key]: { content: explanation, isLoading: false, error: null },
@@ -544,7 +551,7 @@ export default function KnowledgeSearchPanel() {
         [key]: { content: '', isLoading: false, error: errorMessage },
       }));
     }
-  }, []);
+  }, [apiKey]);
 
   // 追問
   const handleFollowUp = useCallback(
@@ -560,7 +567,7 @@ export default function KnowledgeSearchPanel() {
       }));
 
       try {
-        const answer = await fetchAIFollowUp(item.title, prevExplanation, question);
+        const answer = await fetchAIFollowUp(item.title, prevExplanation, question, apiKey);
         setFollowUpResponses((prev) => ({
           ...prev,
           [key]: { content: answer, isLoading: false, error: null },
@@ -574,7 +581,7 @@ export default function KnowledgeSearchPanel() {
         }));
       }
     },
-    [followUpQuestions, aiResponses]
+    [followUpQuestions, aiResponses, apiKey]
   );
 
   // 高亮搜尋關鍵字

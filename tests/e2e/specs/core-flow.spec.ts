@@ -22,6 +22,18 @@ test('rejects an impossible calendar date on the real landing page', async ({ pa
   await expect(page.getByText('出生日期不存在')).toBeVisible();
 });
 
+test('removes API keys persisted by older releases', async ({ page }) => {
+  await page.evaluate(() => {
+    window.localStorage.setItem('bazi_api_key', 'legacy-plaintext-secret');
+  });
+
+  await page.reload();
+
+  await expect.poll(
+    () => page.evaluate(() => window.localStorage.getItem('bazi_api_key')),
+  ).toBeNull();
+});
+
 test('completes chart creation and calibration without an API key', async ({ page }) => {
   await page.getByLabel('您的稱呼').fill('E2E 測試');
   await page.getByRole('button', { name: '男' }).click();
@@ -39,9 +51,20 @@ test('completes chart creation and calibration without an API key', async ({ pag
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('八字格局 · 五行能量 · 人生藍圖')).toBeVisible();
 
+  await page.getByRole('button', { name: '設定' }).click();
+  const apiKeyInput = page.getByPlaceholder('輸入您的 API 金鑰...');
+  await apiKeyInput.fill('session-only-test-key');
+  await page.getByRole('button', { name: '套用金鑰' }).click();
+  await expect.poll(
+    () => page.evaluate(() => window.localStorage.getItem('bazi_api_key')),
+  ).toBeNull();
+
   await page.reload();
   await expect(
     page.getByRole('heading', { name: 'E2E 測試 的命盤' }),
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('八字格局 · 五行能量 · 人生藍圖')).toBeVisible();
+
+  await page.getByRole('button', { name: '設定' }).click();
+  await expect(page.getByPlaceholder('輸入您的 API 金鑰...')).toHaveValue('');
 });

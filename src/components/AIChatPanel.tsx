@@ -14,6 +14,8 @@ interface Message {
 interface AIChatPanelProps {
   bazi?: BaziDisplay | null;
   userName?: string;
+  apiKey: string;
+  onApiKeyChange: (value: string) => void;
 }
 
 // 專業且負責任的八字命理師 System Prompt — 含完整倫理規範、多門派分析框架、行動導向
@@ -34,14 +36,13 @@ const SYSTEM_PROMPT = `你是一位專業且負責任的八字學術分析師，
 
 請用繁體中文作答。語氣溫厚謙和，像一位睿智、溫柔的命理老師與朋友在相談。`;
 
-export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
+export default function AIChatPanel({ bazi, userName, apiKey, onApiKeyChange }: AIChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
-  const [localApiKey, setLocalApiKey] = useState(() => localStorage.getItem('bazi_api_key') || '');
   const [isKeySaved, setIsKeySaved] = useState(false);
   const [showKeyConfig, setShowKeyConfig] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -143,7 +144,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
           customPrompt: activePrompt,
-          apiKey: localStorage.getItem('bazi_api_key') || undefined,
+          apiKey: apiKey.trim() || undefined,
         }),
         signal: controller.signal,
       });
@@ -263,7 +264,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
           >
             <span>🔑 {showKeyConfig ? '收起 API 金鑰設定' : '設定自訂 AI API 金鑰'}</span>
             <span className="text-[9px] text-amber-500/80">
-              {localApiKey ? '（已設定）' : '（尚未設定）'}
+              {apiKey ? '（已設定）' : '（尚未設定）'}
             </span>
           </button>
         </div>
@@ -273,9 +274,9 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
             <div className="flex gap-2">
               <input
                 type="password"
-                value={localApiKey}
+                value={apiKey}
                 onChange={(e) => {
-                  setLocalApiKey(e.target.value);
+                  onApiKeyChange(e.target.value);
                   setIsKeySaved(false);
                 }}
                 placeholder="輸入您的自訂 AI API 金鑰"
@@ -283,22 +284,17 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
               />
               <button
                 onClick={() => {
-                  const cleaned = localApiKey.trim();
-                  if (cleaned) {
-                    localStorage.setItem('bazi_api_key', cleaned);
-                  } else {
-                    localStorage.removeItem('bazi_api_key');
-                  }
+                  onApiKeyChange(apiKey.trim());
                   setIsKeySaved(true);
                   setTimeout(() => setIsKeySaved(false), 2000);
                 }}
                 className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 rounded-lg text-[10px] font-medium transition-colors focus:outline-none"
               >
-                {isKeySaved ? '已儲存' : '儲存'}
+                {isKeySaved ? '已套用' : '套用'}
               </button>
             </div>
             <p className="text-[9px] text-zen-muted/50 leading-normal">
-              金鑰會儲存於此瀏覽器，並在對談時送至本站 AI 代理伺服器。只有部署者明確啟用共用金鑰時，留空才能使用伺服器預設服務。
+              金鑰只保留在目前分頁的記憶體中，重新整理或關閉分頁後即清除；對談時會送至本站 AI 代理伺服器。只有部署者明確啟用共用金鑰時，留空才能使用伺服器預設服務。
             </p>
           </div>
         )}

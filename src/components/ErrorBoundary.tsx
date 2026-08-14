@@ -44,13 +44,9 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   };
 
   private handleReset = () => {
-    if (window.confirm('確定要清除快取並重設系統嗎？您的自訂 API 金鑰將會保留。')) {
-      const apiKey = localStorage.getItem('bazi_api_key');
+    if (window.confirm('確定要清除快取並重設系統嗎？目前分頁中的自訂 API 金鑰也會清除。')) {
       localStorage.clear();
       sessionStorage.clear();
-      if (apiKey) {
-        localStorage.setItem('bazi_api_key', apiKey);
-      }
       window.location.href = window.location.origin;
     }
   };

@@ -2,6 +2,7 @@
 import express from "express";
 import path from "path";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
 import dotenv from "dotenv";
@@ -448,9 +449,11 @@ async function startServer(): Promise<void> {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    const indexHtml = await readFile(path.join(distPath, "index.html"), "utf8");
     app.use(express.static(distPath));
     app.get("*", (_req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      res.setHeader("Cache-Control", "no-cache");
+      res.type("html").send(indexHtml);
     });
   }
 

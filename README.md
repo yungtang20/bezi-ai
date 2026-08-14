@@ -40,7 +40,7 @@
 - **資安與防禦**：
   - 後端嚴格校驗訊息數量、內容長度與系統提示格式
   - XSS 防護：使用 `DOMPurify` 洗淨 AI 渲染內容
-  - API 金鑰邊界：金鑰絕不硬編碼於原始碼中，支援明確啟用的伺服器環境變數或使用者 BYOK
+  - API 金鑰邊界：金鑰絕不硬編碼於原始碼中；使用者 BYOK 只保留在目前分頁記憶體，或由部署者明確啟用伺服器環境變數
 
 ---
 
@@ -115,8 +115,9 @@ npm ci
 ```
 
 ### 3. 設定環境變數
-將 `.env.example` 複製為 `.env.local`。預設採 BYOK，由瀏覽器隨請求提供
-NVIDIA API Key；若要啟用伺服器共用金鑰，必須明確設為允許：
+將 `.env.example` 複製為 `.env.local`。預設採 BYOK，由瀏覽器目前分頁的
+記憶體隨請求提供 NVIDIA API Key，不寫入 `localStorage` 或
+`sessionStorage`；若要啟用伺服器共用金鑰，必須明確設為允許：
 ```bash
 cp .env.example .env.local
 ```
@@ -177,6 +178,6 @@ npm run test:e2e
 2. **XSS 防範**：前端渲染來自使用者的對話與 AI 回應時，必須經過 `DOMPurify` 處理。
 3. **輸入消毒**：請求到達 LLM 前，伺服器驗證角色、訊息長度、總長度、筆數與請求頻率。
 4. **CORS fail closed**：Production 只接受 `ALLOWED_ORIGINS` 明列的瀏覽器來源。
-5. **共用金鑰明確啟用**：伺服器環境金鑰只有在 `ALLOW_SERVER_API_KEY=true` 時使用；BYOK 維持可用。
+5. **金鑰最小留存**：伺服器環境金鑰只有在 `ALLOW_SERVER_API_KEY=true` 時使用；BYOK 只存在目前分頁記憶體，重新整理或關閉分頁即清除。
 6. **瀏覽器安全標頭**：Production 回應包含 CSP、HSTS、frame-ancestors/X-Frame-Options、nosniff、Referrer-Policy 與 Permissions-Policy。
 7. **可追蹤與可探測**：API 回應包含不可由客戶端指定的 request ID，伺服器輸出不含訊息內容的結構化完成紀錄，容器具備 readiness healthcheck。
