@@ -1,6 +1,8 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { access, mkdir, rm, rmdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 const port = 32_000 + (process.pid % 10_000);
 const baseUrl = `http://127.0.0.1:${port}`;
@@ -8,6 +10,10 @@ const allowedOrigin = 'http://allowed.example';
 
 let serverProcess;
 let serverOutput = '';
+const staticDirectory = path.join(process.cwd(), 'dist');
+const staticIndexPath = path.join(staticDirectory, 'index.html');
+let createdStaticDirectory = false;
+let createdStaticFixture = false;
 
 function serverHasExited() {
   return serverProcess
@@ -53,6 +59,20 @@ function assertErrorContract(body, code) {
 }
 
 before(async () => {
+  try {
+    await access(staticIndexPath);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+
+    createdStaticDirectory = (await mkdir(staticDirectory, { recursive: true })) !== undefined;
+    await writeFile(
+      staticIndexPath,
+      '<!doctype html><html><body><div id="root"></div></body></html>',
+      'utf8',
+    );
+    createdStaticFixture = true;
+  }
+
   serverProcess = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
     cwd: process.cwd(),
     env: {
@@ -77,18 +97,23 @@ before(async () => {
 });
 
 after(async () => {
-  if (!serverProcess || serverHasExited()) return;
+  try {
+    if (serverProcess && !serverHasExited()) {
+      const exited = new Promise((resolve) => serverProcess.once('exit', resolve));
+      serverProcess.kill('SIGTERM');
+      await Promise.race([
+        exited,
+        new Promise((resolve) => setTimeout(resolve, 3_000)),
+      ]);
 
-  const exited = new Promise((resolve) => serverProcess.once('exit', resolve));
-  serverProcess.kill('SIGTERM');
-  await Promise.race([
-    exited,
-    new Promise((resolve) => setTimeout(resolve, 3_000)),
-  ]);
-
-  if (!serverHasExited()) {
-    serverProcess.kill('SIGKILL');
-    await exited;
+      if (!serverHasExited()) {
+        serverProcess.kill('SIGKILL');
+        await exited;
+      }
+    }
+  } finally {
+    if (createdStaticFixture) await rm(staticIndexPath, { force: true });
+    if (createdStaticDirectory) await rmdir(staticDirectory).catch(() => {});
   }
 });
 
