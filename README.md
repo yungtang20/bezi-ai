@@ -8,6 +8,8 @@
 
 主要儲存庫：https://github.com/yungtang20/bezi-ai
 
+線上網站：[https://bezi-ai-api-yungtang20.onrender.com/](https://bezi-ai-api-yungtang20.onrender.com/)
+
 [![CI Pipeline](https://github.com/yungtang20/bezi-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/yungtang20/bezi-ai/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/yungtang20/bezi-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/yungtang20/bezi-ai/actions/workflows/codeql.yml)
 
