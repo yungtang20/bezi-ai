@@ -1,7 +1,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, mkdir, rm, rmdir, writeFile } from 'node:fs/promises';
+import { mkdir, open, rm, rmdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const port = 32_000 + (process.pid % 10_000);
@@ -59,18 +59,21 @@ function assertErrorContract(body, code) {
 }
 
 before(async () => {
-  try {
-    await access(staticIndexPath);
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw error;
+  createdStaticDirectory = (await mkdir(staticDirectory, { recursive: true })) !== undefined;
 
-    createdStaticDirectory = (await mkdir(staticDirectory, { recursive: true })) !== undefined;
-    await writeFile(
-      staticIndexPath,
-      '<!doctype html><html><body><div id="root"></div></body></html>',
-      'utf8',
-    );
-    createdStaticFixture = true;
+  try {
+    const fixtureHandle = await open(staticIndexPath, 'wx');
+    try {
+      await fixtureHandle.writeFile(
+        '<!doctype html><html><body><div id="root"></div></body></html>',
+        'utf8',
+      );
+      createdStaticFixture = true;
+    } finally {
+      await fixtureHandle.close();
+    }
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
   }
 
   serverProcess = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
