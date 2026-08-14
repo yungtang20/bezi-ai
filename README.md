@@ -151,6 +151,28 @@ npm run dev
 ```
 開發伺服器將於 `http://localhost:3000` 啟動。
 
+### 5. GitHub Pages + Render 部署
+
+GitHub Pages 只部署靜態前端；Express `/api/chat` 由 Render Web Service
+提供，Gemini 金鑰只設定在 Render 的秘密環境變數中，絕不寫入 Pages
+建置產物。
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yungtang20/bezi-ai)
+
+1. 在 Render 以本儲存庫根目錄的 `render.yaml` 建立 Blueprint，並在建立
+   服務時填入新的 `GEMINI_API_KEY`。
+2. Render 預設服務網址為
+   `https://bezi-ai-api-yungtang20.onrender.com`。若實際網址不同，請在
+   GitHub 儲存庫的 Settings → Secrets and variables → Actions → Variables
+   新增 `API_BASE_URL`，值設為實際的 HTTPS 網址。
+3. GitHub Pages workflow 會在 `main` 更新後建置 `/bezi-ai/` 路徑，並將
+   前端對談請求指向上述 API。
+4. 在 Settings → Pages 將 Source 設為 GitHub Actions；正式網址為
+   `https://yungtang20.github.io/bezi-ai/`。
+
+Render 免費 Web Service 閒置後可能休眠，首次 AI 請求可能需要等待服務
+喚醒；正式環境建議改用不休眠的方案。
+
 ---
 
 ## 🧪 測試與品質檢驗 (Testing & Linting)

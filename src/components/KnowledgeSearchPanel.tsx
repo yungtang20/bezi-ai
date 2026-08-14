@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { readChatHttpError } from '../api/chatError';
+import { CLIENT_CONFIG } from '../config';
 
 // 知識索引項目介面
 interface KnowledgeItem {
@@ -367,7 +368,7 @@ async function fetchFromBackend(
   systemPrompt: string,
   apiKey?: string,
 ): Promise<string> {
-  const response = await fetch('/api/chat', {
+  const response = await fetch(CLIENT_CONFIG.API.CHAT_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
