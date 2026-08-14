@@ -223,6 +223,16 @@ test('allows configured CORS origins on preflight', async () => {
   assert.match(response.headers.get('vary') || '', /Origin/i);
 });
 
+test('allows same-origin browser requests without adding the service URL to ALLOWED_ORIGINS', async () => {
+  const response = await fetch(`${baseUrl}/`, {
+    headers: { Origin: baseUrl },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), baseUrl);
+  assert.match(await response.text(), /<div id="root"><\/div>/);
+});
+
 test('rejects unconfigured CORS origins without reflecting them', async () => {
   const response = await fetch(`${baseUrl}/api/chat`, {
     method: 'OPTIONS',
