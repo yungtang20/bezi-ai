@@ -6,7 +6,7 @@ describe('runtime configuration', () => {
     expect(() => loadRuntimeConfig({
       NODE_ENV: 'production',
       ALLOW_SERVER_API_KEY: 'true',
-    })).toThrow(/NVIDIA_API_KEY is required/);
+    })).toThrow(/GEMINI_API_KEY is required/);
   });
 
   it('rejects malformed booleans and unsafe numeric ranges', () => {
@@ -31,6 +31,7 @@ describe('runtime configuration', () => {
       TRUST_PROXY_HOPS: '1',
       RATE_LIMIT_WINDOW_MS: '120000',
       RATE_LIMIT_MAX: '50',
+      GEMINI_MODEL: 'gemini-2.5-pro',
     });
 
     expect(config.port).toBe(8080);
@@ -41,5 +42,12 @@ describe('runtime configuration', () => {
     expect(config.trustProxyHops).toBe(1);
     expect(config.rateLimitWindowMs).toBe(120_000);
     expect(config.rateLimitMax).toBe(50);
+    expect(config.geminiModel).toBe('gemini-2.5-pro');
+  });
+
+  it('uses the stable Gemini model default and rejects malformed model ids', () => {
+    expect(loadRuntimeConfig({}).geminiModel).toBe('gemini-2.5-flash');
+    expect(() => loadRuntimeConfig({ GEMINI_MODEL: 'https://attacker.example/model' }))
+      .toThrow(/GEMINI_MODEL/);
   });
 });

@@ -31,13 +31,14 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
   const [overrideOutcome, setOverrideOutcome] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [canCheckIn, setCanCheckIn] = useState(false);
   const [monthAccuracy, setMonthAccuracy] = useState<number | null>(null);
   const [monthCategoryStats, setMonthCategoryStats] = useState<{name: string, score: number}[]>([]);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
     return formatLocalDate(new Date());
   });
+  const todayDateStr = formatLocalDate(new Date());
+  const canCheckIn = selectedDateStr <= todayDateStr;
 
   const forecastContext = useMemo(() => {
     if (!chart || !scores) return null;
@@ -55,10 +56,6 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
     
     const energy = getDailyEnergy(chart, patternResult.weakestElement, favorable, unfavorable, primaryPattern, selectedDateObj);
     setDailyEnergy(energy);
-    const now = new Date();
-    const todayDateStr = formatLocalDate(now);
-    setCanCheckIn(selectedDateStr < todayDateStr || (selectedDateStr === todayDateStr && now.getHours() >= 20));
-
     getDailyLog(selectedDateStr).then(log => {
       if (cancelled) return;
       if (log) {
@@ -121,8 +118,6 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
   }
 
   const { primaryPattern } = forecastContext;
-  const todayDateStr = formatLocalDate(new Date());
-
 
   const handleCheckIn = async () => {
     const hasAny = Object.values(categoryFeedback).some(v => v !== null);
@@ -289,7 +284,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
            <div className="mt-2">
              <h4 className="font-bold text-zen-text mb-3">10秒心流紀錄</h4>
              {!canCheckIn && !isSubmitted && (
-               <p className="text-sm text-zen-muted">紀錄將在今晚20:00開放</p>
+               <p className="text-sm text-zen-muted">未來日期尚未開放紀錄</p>
              )}
              {canCheckIn && !isSubmitted && (
                <div className="space-y-3">

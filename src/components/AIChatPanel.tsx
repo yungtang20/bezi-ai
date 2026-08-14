@@ -4,6 +4,7 @@ import { Send, Bot, User, Loader2, Sparkles, RotateCcw, AlertTriangle } from 'lu
 import DOMPurify from 'dompurify';
 import { BaziDisplay } from '../types';
 import { CLIENT_CONFIG } from '../config';
+import { readChatHttpError } from '../api/chatError';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -150,7 +151,7 @@ export default function AIChatPanel({ bazi, userName, apiKey, onApiKeyChange }: 
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP 錯誤 ${response.status}`);
+        throw new Error(await readChatHttpError(response));
       }
       if (!response.body) {
         throw new Error('AI 服務未回傳串流內容');
@@ -262,7 +263,7 @@ export default function AIChatPanel({ bazi, userName, apiKey, onApiKeyChange }: 
             onClick={() => setShowKeyConfig(!showKeyConfig)}
             className="flex items-center gap-1 text-[10px] text-zen-muted hover:text-amber-400 transition-colors font-mono uppercase tracking-wider focus:outline-none"
           >
-            <span>🔑 {showKeyConfig ? '收起 API 金鑰設定' : '設定自訂 AI API 金鑰'}</span>
+            <span>🔑 {showKeyConfig ? '收起 Gemini 金鑰設定' : '設定自訂 Gemini API 金鑰'}</span>
             <span className="text-[9px] text-amber-500/80">
               {apiKey ? '（已設定）' : '（尚未設定）'}
             </span>
@@ -279,7 +280,7 @@ export default function AIChatPanel({ bazi, userName, apiKey, onApiKeyChange }: 
                   onApiKeyChange(e.target.value);
                   setIsKeySaved(false);
                 }}
-                placeholder="輸入您的自訂 AI API 金鑰"
+                placeholder="輸入您的 Gemini API 金鑰"
                 className="flex-1 px-2.5 py-1.5 bg-black/60 border border-white/5 rounded-lg text-zen-text text-[11px] placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
               />
               <button
@@ -294,7 +295,7 @@ export default function AIChatPanel({ bazi, userName, apiKey, onApiKeyChange }: 
               </button>
             </div>
             <p className="text-[9px] text-zen-muted/50 leading-normal">
-              金鑰只保留在目前分頁的記憶體中，重新整理或關閉分頁後即清除；對談時會送至本站 AI 代理伺服器。只有部署者明確啟用共用金鑰時，留空才能使用伺服器預設服務。
+              請使用 Google AI Studio 建立的 Gemini API 金鑰。金鑰只保留在目前分頁的記憶體中，重新整理或關閉分頁後即清除；對談時會送至本站 AI 代理伺服器。只有部署者明確啟用共用金鑰時，留空才能使用伺服器預設服務。
             </p>
           </div>
         )}
