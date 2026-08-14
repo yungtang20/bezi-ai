@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { getTenGod, GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../../src/constants';
+import {
+  getTenGod,
+  getTenGodCategory,
+  getYinYang,
+  isSameYinYang,
+  GAN_TO_ELEMENT,
+  ZHI_TO_ELEMENT,
+} from '../../src/constants';
 
 describe('Constants & Ten Gods calculations', () => {
   it('correctly maps Tian Gan to Wu Xing elements', () => {
@@ -29,5 +36,14 @@ describe('Constants & Ten Gods calculations', () => {
     expect(getTenGod('甲', '辛')).toBe('正官');
     expect(getTenGod('甲', '壬')).toBe('偏印');
     expect(getTenGod('甲', '癸')).toBe('正印');
+  });
+
+  it('fails closed for unknown stems and Ten Gods', () => {
+    expect(getTenGod('未知', '甲')).toBe('未知');
+    expect(getTenGod('甲', '未知')).toBe('未知');
+    expect(getTenGodCategory('未知')).toBe('未知');
+    expect(getTenGodCategory('任意值')).toBe('未知');
+    expect(getYinYang('未知')).toBeNull();
+    expect(isSameYinYang('未知', '未知')).toBe(false);
   });
 });

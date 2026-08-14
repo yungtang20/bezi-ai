@@ -336,7 +336,7 @@ export default function FriendsPage({
   const nobleDecorGuide = CAREER_NOBLE_DECOR_MAP[dayElement];
 
   // 5. 流日人際預警 (使用 villainDays)
-  const upcomingVillainDays = getUpcomingDatesForCategory(chart, 'health_warning', favorable, unfavorable, weakestElement, 4, partners);
+  const upcomingVillainDays = getUpcomingDatesForCategory(chart, 'villain', favorable, unfavorable, weakestElement, 4, partners);
 
     const menuItems = [
     { id: 'judgment', label: '1. 我是怎麼判斷的', labelShort: '判斷依據', icon: Compass },
@@ -604,7 +604,7 @@ export default function FriendsPage({
           {upcomingVillainDays.length > 0 ? (
             <DailyForecastCard
               chart={chart}
-              category="health_warning"
+              category="villain"
               categoryName="人際社交"
               accentColor="text-indigo-400"
               title="流日專屬人際防小人與預警日曆"

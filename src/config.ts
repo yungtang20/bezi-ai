@@ -9,7 +9,6 @@ export const CLIENT_CONFIG = {
     GENDER: 'bazi_gender',
     DATE: 'bazi_date',
     TIME: 'bazi_time',
-    API_KEY: 'bazi_api_key',
     CURRENT_STEP: 'bazi_current_step',
     CALIBRATIONS: 'bazi_calibrations',
   },

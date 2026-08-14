@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Sparkles, RotateCcw, AlertTriangle } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { BaziDisplay } from '../types';
+import { CLIENT_CONFIG } from '../config';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -13,6 +14,8 @@ interface Message {
 interface AIChatPanelProps {
   bazi?: BaziDisplay | null;
   userName?: string;
+  apiKey: string;
+  onApiKeyChange: (value: string) => void;
 }
 
 // 專業且負責任的八字命理師 System Prompt — 含完整倫理規範、多門派分析框架、行動導向
@@ -33,22 +36,25 @@ const SYSTEM_PROMPT = `你是一位專業且負責任的八字學術分析師，
 
 請用繁體中文作答。語氣溫厚謙和，像一位睿智、溫柔的命理老師與朋友在相談。`;
 
-export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
+export default function AIChatPanel({ bazi, userName, apiKey, onApiKeyChange }: AIChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
-  const [localApiKey, setLocalApiKey] = useState(() => localStorage.getItem('bazi_api_key') || '');
   const [isKeySaved, setIsKeySaved] = useState(false);
   const [showKeyConfig, setShowKeyConfig] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(true);
+  const activeControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    isMounted.current = true;
     return () => {
       isMounted.current = false;
+      activeControllerRef.current?.abort();
+      activeControllerRef.current = null;
     };
   }, []);
 
@@ -101,17 +107,17 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
     if (!trimmed || isLoading) return;
 
     const userMessage: Message = { role: 'user', content: trimmed, timestamp: Date.now() };
-    const newMessages = [...messages, userMessage];
+    const newMessages = [...messages, userMessage].slice(-CLIENT_CONFIG.DEFAULT_VALUES.MAX_MESSAGES_HISTORY);
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
     setDebugInfo(null);
-    setStatus('連接 secure server-side AI 服務中...');
+    setStatus('連接 AI 服務中...');
 
+    const controller = new AbortController();
+    activeControllerRef.current = controller;
+    const timeoutId = window.setTimeout(() => controller.abort(), 90000);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000);
-
       // 合併原系統提示與八字的客製化上下文資訊
       let baziContext = '';
       if (bazi && bazi.chart) {
@@ -130,7 +136,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
 
       setStatus('分析大腦解析中...');
 
-      const response = await fetch('/api/chat', {
+      const response = await fetch(CLIENT_CONFIG.API.CHAT_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,68 +144,74 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
           customPrompt: activePrompt,
-          apiKey: localStorage.getItem('bazi_api_key') || undefined,
+          apiKey: apiKey.trim() || undefined,
         }),
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
-
       if (!response.ok) {
         throw new Error(`HTTP 錯誤 ${response.status}`);
+      }
+      if (!response.body) {
+        throw new Error('AI 服務未回傳串流內容');
       }
       
       setStatus('接受訊號中...');
       
       const assistantMessage: Message = { role: 'assistant', content: '', timestamp: Date.now() };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage].slice(-CLIENT_CONFIG.DEFAULT_VALUES.MAX_MESSAGES_HISTORY));
       setStatus(null);
 
-      if (response.body) {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder("utf-8");
-          let done = false;
-          let buffer = '';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let receivedDone = false;
 
-          while (!done) {
-              const { value, done: readerDone } = await reader.read();
-              done = readerDone;
-              if (value) {
-                  buffer += decoder.decode(value, { stream: true });
-                  const lines = buffer.split('\n');
-                  buffer = lines.pop() || '';
-                  
-                  for (const line of lines) {
-                      if (line.trim() === '') continue;
-                      if (line.startsWith('data: ')) {
-                          const dataStr = line.slice(6).trim();
-                          if (dataStr === '[DONE]') continue;
-                          
-                          try {
-                              const parsed = JSON.parse(dataStr);
-                              if (parsed.error) {
-                                  throw new Error(parsed.error);
-                              }
-                              if (parsed.content) {
-                                  setMessages(prev => {
-                                      const newMsgs = [...prev];
-                                      const last = { ...newMsgs[newMsgs.length - 1] };
-                                      last.content += parsed.content;
-                                      newMsgs[newMsgs.length - 1] = last;
-                                      return newMsgs;
-                                  });
-                              }
-                          } catch (e: unknown) {
-                              // maybe partial JSON or actual error inside stream processing
-                              const msg = e instanceof Error ? e.message : String(e);
-                              if (msg && !msg.includes("JSON")) {
-                                  throw e;
-                              }
-                          }
-                      }
-                  }
-              }
+      const processLine = (line: string): boolean => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine || !trimmedLine.startsWith('data:')) return false;
+        const dataString = trimmedLine.slice(5).trim();
+        if (dataString === '[DONE]') return true;
+
+        let parsed: { content?: unknown; error?: unknown };
+        try {
+          parsed = JSON.parse(dataString) as { content?: unknown; error?: unknown };
+        } catch {
+          throw new Error('AI 串流資料格式錯誤');
+        }
+        if (parsed.error) throw new Error(String(parsed.error));
+        if (typeof parsed.content === 'string' && parsed.content) {
+          if (!isMounted.current) return false;
+          setMessages(prev => {
+            if (prev.length === 0) return prev;
+            const next = [...prev];
+            const last = { ...next[next.length - 1] };
+            last.content += parsed.content as string;
+            next[next.length - 1] = last;
+            return next;
+          });
+        }
+        return false;
+      };
+
+      while (!receivedDone) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (processLine(line)) {
+            receivedDone = true;
+            break;
           }
+        }
+        if (done) {
+          if (buffer.trim()) processLine(buffer);
+          break;
+        }
+      }
+      if (receivedDone) {
+        await reader.cancel();
       }
 
     } catch (err: unknown) {
@@ -221,6 +233,10 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
       }
       setStatus(null);
     } finally {
+      window.clearTimeout(timeoutId);
+      if (activeControllerRef.current === controller) {
+        activeControllerRef.current = null;
+      }
       if (isMounted.current) setIsLoading(false);
     }
   };
@@ -246,9 +262,9 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
             onClick={() => setShowKeyConfig(!showKeyConfig)}
             className="flex items-center gap-1 text-[10px] text-zen-muted hover:text-amber-400 transition-colors font-mono uppercase tracking-wider focus:outline-none"
           >
-            <span>🔑 {showKeyConfig ? '收起 API 金鑰設定' : '設定 API 金鑰 (LongCat / Gemini)'}</span>
+            <span>🔑 {showKeyConfig ? '收起 API 金鑰設定' : '設定自訂 AI API 金鑰'}</span>
             <span className="text-[9px] text-amber-500/80">
-              {localApiKey ? '（已設定）' : '（將使用伺服器預設）'}
+              {apiKey ? '（已設定）' : '（尚未設定）'}
             </span>
           </button>
         </div>
@@ -258,32 +274,27 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
             <div className="flex gap-2">
               <input
                 type="password"
-                value={localApiKey}
+                value={apiKey}
                 onChange={(e) => {
-                  setLocalApiKey(e.target.value);
+                  onApiKeyChange(e.target.value);
                   setIsKeySaved(false);
                 }}
-                placeholder="輸入您的自訂 AI API 金鑰 (留空使用預設金鑰)"
+                placeholder="輸入您的自訂 AI API 金鑰"
                 className="flex-1 px-2.5 py-1.5 bg-black/60 border border-white/5 rounded-lg text-zen-text text-[11px] placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
               />
               <button
                 onClick={() => {
-                  const cleaned = localApiKey.trim();
-                  if (cleaned) {
-                    localStorage.setItem('bazi_api_key', cleaned);
-                  } else {
-                    localStorage.removeItem('bazi_api_key');
-                  }
+                  onApiKeyChange(apiKey.trim());
                   setIsKeySaved(true);
                   setTimeout(() => setIsKeySaved(false), 2000);
                 }}
                 className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 rounded-lg text-[10px] font-medium transition-colors focus:outline-none"
               >
-                {isKeySaved ? '已儲存' : '儲存'}
+                {isKeySaved ? '已套用' : '套用'}
               </button>
             </div>
             <p className="text-[9px] text-zen-muted/50 leading-normal">
-              金鑰僅儲存於本地。如未輸入，系統將使用預設的 AI 服務器（NVIDIA GLM 命理模型）進行對談。
+              金鑰只保留在目前分頁的記憶體中，重新整理或關閉分頁後即清除；對談時會送至本站 AI 代理伺服器。只有部署者明確啟用共用金鑰時，留空才能使用伺服器預設服務。
             </p>
           </div>
         )}
@@ -358,6 +369,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
       {/* 3. 輸入欄 */}
       <div className="shrink-0 flex gap-2">
         <input
+          aria-label="AI 對談訊息"
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -367,6 +379,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
           className="flex-1 px-3 py-2 bg-black/40 border border-white/5 rounded-xl text-xs text-zen-text placeholder-zen-muted focus:outline-none focus:border-amber-500/40"
         />
         <button
+          aria-label={isLoading ? 'AI 回覆產生中' : '送出訊息'}
           onClick={sendMessage}
           disabled={!input.trim() || isLoading}
           className="px-3 py-2 bg-amber-500/10 border border-amber-500/25 text-amber-400 hover:bg-amber-500/20 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
@@ -392,7 +405,7 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
         {!isLoading && !debugInfo && (
           <div className="flex items-center gap-1.5 px-1 py-0.5">
             <Sparkles className="w-3 h-3 text-pink-500/40" />
-            <span className="text-[10px] text-zen-muted/30 font-sans">對話內容皆安全加密傳輸</span>
+            <span className="text-[10px] text-zen-muted/30 font-sans">對話與命盤資料會送至本站 AI 代理；請僅在信任此網站與連線時使用。</span>
           </div>
         )}
         

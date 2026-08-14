@@ -2,7 +2,5 @@
   "name": "Remix: 八字",
   "description": "專業八字生辰理氣、五行住宅軟裝添運與流年運勢分析系統",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": []
 }

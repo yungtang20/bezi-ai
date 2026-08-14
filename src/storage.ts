@@ -1,6 +1,7 @@
 // src/storage.ts
 import { PartnerChart } from './matchmaking';
 import { PatternScores } from './pattern';
+import { formatLocalDate } from './utils/localDate';
 
 // 每日打卡記錄結構
 export interface DailyLog {
@@ -35,7 +36,11 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('partners')) db.createObjectStore('partners', { keyPath: 'id' });
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
     request.onblocked = () => reject(new Error('IndexedDB blocked — please close other tabs using this app'));
   });
@@ -57,41 +62,65 @@ function dbRequest<T>(store: IDBObjectStore | IDBIndex, method: string, key?: an
 
 /** Wait for an IndexedDB transaction to complete */
 function txComplete(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); });
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'));
+  });
 }
 
 // 儲存打卡記錄
 export async function saveDailyLog(log: DailyLog): Promise<void> {
   const db = await openDB();
-  const store = db.transaction('dailyLogs', 'readwrite').objectStore('dailyLogs');
-  const existing = await dbRequest<DailyLog | undefined>(store.index('date'), 'get', log.date);
-  const saved = { ...existing, ...log };
-  await dbRequest(store, 'put', saved);
+  try {
+    const tx = db.transaction('dailyLogs', 'readwrite');
+    const store = tx.objectStore('dailyLogs');
+    const existingRequest = store.index('date').get(log.date);
+    existingRequest.onsuccess = () => {
+      const existing = existingRequest.result as DailyLog | undefined;
+      store.put({ ...existing, ...log });
+    };
+    await txComplete(tx);
+  } finally {
+    db.close();
+  }
 }
 
 // 取得特定日期的打卡記錄
 export async function getDailyLog(date: string): Promise<DailyLog | null> {
   const db = await openDB();
-  const store = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
-  return (await dbRequest<DailyLog | undefined>(store.index('date'), 'get', date)) || null;
+  try {
+    const store = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
+    return (await dbRequest<DailyLog | undefined>(store.index('date'), 'get', date)) || null;
+  } finally {
+    db.close();
+  }
 }
 
 // 取得本月所有打卡記錄
 export async function getMonthLogs(year: number, month: number): Promise<DailyLog[]> {
   const db = await openDB();
-  const store = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
-  const all = await dbRequest<DailyLog[]>(store, 'getAll');
-  const prefix = `${year}-${String(month).padStart(2, '0')}`;
-  return all.filter(log => log.date?.startsWith(prefix));
+  try {
+    const store = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
+    const all = await dbRequest<DailyLog[]>(store, 'getAll');
+    const prefix = `${year}-${String(month).padStart(2, '0')}`;
+    return all.filter(log => log.date?.startsWith(prefix));
+  } finally {
+    db.close();
+  }
 }
 
 export async function getWeekLogs(): Promise<DailyLog[]> {
   const db = await openDB();
-  const store = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
-  const all = await dbRequest<DailyLog[]>(store, 'getAll');
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 7);
-  return all.filter(log => log.date >= cutoff.toISOString().split('T')[0]);
+  try {
+    const store = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
+    const all = await dbRequest<DailyLog[]>(store, 'getAll');
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    return all.filter(log => log.date >= formatLocalDate(cutoff));
+  } finally {
+    db.close();
+  }
 }
 
 // 通知記錄結構
@@ -109,24 +138,37 @@ export interface AppNotification {
 // 儲存格局分數
 export async function savePatternScores(scores: PatternScores): Promise<void> {
   const db = await openDB();
-  const store = db.transaction('patternScores', 'readwrite').objectStore('patternScores');
-  await dbRequest(store, 'put', { id: 'current', scores });
+  try {
+    const tx = db.transaction('patternScores', 'readwrite');
+    tx.objectStore('patternScores').put({ id: 'current', scores });
+    await txComplete(tx);
+  } finally {
+    db.close();
+  }
 }
 
 // 讀取格局分數
 export async function getPatternScores(): Promise<PatternScores | null> {
   const db = await openDB();
-  const store = db.transaction('patternScores', 'readonly').objectStore('patternScores');
-  const result = await dbRequest<{ scores: PatternScores } | undefined>(store, 'get', 'current');
-  return result?.scores || null;
+  try {
+    const store = db.transaction('patternScores', 'readonly').objectStore('patternScores');
+    const result = await dbRequest<{ scores: PatternScores } | undefined>(store, 'get', 'current');
+    return result?.scores || null;
+  } finally {
+    db.close();
+  }
 }
 
 // 儲存通知
 export async function saveNotification(notification: AppNotification): Promise<void> {
   const db = await openDB();
-  const tx = db.transaction('notifications', 'readwrite');
-  tx.objectStore('notifications').put(notification);
-  await txComplete(tx);
+  try {
+    const tx = db.transaction('notifications', 'readwrite');
+    tx.objectStore('notifications').put(notification);
+    await txComplete(tx);
+  } finally {
+    db.close();
+  }
 }
 
 // [AI MOD] getAllNotifications / getUnreadNotifications 已移除 — dead export（無外部消費者）
@@ -138,19 +180,31 @@ export async function saveNotification(notification: AppNotification): Promise<v
 
 export async function savePartner(partner: PartnerChart): Promise<void> {
   const db = await openDB();
-  const tx = db.transaction('partners', 'readwrite');
-  tx.objectStore('partners').put(partner);
-  await txComplete(tx);
+  try {
+    const tx = db.transaction('partners', 'readwrite');
+    tx.objectStore('partners').put(partner);
+    await txComplete(tx);
+  } finally {
+    db.close();
+  }
 }
 
 export async function getPartners(): Promise<PartnerChart[]> {
   const db = await openDB();
-  return dbRequest<PartnerChart[]>(db.transaction('partners', 'readonly').objectStore('partners'), 'getAll');
+  try {
+    return await dbRequest<PartnerChart[]>(db.transaction('partners', 'readonly').objectStore('partners'), 'getAll');
+  } finally {
+    db.close();
+  }
 }
 
 export async function deletePartner(id: string): Promise<void> {
   const db = await openDB();
-  const tx = db.transaction('partners', 'readwrite');
-  tx.objectStore('partners').delete(id);
-  await txComplete(tx);
+  try {
+    const tx = db.transaction('partners', 'readwrite');
+    tx.objectStore('partners').delete(id);
+    await txComplete(tx);
+  } finally {
+    db.close();
+  }
 }

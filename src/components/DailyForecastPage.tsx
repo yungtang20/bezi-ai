@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
-import { DailyEnergy, getDailyEnergy, getUpcomingDatesForCategory } from '../dailyAnalysis';
+import { DailyEnergy, getDailyEnergy } from '../dailyAnalysis';
 import { generateCalendarICS } from '../utils/calendarExport';
 import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs } from '../storage';
 import MonthlyForecastCalendar from './MonthlyForecastCalendar';
+import { addLocalDays, addLocalMonths, formatLocalDate, parseLocalDate } from '../utils/localDate';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 
 const CATEGORY_OPTIONS = [
@@ -35,26 +36,31 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
   const [monthCategoryStats, setMonthCategoryStats] = useState<{name: string, score: number}[]>([]);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
-    const d = new Date();
-    const tzOffset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
+    return formatLocalDate(new Date());
   });
 
-  if (!chart || !scores) return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
-
-  const primaryPattern = getPrimaryPattern(scores);
-  const patternResult = determinePattern(chart);
-  const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
+  const forecastContext = useMemo(() => {
+    if (!chart || !scores) return null;
+    const primaryPattern = getPrimaryPattern(scores);
+    const patternResult = determinePattern(chart);
+    const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
+    return { primaryPattern, patternResult, favorable, unfavorable };
+  }, [chart, scores]);
 
   useEffect(() => {
-    const dTokens = selectedDateStr.split('-');
-    const selectedDateObj = new Date(Number(dTokens[0]), Number(dTokens[1]) - 1, Number(dTokens[2]), 12, 0, 0);
+    if (!chart || !forecastContext) return;
+    let cancelled = false;
+    const selectedDateObj = parseLocalDate(selectedDateStr);
+    const { primaryPattern, patternResult, favorable, unfavorable } = forecastContext;
     
     const energy = getDailyEnergy(chart, patternResult.weakestElement, favorable, unfavorable, primaryPattern, selectedDateObj);
     setDailyEnergy(energy);
-    setCanCheckIn(true); // Allow all times for testing
+    const now = new Date();
+    const todayDateStr = formatLocalDate(now);
+    setCanCheckIn(selectedDateStr < todayDateStr || (selectedDateStr === todayDateStr && now.getHours() >= 20));
 
     getDailyLog(selectedDateStr).then(log => {
+      if (cancelled) return;
       if (log) {
         setCategoryFeedback({
           health: log.health || null,
@@ -73,8 +79,9 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
       }
     }).catch(() => {/* [AI MOD] 靜默處理 DB 錯誤 */});
 
-    const now = new Date();
-    getMonthLogs(now.getFullYear(), now.getMonth() + 1).then(logs => {
+    const [selectedYear, selectedMonth] = selectedDateStr.split('-').map(Number);
+    getMonthLogs(selectedYear, selectedMonth).then(logs => {
+        if (cancelled) return;
         if (logs.length > 0) {
           const cStats = { health: 0, career: 0, romance: 0, wealth: 0, family: 0, friends: 0 };
           logs.forEach(log => {
@@ -96,14 +103,25 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
           ]);
 
           import('../calibration').then(({ calculateAccuracy }) => {
-            setMonthAccuracy(calculateAccuracy(logs));
+            if (!cancelled) setMonthAccuracy(calculateAccuracy(logs));
           }).catch(() => {/* [AI MOD] 靜態處理 */});
         } else {
           setMonthCategoryStats([]);
           setMonthAccuracy(null);
         }
     }).catch(() => {/* [AI MOD] 靜默處理 DB 錯誤 */});
-  }, [chart, scores, selectedDateStr]); // Removed isSubmitted to fix edit bug
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chart, forecastContext, selectedDateStr]);
+
+  if (!chart || !scores || !forecastContext) {
+    return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
+  }
+
+  const { primaryPattern } = forecastContext;
+  const todayDateStr = formatLocalDate(new Date());
 
 
   const handleCheckIn = async () => {
@@ -132,7 +150,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
       const { savePatternScores, saveNotification } = await import('../storage');
       await savePatternScores(newScores);
 
-      const switchResult = checkAutoSwitch(newScores);
+      const switchResult = checkAutoSwitch(newScores, primaryPattern);
       if (switchResult) {
         const oldPattern = getPrimaryPattern(scores);
         await saveNotification({
@@ -216,9 +234,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
          <div className="flex items-center justify-between mb-4">
            <button 
              onClick={() => {
-               const d = new Date(selectedDateStr);
-               d.setMonth(d.getMonth() - 1);
-               setSelectedDateStr(d.toISOString().split('T')[0]);
+               setSelectedDateStr(addLocalMonths(selectedDateStr, -1));
              }}
              className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
            >
@@ -227,9 +243,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
            <span className="text-[14px] font-bold text-zen-text tracking-wider">{selectedDateStr.split('-')[0]} 年 {selectedDateStr.split('-')[1]} 月</span>
            <button 
              onClick={() => {
-               const d = new Date(selectedDateStr);
-               d.setMonth(d.getMonth() + 1);
-               setSelectedDateStr(d.toISOString().split('T')[0]);
+               setSelectedDateStr(addLocalMonths(selectedDateStr, 1));
              }}
              className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
            >
@@ -251,9 +265,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
              <div className="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1">
                <button 
                  onClick={() => {
-                   const d = new Date(selectedDateStr);
-                   d.setDate(d.getDate() - 1);
-                   setSelectedDateStr(d.toISOString().split('T')[0]);
+                   setSelectedDateStr(addLocalDays(selectedDateStr, -1));
                  }}
                  className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
                >
@@ -262,9 +274,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
                <span className="text-[13px] font-medium text-zen-muted min-w-[85px] text-center tracking-wider">{selectedDateStr.slice(5)}</span>
                <button 
                  onClick={() => {
-                   const d = new Date(selectedDateStr);
-                   d.setDate(d.getDate() + 1);
-                   setSelectedDateStr(d.toISOString().split('T')[0]);
+                   setSelectedDateStr(addLocalDays(selectedDateStr, 1));
                  }}
                  className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
                >
@@ -283,7 +293,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
              )}
              {canCheckIn && !isSubmitted && (
                <div className="space-y-3">
-                 <p className="text-sm text-zen-muted">回顧{selectedDateStr === new Date().toISOString().split('T')[0] ? '今天' : '該日'}，各領域的感受是？（可只選有感的）</p>
+                 <p className="text-sm text-zen-muted">回顧{selectedDateStr === todayDateStr ? '今天' : '該日'}，各領域的感受是？（可只選有感的）</p>
                  <div className="grid grid-cols-2 gap-2">
                    {CATEGORY_OPTIONS.map(cat => (
                      <div key={cat.key} className="bg-white/5 rounded-xl p-3 border border-white/5">
@@ -319,14 +329,14 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
                    className="w-full py-2 text-white rounded-xl font-medium disabled:opacity-50 mt-2 hover:bg-indigo-600 transition-colors"
                    style={{ backgroundColor: '#8B5CF6' }}
                  >
-                   記錄{selectedDateStr === new Date().toISOString().split('T')[0] ? '今天' : '這天'}的能量
+                   記錄{selectedDateStr === todayDateStr ? '今天' : '這天'}的能量
                  </button>
                </div>
              )}
              {isSubmitted && (
                <div className="flex flex-col items-center justify-center p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mt-2">
                  <div className="flex items-center text-emerald-400 font-medium mb-3">
-                   <span className="text-xl mr-2">✅</span> {selectedDateStr === new Date().toISOString().split('T')[0] ? '今日' : '這天'}已記錄
+                   <span className="text-xl mr-2">✅</span> {selectedDateStr === todayDateStr ? '今日' : '這天'}已記錄
                  </div>
                  <button
                    onClick={() => setIsSubmitted(false)}

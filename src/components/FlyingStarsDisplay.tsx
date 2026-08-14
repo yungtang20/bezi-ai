@@ -28,6 +28,7 @@ export default function FlyingStarsDisplay({
   gridColumns = 3
 }: FlyingStarsDisplayProps) {
   const yearRange = [2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035];
+  const responsiveGridClass = gridColumns === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3';
 
   return (
     <div className="mt-6 border-t border-zen-border pt-6">
@@ -62,7 +63,7 @@ export default function FlyingStarsDisplay({
       )}
 
       {/* 飛星列表 */}
-      <div className={`grid grid-cols-1 md:grid-cols-${gridColumns} gap-4`}>
+      <div className={`grid grid-cols-1 ${responsiveGridClass} gap-4`}>
         {stars.map((star) => (
           <div key={star.name} className="glass-card p-4 space-y-2 font-sans">
             <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${accentColor} bg-zen-surface/60 border border-zen-border mb-1`}>

@@ -141,9 +141,9 @@ export default function RecordPage({
         await savePatternScores(newScores);
         setLocalScores(newScores);
 
-        const switchResult = checkAutoSwitch(newScores);
+        const oldPattern = getPrimaryPattern(localScores);
+        const switchResult = checkAutoSwitch(newScores, oldPattern);
         if (switchResult) {
-          const oldPattern = getPrimaryPattern(localScores);
           await saveNotification({
             type: 'pattern_switch',
             title: '格局自動調整通知',

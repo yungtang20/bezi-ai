@@ -1,7 +1,7 @@
 import React from 'react';
 import { BaziChart } from '../paipan';
-import { calculateDaYun, getTenGodForDaYun } from '../dayun';
-import { GAN_TO_ELEMENT } from '../constants';
+import { calculateDaYun } from '../dayun';
+import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../constants';
 import { getLiunianAndRemedy } from '../data/core/fiveElementsBalance';
 import { DEFICIENT_ELEMENT_REMEDIES } from '../data/core/fiveElementsRemedies';
 import { FiveElement, DayMasterStrength } from '../data/core/types';
@@ -23,9 +23,9 @@ export default function DaYunRemedy({ chart, primaryPattern, favorable, pageCont
   
   let isDayunGood = false;
   if (currentDaYun) {
-    const currentDaYunGanGod = getTenGodForDaYun(chart.dayMaster, currentDaYun.gan);
-    const currentDaYunZhiGod = getTenGodForDaYun(chart.dayMaster, currentDaYun.zhi);
-    isDayunGood = favorable.includes(currentDaYunGanGod) || favorable.includes(currentDaYunZhiGod);
+    const currentDaYunGanElement = GAN_TO_ELEMENT[currentDaYun.gan];
+    const currentDaYunZhiElement = ZHI_TO_ELEMENT[currentDaYun.zhi];
+    isDayunGood = favorable.includes(currentDaYunGanElement) || favorable.includes(currentDaYunZhiElement);
   }
 
   const dmEl = GAN_TO_ELEMENT[chart.dayMaster] as FiveElement;

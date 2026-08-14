@@ -1,30 +1,27 @@
-import { Solar } from 'lunar-javascript';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Compass, Moon, Sun, Github, X, Sparkles, Settings } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import NavigationBar from './components/NavigationBar';
-import AIChatPanel from './components/AIChatPanel';
 import Modal from './components/Modal';
 import Drawer from './components/Drawer';
 import { SkeletonPage } from './components/Skeleton';
 import { useBirthForm } from './hooks/useBirthForm';
 
 // [AI MOD] Lazy-loaded page components
-// Dashboard 已精簡為先天命局，直接 import（非 lazy）
-import Dashboard from './components/Dashboard';
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const AIChatPanel = lazy(() => import('./components/AIChatPanel'));
 const SpecialtyNav = lazy(() => import('./components/SpecialtyNav'));
 const DailyForecastPage = lazy(() => import('./components/DailyForecastPage'));
 const TimelinePage = lazy(() => import('./components/TimelinePage'));
 const SynastryPage = lazy(() => import('./components/SynastryPage'));
 const ReferenceTablePage = lazy(() => import('./components/ReferenceTablePage'));
 
-import { calculateChart, BaziChart } from './paipan';
 import { BaziDisplay } from './types';
 import { determinePattern, PatternResult, PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements } from './pattern';
 import { GAN_TO_ELEMENT, getShiChen } from './constants';
 import { CLIENT_CONFIG } from './config';
-import { validateBirthInput } from './utils/validation';
+import { parseBirthHour, validateBirthInput } from './utils/validation';
 
 // [AI MOD] 定義有效的步驟型別（供 Sidebar 等元件匯入）
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
@@ -81,78 +78,107 @@ export default function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [showAI, setShowAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState(() => localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY) || '');
+  const [apiKeyInput, setApiKeyInput] = useState('');
   const [apiKeySaved, setApiKeySaved] = useState(false);
 
   useEffect(() => {
-    // Load persisted state from localStorage
-    const savedName = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.NAME);
-    const savedGender = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER);
-    const savedDate = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
-    const savedTime = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.TIME);
+    let cancelled = false;
 
-    if (savedName && savedGender && savedDate && savedTime !== null) {
-      setName(savedName);
-      setGender(savedGender as 'male' | 'female');
-      setBirthDate(savedDate);
-      setBirthTime(savedTime);
-      setBirthTimeInput(savedTime);
-      
+    // Remove API keys persisted by older releases. Secrets now live only in
+    // React memory and disappear when the tab is refreshed or closed.
+    localStorage.removeItem('bazi_api_key');
+
+    const resetToLanding = () => {
+      if (cancelled) return;
+      setStep(1);
+      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+      setIsInitializing(false);
+    };
+
+    const restorePersistedState = async () => {
+      const savedName = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.NAME);
+      const savedGender = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER);
+      const savedDate = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+      const persistedTime = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.TIME) ?? '';
+
+      if ((savedGender !== 'male' && savedGender !== 'female') || !savedDate) {
+        resetToLanding();
+        return;
+      }
+
+      const persistedInput = validateBirthInput({
+        name: savedName ?? undefined,
+        gender: savedGender === 'male' ? '男' : '女',
+        birthDate: savedDate,
+        birthTime: persistedTime,
+      });
+      if (!persistedInput.valid) {
+        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+        resetToLanding();
+        return;
+      }
+
       try {
+        const { calculateChart } = await import('./paipan');
         const [y, m, d] = savedDate.split('-').map(Number);
-        const isHourUnknown = !savedTime;
-        const hour = isHourUnknown ? 12 : parseInt(savedTime, 10);
-        const g = savedGender === 'male' ? '男' : '女';
-        const chart = calculateChart(y, m, d, hour, g, isHourUnknown);
+        const isHourUnknown = !persistedTime;
+        const hour = parseBirthHour(persistedTime) ?? 12;
+        const chart = calculateChart(
+          y,
+          m,
+          d,
+          hour,
+          savedGender === 'male' ? '男' : '女',
+          isHourUnknown,
+        );
         const patternResult = determinePattern(chart);
-        
+        if (cancelled) return;
+
+        setName(savedName ?? '');
+        setGender(savedGender);
+        setBirthDate(savedDate);
+        setBirthTime(persistedTime);
+        setBirthTimeInput(persistedTime);
         setBazi({
           year: chart.year.gan + chart.year.zhi,
           month: chart.month.gan + chart.month.zhi,
           day: chart.day.gan + chart.day.zhi,
           time: chart.hour.gan + chart.hour.zhi,
-          chart: chart
+          chart,
         });
         setPattern(patternResult);
 
-        // Load scores securely from IndexedDB
-        import('./storage').then(({ getPatternScores }) => {
-          getPatternScores().then(savedScores => {
-            if (savedScores) {
-              setScores(savedScores);
-              if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
-                setStep(4); // Go to dashboard if already registered
-              }
-            } else {
-              setScores(initPatternScores(patternResult.score));
-              if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
-                setStep(3);
-              }
-            }
-            setIsInitializing(false);
-          }).catch(() => {
-             setIsInitializing(false);
-          });
-        }).catch(() => {/* [AI MOD] 靜態處理 */});
-
-      } catch (e: unknown) {
-        console.error(e);
-        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
-        setStep(1);
-        sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+        try {
+          const { getPatternScores } = await import('./storage');
+          const savedScores = await getPatternScores();
+          if (cancelled) return;
+          setScores(savedScores ?? initPatternScores(patternResult.score));
+          if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
+            setStep(savedScores ? 4 : 3);
+          }
+        } catch {
+          if (cancelled) return;
+          setScores(initPatternScores(patternResult.score));
+          setStep(3);
+        }
         setIsInitializing(false);
+      } catch (error: unknown) {
+        console.error(error);
+        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+        resetToLanding();
       }
-    } else {
-      setStep(1);
-      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
-      setIsInitializing(false);
-    }
+    };
+
+    void restorePersistedState();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!isFormValid || isGenerating) return;
     
     const isHourUnknown = !birthTime;
@@ -188,7 +214,10 @@ export default function App() {
     localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.TIME, birthTime);
     
     try {
-      const hour = isHourUnknown ? 12 : parseInt(birthTime, 10);
+      // The calendar engine is only needed after submission. Keeping it out of
+      // the landing bundle materially reduces first-load JavaScript.
+      const { calculateChart } = await import('./paipan');
+      const hour = parseBirthHour(birthTime) ?? 12;
       const chart = calculateChart(y, m, d, hour, gender === 'male' ? '男' : '女', isHourUnknown);
       const patternResult = determinePattern(chart);
 
@@ -292,10 +321,7 @@ export default function App() {
         {step >= 4 && (
           <div className="md:hidden fixed top-4 right-4 z-40">
             <button
-              onClick={() => {
-                setApiKeyInput(localStorage.getItem('bazi_api_key') || '');
-                setShowSettings(true);
-              }}
+              onClick={() => setShowSettings(true)}
               className="p-2.5 rounded-full bg-zinc-950/80 border border-white/10 text-zen-gold shadow-lg backdrop-blur-md hover:bg-zinc-900 transition-all active:scale-95 flex items-center justify-center focus:outline-none"
               title="系統設定"
             >
@@ -331,15 +357,17 @@ export default function App() {
                transition={{ duration: 1.5, ease: 'easeOut' }}
                className="w-full relative"
             >
-              <Dashboard
-                bazi={bazi}
-                name={name}
-                onNavigate={handleNavigate}
-                scores={scores}
-                birthDate={birthDate}
-                birthTime={birthTime}
-                gender={gender}
-              />
+              <Suspense fallback={<SkeletonPage />}>
+                <Dashboard
+                  bazi={bazi}
+                  name={name}
+                  onNavigate={handleNavigate}
+                  scores={scores}
+                  birthDate={birthDate}
+                  birthTime={birthTime}
+                  gender={gender}
+                />
+              </Suspense>
             </motion.div>
           )}
 
@@ -474,8 +502,9 @@ export default function App() {
                     {/* Input Group: Name */}
                     <div className="relative pl-6">
                       <div className="absolute left-[-4px] top-[12px] w-2 h-2 rounded-full bg-zen-sage border-2 border-white shadow-sm"></div>
-                      <label className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-1 font-medium">您的稱呼</label>
+                      <label htmlFor="name" className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-1 font-medium">您的稱呼</label>
                       <input 
+                        id="name"
                         type="text" 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -490,6 +519,8 @@ export default function App() {
                        <label className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-2 font-medium">生理性別 <span className="text-red-400">*</span></label>
                        <div className="flex gap-3">
                          <button
+                           type="button"
+                           aria-pressed={gender === 'male'}
                            onClick={() => setGender('male')}
                            className={`flex-1 py-2 md:py-2.5 px-3 md:px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 border ${
                              gender === 'male'
@@ -501,6 +532,8 @@ export default function App() {
                            <span className="font-medium text-sm">男</span>
                          </button>
                          <button
+                           type="button"
+                           aria-pressed={gender === 'female'}
                            onClick={() => setGender('female')}
                            className={`flex-1 py-2 md:py-2.5 px-3 md:px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 border ${
                              gender === 'female'
@@ -521,9 +554,10 @@ export default function App() {
 
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
                           <div>
-                            <label className="block text-xs text-zen-muted mb-1 font-medium">日期 (年/月/日)</label>
+                            <label htmlFor="birth-date" className="block text-xs text-zen-muted mb-1 font-medium">日期 (年/月/日)</label>
                             <div className="bg-white/5 rounded-xl border border-zen-muted/20 px-3 py-2 md:py-2.5 focus-within:border-zen-sage transition-colors">
                               <input 
+                                id="birth-date"
                                 type="text"
                                 inputMode="numeric"
                                 value={birthDate}
@@ -535,9 +569,10 @@ export default function App() {
                           </div>
                           
                           <div>
-                            <label className="block text-xs text-zen-muted mb-1 font-medium">時間 (選填)</label>
+                            <label htmlFor="birth-time" className="block text-xs text-zen-muted mb-1 font-medium">時間 (選填)</label>
                             <div className="bg-white/5 rounded-xl border border-zen-muted/20 px-3 py-2 md:py-2.5 focus-within:border-zen-sage transition-colors">
                               <input 
+                                id="birth-time"
                                 ref={timeInputRef}
                                   type="text"
                                   inputMode="numeric"
@@ -576,6 +611,7 @@ export default function App() {
                   <div className="pt-1 md:pt-2">
                     {errorMsg && <p className="text-rose-400 text-sm text-center mb-2 font-medium">{errorMsg}</p>}
                     <button
+                      type="button"
                       id="start-calculation-btn"
                       onClick={handleStart}
                       disabled={!isFormValid || isGenerating}
@@ -716,7 +752,7 @@ export default function App() {
         {/* API Key 設定 */}
         <div className="space-y-2">
           <label className="block text-xs text-zen-muted tracking-wide">
-            LongCat API 金鑰
+             自訂 AI API 金鑰
           </label>
           <input
             type="password"
@@ -726,25 +762,24 @@ export default function App() {
             className="w-full px-3 py-2.5 bg-zen-surface/60 border border-zen-border rounded-lg text-zen-text text-sm placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
           />
           <p className="text-[11px] text-zen-muted/50 leading-relaxed">
-            金鑰僅儲存於瀏覽器本地，不會上傳至任何伺服器。
+            金鑰只保留在目前分頁的記憶體中；重新整理或關閉分頁後即清除。開始對談時，會連同請求送至本站的 AI 代理伺服器。
             </p>
         </div>
 
         <div className="flex gap-3 mt-5">
           <button
             onClick={() => {
-              localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY, apiKeyInput);
+              setApiKeyInput(apiKeyInput.trim());
               setApiKeySaved(true);
               setTimeout(() => setApiKeySaved(false), 2000);
             }}
             className="flex-1 py-2.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors"
           >
-            {apiKeySaved ? '✓ 已儲存' : '儲存金鑰'}
+            {apiKeySaved ? '✓ 已套用' : '套用金鑰'}
           </button>
           <button
             onClick={() => {
               setApiKeyInput('');
-              localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.API_KEY);
               setApiKeySaved(false);
             }}
             className="px-4 py-2.5 bg-white/5 border border-white/10 text-zen-muted rounded-lg text-sm hover:bg-white/10 transition-colors"
@@ -762,7 +797,16 @@ export default function App() {
           title="AI 智能問答"
           icon={<Sparkles size={16} className="text-zen-gold" />}
         >
-          <AIChatPanel bazi={bazi} userName={name} />
+          {showAI && (
+            <Suspense fallback={<SkeletonPage />}>
+              <AIChatPanel
+                bazi={bazi}
+                userName={name}
+                apiKey={apiKeyInput}
+                onApiKeyChange={setApiKeyInput}
+              />
+            </Suspense>
+          )}
         </Drawer>
       )}
     </div>

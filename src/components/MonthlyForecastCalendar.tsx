@@ -1,9 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, getFavorableElements, determinePattern } from '../pattern';
 import { getDailyEnergy } from '../dailyAnalysis';
-import { GAN_TO_ELEMENT } from '../constants';
 import { Solar } from 'lunar-javascript';
+
+interface JieQiSolarTime {
+  getHour(): number;
+  getMinute(): number;
+}
+
+interface LunarWithJieQiTable {
+  getJieQiTable(): Record<string, JieQiSolarTime>;
+}
+import { formatLocalDate } from '../utils/localDate';
 
 interface Props {
   chart: BaziChart;
@@ -15,17 +24,23 @@ interface Props {
 }
 
 export default function MonthlyForecastCalendar({ chart, scores, selectedYear, selectedMonth, onDateClick, selectedDateStr }: Props) {
-  const dmElement = GAN_TO_ELEMENT[chart.dayMaster];
-  const primaryPattern = getPrimaryPattern(scores);
-  const patternResult = determinePattern(chart);
-  const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
-  const weakest = patternResult.weakestElement || '';
+  const { primaryPattern, favorable, unfavorable, weakest } = useMemo(() => {
+    const nextPrimaryPattern = getPrimaryPattern(scores);
+    const patternResult = determinePattern(chart);
+    const elements = getFavorableElements(chart.dayMaster, nextPrimaryPattern);
+    return {
+      primaryPattern: nextPrimaryPattern,
+      favorable: elements.favorable,
+      unfavorable: elements.unfavorable,
+      weakest: patternResult.weakestElement || '',
+    };
+  }, [chart, scores]);
 
   const daysInMonth = useMemo(() => {
     const days = [];
     const date = new Date(selectedYear, selectedMonth - 1, 1);
     while (date.getMonth() === selectedMonth - 1) {
-      const dateStr = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      const dateStr = formatLocalDate(date);
       const energy = getDailyEnergy(chart, weakest, favorable, unfavorable, primaryPattern, new Date(date));
       
       const solar = Solar.fromDate(new Date(date));
@@ -33,7 +48,9 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
       const jieQi = lunar.getJieQi();
       let jieQiTime = '';
       if (jieQi) {
-        const table = lunar.getJieQiTable();
+        // lunar-javascript exposes this at runtime, but its bundled declaration
+        // omits the method. Keep the compatibility cast local to this boundary.
+        const table = (lunar as unknown as LunarWithJieQiTable).getJieQiTable();
         const jqDate = table[jieQi];
         if (jqDate) {
           jieQiTime = `${jqDate.getHour()}:${String(jqDate.getMinute()).padStart(2, '0')}`;
@@ -41,7 +58,7 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
       }
 
       days.push({
-        date: new Date(dateStr),
+        date: new Date(date),
         dateStr,
         energy,
         jieQi,
@@ -54,6 +71,7 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
 
   const firstDayOfWeek = new Date(selectedYear, selectedMonth - 1, 1).getDay();
   const paddingDays = Array(firstDayOfWeek).fill(null);
+  const todayDateStr = formatLocalDate(new Date());
 
   const renderShape = (type: string) => {
     let colorClass = '';
@@ -100,12 +118,15 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
         {paddingDays.map((_, i) => <div key={`pad-${i}`} className="min-h-[60px] sm:min-h-[80px]"></div>)}
         {daysInMonth.map(day => {
           const isSelected = day.dateStr === selectedDateStr;
-          const isToday = day.dateStr === new Date().toISOString().split('T')[0];
+          const isToday = day.dateStr === todayDateStr;
           return (
-            <div 
+            <button
+              type="button"
               key={day.dateStr}
               onClick={() => onDateClick?.(day.dateStr)}
-              className={`min-h-[60px] sm:min-h-[80px] relative flex flex-col p-1 cursor-pointer transition-colors border hover:bg-white/10 rounded-xl
+              aria-label={`${day.dateStr}${day.jieQi ? `，${day.jieQi}` : ''}`}
+              aria-pressed={isSelected}
+              className={`min-h-[60px] sm:min-h-[80px] relative flex flex-col p-1 cursor-pointer transition-colors border hover:bg-white/10 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400
                 ${isSelected ? 'bg-indigo-500/20 border-indigo-500/50' : 'border-transparent bg-black/20'}
                 ${isToday ? 'ring-1 ring-white/20' : ''}
               `}
@@ -124,7 +145,7 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
                    <React.Fragment key={idx}>{renderShape(t)}</React.Fragment>
                  ))}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

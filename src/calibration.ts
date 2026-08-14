@@ -98,28 +98,34 @@ function adjustByPattern(scores: PatternScores, pattern: string, amount: number)
   scores[target.dec] -= amount;
 }
 
-export function checkAutoSwitch(scores: PatternScores): string | null {
-  const primary = getPrimaryPattern(scores);
-  const patterns = ['身強', '身弱', '從強', '從弱'];
-  const currentScore = getScoreByPattern(scores, primary);
+type PatternName = ReturnType<typeof getPrimaryPattern>;
+
+export function checkAutoSwitch(
+  scores: PatternScores,
+  currentPattern: PatternName
+): PatternName | null {
+  const patterns: PatternName[] = ['身強', '身弱', '從強', '從弱'];
+  const currentScore = getScoreByPattern(scores, currentPattern);
   
   const best = patterns
-    .filter(p => p !== primary)
+    .filter(p => p !== currentPattern)
     .map(p => ({ pattern: p, score: getScoreByPattern(scores, p) }))
-    .reduce((max, cur) => cur.score > max.score ? cur : max, { pattern: '', score: -1 });
+    .reduce(
+      (max, cur) => cur.score > max.score ? cur : max,
+      { pattern: currentPattern, score: Number.NEGATIVE_INFINITY }
+    );
 
   return best.score > currentScore + 5 ? best.pattern : null;
 }
 
-function getScoreByPattern(scores: PatternScores, pattern: string): number {
-  const map: Record<string, keyof PatternScores> = {
+function getScoreByPattern(scores: PatternScores, pattern: PatternName): number {
+  const map: Record<PatternName, keyof PatternScores> = {
     '身強': 'strong',
     '身弱': 'weak',
     '從強': 'followStrong',
     '從弱': 'followWeak'
   };
-  const key = map[pattern];
-  return key ? scores[key] : 0;
+  return scores[map[pattern]];
 }
 
 export function calculateAccuracy(logs: DailyLog[]): number {

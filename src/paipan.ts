@@ -5,7 +5,7 @@ import {
   YANG_GANS,
   isSameYinYang,
 } from './constants';
-import { ZHI_HIDDEN } from './pattern';
+import { ZHI_HIDDEN } from './domain/baziRules';
 
 // [AI MOD] 生肖對照表（移到模組頂層，避免每次呼叫 calculateChart 時重建）
 const ZODIAC_MAP: Record<string, string> = {
@@ -62,7 +62,7 @@ export interface BaziChart {
 interface Pillar {
   gan: string;            // 天干
   zhi: string;            // 地支
-  hiddenGan: string[];    // 藏干（依照講義中的百分比排序）
+  hiddenGan: readonly string[];    // 藏干（依照講義中的百分比排序）
   tenGod: string;         // 該柱的十神（相對於日主）
   hiddenTenGods: string[]; // 藏干的十神
 }
@@ -134,8 +134,8 @@ export function calculateChart(
 
 // ---------- 輔助函式 ----------
 
-/** 地支藏干對照表（與 pattern.ts 的 ZHI_HIDDEN 同步） */
-export const ZHI_HIDE_GAN: Record<string, string[]> = ZHI_HIDDEN;
+/** 地支藏干對照表（來源：SRC-HIDDEN-STEMS-1） */
+export const ZHI_HIDE_GAN: Readonly<Record<string, readonly string[]>> = ZHI_HIDDEN;
 
 export function getHiddenTenGodsForZhi(zhi: string, dayMaster: string): string[] {
   const hiddenGan = ZHI_HIDE_GAN[zhi] || [];

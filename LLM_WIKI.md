@@ -1,7 +1,8 @@
 # 八字命理 LLM Wiki
 
-> 最後更新：2026-06-05
+> 最後更新：2026-08-14
 > 目的：建立「來源講義 → Wiki 知識頁 → 程式碼」的完整知識圖譜，供 LLM 問答與系統開發使用
+> 核心計算規則的來源雜湊、驗證狀態與未決歧義以 `docs/domain-sources.md` 為準；本 Wiki 不等同於已驗證規格。
 
 ---
 
@@ -239,16 +240,16 @@
 |------|----------|----------|-----------|
 | 十天干 | 1-6、2-0 五行關係十神表 | `src/constants.ts` | `GAN_TO_ELEMENT`, `YANG_GANS` |
 | 十二地支 | 1-1 地支藏干表 | `src/constants.ts` | `ZHI_TO_ELEMENT` |
-| 地支藏干 | 1-1 地支藏干表 | `src/pattern.ts` | `ZHI_HIDDEN`, `ZHI_HIDDEN_DETAIL` |
-| 天干五合 | 天干地支合化條件.docx | `src/pattern.ts` | `STEM_HARMONIES`, `findStemHarmony()` |
-| 地支六合 | 天干地支合化條件.docx | `src/pattern.ts` | `BRANCH_HARMONIES`, `findBranchHarmony()` |
+| 地支藏干 | 1-1 地支藏干表 | `src/domain/baziRules.ts` | `HIDDEN_STEMS`, `getHiddenStemNames()` |
+| 天干五合 | 天干地支合化條件.docx | `src/domain/harmony.ts` | `evaluateHarmonies()` |
+| 地支六合 | 天干地支合化條件.docx | `src/domain/harmony.ts` | `evaluateHarmonies()` |
 | 地支六沖 | 1-2 地支互動表講義 | `src/matchmaking.ts` | `PAIR_RELATIONS`, `checkLiuChong()` |
 | 地支三刑 | 1-2 地支互動表講義 | `src/data/core/earthlyBranchTraits.ts` | `BRANCH_INTERACTIONS` |
 | 地支相害 | 天干地支含刑沖破害 | `src/matchmaking.ts` | `checkLiuHai()` |
 | 地支相破 | 天干地支含刑沖破害 | `src/matchmaking.ts` | `checkLiuPo()` |
 | 十神計算 | 十神.docx | `src/constants.ts` | `getTenGod()`, `getTenGodCategory()` |
 | 命盤計算 | 1-1, 1-2 | `src/paipan.ts` | `calculateChart()`, `buildPillar()` |
-| 格局判定 | 定格局.docx | `src/pattern.ts` | `determinePattern()`, `getPrimaryPattern()` |
+| 格局判定 | 定格局.docx | `src/pattern.ts`, `src/domain/patternScoring.ts` | `determinePattern()`, `calculatePatternSupportScore()` |
 | 大運計算 | 大運流年補運架構 | `src/dayun.ts` | `calculateDaYun()`, `getDaYunQuality()` |
 | 流年計算 | 2000-2030 流年五行對照表 | `src/dayun.ts` | `getLiuNian()`, `getFutureLiuNian()` |
 | 合盤判斷 | 姻緣篇.docx | `src/matchmaking.ts` | `checkSpouseStar()`, `checkMutualComplement()` |
@@ -373,7 +374,7 @@
 | 地支互動 | 1-2 地支互動表講義 | `src/data/core/earthlyBranchTraits.ts` | `BRANCH_INTERACTIONS` |
 | 命盤計算 | 1-1, 1-2 | `src/paipan.ts` | `calculateChart()` |
 | 格局判定 | 定格局.docx | `src/pattern.ts` | `determinePattern()` |
-| 合化條件 | 天干地支合化條件.docx | `src/pattern.ts` | `STEM_HARMONIES`, `BRANCH_HARMONIES` |
+| 合化條件 | 天干地支合化條件.docx | `src/domain/harmony.ts` | `evaluateHarmonies()` |
 
 ---
 

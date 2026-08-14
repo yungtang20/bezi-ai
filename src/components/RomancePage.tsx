@@ -22,7 +22,7 @@ import {
   Compass as CompassIcon,
   HelpCircle
 } from "lucide-react";
-import { BaziChart } from "../paipan";
+import { BaziChart, getHiddenTenGodsForZhi } from "../paipan";
 import { PatternScores } from "../pattern";
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from "../constants";
 import { getUpcomingDatesForCategory } from "../dailyAnalysis";
@@ -253,7 +253,7 @@ export default function RomancePage({
 
   if (currentDaYun) {
     const daYunGanTenGod = getTenGodForDaYun(chart.dayMaster, currentDaYun.gan);
-    const daYunZhiTenGod = getTenGodForDaYun(chart.dayMaster, currentDaYun.zhi);
+    const daYunZhiTenGod = getHiddenTenGodsForZhi(currentDaYun.zhi, chart.dayMaster)[0] || '未知';
     if (isMale) {
       if (["正財", "偏財"].includes(daYunGanTenGod) && ["比肩", "劫財"].includes(daYunZhiTenGod)) isCrisis = true;
       if (["比肩", "劫財"].includes(daYunGanTenGod) && ["正財", "偏財"].includes(daYunZhiTenGod)) isCrisis = true;

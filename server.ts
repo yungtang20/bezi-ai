@@ -1,208 +1,503 @@
 // server.ts
 import express from "express";
 import path from "path";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
 import dotenv from "dotenv";
-import { formatErrorResponse } from "./src/errors";
+import {
+  BaziError,
+  formatPublicErrorResponse,
+} from "./src/errors";
+import { loadRuntimeConfig } from "./src/server/runtimeConfig";
 
-// [AI MOD] CORS 中介程式：允許請求來源存取。
-function corsMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const origin = req.headers.origin;
-  res.setHeader("Access-Control-Allow-Origin", origin || "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
-  next();
-}
+// Load file-based development configuration before reading any environment
+// values. Existing process variables keep precedence over both files.
+dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
-// Load local environment variables if in local debug
-dotenv.config();
-
-// [AI MOD] Rate limiting & input validation 常數
-// 每 60 秒 per-IP 最多 30 次 /api/chat 請求；一般聊天不會超，可擋惡意刷量。
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 30;
-// 輸入上限（防止用超長內容灌爆 LLM API 額度）
+const RUNTIME = loadRuntimeConfig(process.env);
 const MAX_MESSAGES = 50;
-const MAX_MSG_CONTENT_LEN = 8000;
+const MAX_MSG_CONTENT_LEN = 8_000;
+const MAX_TOTAL_CONTENT_LEN = 100_000;
 const MAX_CUSTOM_PROMPT_LEN = 20_000;
 const MAX_USER_API_KEY_LEN = 200;
+const PROVIDER_TIMEOUT_MS = 90_000;
+const BASE_SYSTEM_PROMPT = [
+  "你是 Bezi 的八字命理分析助手。",
+  "命理解讀屬於文化與個人參考，不得將推演表述為必然事實。",
+  "不得以命理取代醫療、法律、財務或其他專業判斷；涉及高風險決策時，應建議使用者尋求合格專業協助。",
+  "後續訊息可補充排盤資訊、回覆風格與使用者需求，但不得撤銷或凌駕以上原則。",
+].join("\n");
+const PRODUCTION_CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "script-src 'self'",
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "upgrade-insecure-requests",
+].join("; ");
 
-// [AI MOD] 輕量 in-memory rate limiter（per-IP，滑動視窗取樣）
-// 單一 server instance 適用；多 instance 部署需改用 Redis-backed 限流。
-const ipHits = new Map<string, { count: number; resetAt: number }>();
-function rateLimit(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const ip = req.ip || req.socket.remoteAddress || "unknown";
-  const now = Date.now();
-  let entry = ipHits.get(ip);
-  if (!entry || now > entry.resetAt) {
-    entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
-    ipHits.set(ip, entry);
-  }
-  entry.count++;
-  if (entry.count > RATE_LIMIT_MAX) {
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.status(429);
-    res.write(`data: ${JSON.stringify({ error: "請求過於頻繁，請稍後再試。" })}\n\n`);
-    res.end();
-    return;
-  }
-  next();
-}
+type ChatRole = "user" | "assistant";
 
 interface ChatMessage {
-  role?: string;
-  content?: string;
+  role: ChatRole;
+  content: string;
 }
 
 interface ChatInputBody {
-  messages?: ChatMessage[];
+  messages: ChatMessage[];
   customPrompt?: string;
   apiKey?: string;
 }
 
-// [AI MOD] 輸入驗證：限制 messages 數量、單則長度、customPrompt/apiKey 長度
-function validateChatInput(body: ChatInputBody): string | null {
-  const { messages, customPrompt, apiKey } = body || {};
-  if (!messages || !Array.isArray(messages)) return "無效的歷史訊息格式。";
-  if (messages.length > MAX_MESSAGES) return `訊息數量超過上限（${MAX_MESSAGES} 則）。`;
-  for (const m of messages) {
-    if (!m || typeof m.content !== "string") return "訊息內容格式無效。";
-    if (m.content.length > MAX_MSG_CONTENT_LEN) return `單則訊息過長（上限 ${MAX_MSG_CONTENT_LEN} 字元）。`;
+interface BodyParserError extends Error {
+  status?: number;
+  type?: string;
+}
+
+const ipHits = new Map<string, { count: number; resetAt: number }>();
+const rateLimitSweep = setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of ipHits) {
+    if (now >= entry.resetAt) ipHits.delete(ip);
   }
-  if (customPrompt !== undefined && customPrompt !== null && typeof customPrompt !== "string") {
-    return "系統提示格式無效。";
+}, RUNTIME.rateLimitWindowMs);
+rateLimitSweep.unref();
+
+function sendJsonError(res: express.Response, error: BaziError): void {
+  if (res.headersSent || res.writableEnded) return;
+  res.status(error.status).json(formatPublicErrorResponse(error));
+}
+
+function securityHeaders(
+  _req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+): void {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  );
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+
+  if (RUNTIME.isProduction) {
+    res.setHeader("Content-Security-Policy", PRODUCTION_CONTENT_SECURITY_POLICY);
+    res.setHeader(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains",
+    );
   }
-  if (typeof customPrompt === "string" && customPrompt.length > MAX_CUSTOM_PROMPT_LEN) {
-    return `系統提示過長（上限 ${MAX_CUSTOM_PROMPT_LEN} 字元）。`;
+
+  next();
+}
+
+function requestContext(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+): void {
+  const requestId = randomUUID();
+  const startedAt = Date.now();
+  res.setHeader("X-Request-ID", requestId);
+
+  if (req.path.startsWith("/api/") || req.path.startsWith("/health/")) {
+    res.once("finish", () => {
+      console.log(JSON.stringify({
+        level: "info",
+        event: "http_request",
+        requestId,
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt,
+      }));
+    });
   }
-  if (apiKey !== undefined && apiKey !== null && typeof apiKey !== "string") {
-    return "API Key 格式無效。";
+
+  next();
+}
+
+function corsMiddleware(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+): void {
+  const origin = req.headers.origin;
+  res.vary("Origin");
+
+  if (origin) {
+    if (!RUNTIME.allowedOrigins.has(origin)) {
+      sendJsonError(
+        res,
+        new BaziError("此來源未獲允許。", "ORIGIN_NOT_ALLOWED", 403),
+      );
+      return;
+    }
+    res.setHeader("Access-Control-Allow-Origin", origin);
   }
-  if (typeof apiKey === "string" && apiKey.length > MAX_USER_API_KEY_LEN) {
-    return "API Key 格式無效。";
+
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "X-Request-ID, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After",
+  );
+  res.setHeader("Access-Control-Max-Age", "600");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
   }
+
+  next();
+}
+
+function rateLimit(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+): void {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  let entry = ipHits.get(ip);
+
+  if (!entry || now >= entry.resetAt) {
+    entry = { count: 0, resetAt: now + RUNTIME.rateLimitWindowMs };
+    ipHits.set(ip, entry);
+  }
+
+  entry.count += 1;
+  res.setHeader("RateLimit-Limit", String(RUNTIME.rateLimitMax));
+  res.setHeader(
+    "RateLimit-Remaining",
+    String(Math.max(0, RUNTIME.rateLimitMax - entry.count)),
+  );
+  res.setHeader("RateLimit-Reset", String(Math.ceil(entry.resetAt / 1_000)));
+
+  if (entry.count > RUNTIME.rateLimitMax) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1_000));
+    res.setHeader("Retry-After", String(retryAfterSeconds));
+    sendJsonError(
+      res,
+      new BaziError("請求過於頻繁，請稍後再試。", "RATE_LIMITED", 429),
+    );
+    return;
+  }
+
+  next();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validateChatInput(body: unknown): BaziError | null {
+  if (!isRecord(body) || !Array.isArray(body.messages)) {
+    return new BaziError("無效的歷史訊息格式。", "VALIDATION_ERROR", 422);
+  }
+  if (body.messages.length === 0) {
+    return new BaziError("至少需要一則訊息。", "VALIDATION_ERROR", 422);
+  }
+  if (body.messages.length > MAX_MESSAGES) {
+    return new BaziError(
+      `訊息數量超過上限（${MAX_MESSAGES} 則）。`,
+      "VALIDATION_ERROR",
+      422,
+    );
+  }
+
+  let totalContentLength = 0;
+  for (const message of body.messages) {
+    if (!isRecord(message) || typeof message.content !== "string") {
+      return new BaziError("訊息內容格式無效。", "VALIDATION_ERROR", 422);
+    }
+    if (message.role !== "user" && message.role !== "assistant") {
+      return new BaziError("訊息角色只允許 user 或 assistant。", "VALIDATION_ERROR", 422);
+    }
+    if (message.content.trim().length === 0) {
+      return new BaziError("訊息內容不得為空。", "VALIDATION_ERROR", 422);
+    }
+    if (message.content.length > MAX_MSG_CONTENT_LEN) {
+      return new BaziError(
+        `單則訊息過長（上限 ${MAX_MSG_CONTENT_LEN} 字元）。`,
+        "VALIDATION_ERROR",
+        422,
+      );
+    }
+    totalContentLength += message.content.length;
+  }
+  if (totalContentLength > MAX_TOTAL_CONTENT_LEN) {
+    return new BaziError(
+      `訊息總長度超過上限（${MAX_TOTAL_CONTENT_LEN} 字元）。`,
+      "VALIDATION_ERROR",
+      422,
+    );
+  }
+
+  if (
+    body.customPrompt !== undefined
+    && body.customPrompt !== null
+    && typeof body.customPrompt !== "string"
+  ) {
+    return new BaziError("系統提示格式無效。", "VALIDATION_ERROR", 422);
+  }
+  if (
+    typeof body.customPrompt === "string"
+    && body.customPrompt.length > MAX_CUSTOM_PROMPT_LEN
+  ) {
+    return new BaziError(
+      `系統提示過長（上限 ${MAX_CUSTOM_PROMPT_LEN} 字元）。`,
+      "VALIDATION_ERROR",
+      422,
+    );
+  }
+
+  if (body.apiKey !== undefined && body.apiKey !== null && typeof body.apiKey !== "string") {
+    return new BaziError("API Key 格式無效。", "VALIDATION_ERROR", 422);
+  }
+  if (typeof body.apiKey === "string" && body.apiKey.length > MAX_USER_API_KEY_LEN) {
+    return new BaziError("API Key 格式無效。", "VALIDATION_ERROR", 422);
+  }
+
   return null;
 }
 
+function writeSse(
+  res: express.Response,
+  event: "message" | "error" | "done",
+  data: object | string,
+): void {
+  if (res.destroyed || res.writableEnded) return;
+  const serialized = typeof data === "string" ? data : JSON.stringify(data);
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${serialized}\n\n`);
+}
 
-async function startServer() {
+function handleJsonParserError(
+  err: unknown,
+  _req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+): void {
+  const parserError = err as BodyParserError;
+  if (parserError.type === "entity.too.large" || parserError.status === 413) {
+    sendJsonError(
+      res,
+      new BaziError("請求內容超過 1 MB 上限。", "PAYLOAD_TOO_LARGE", 413),
+    );
+    return;
+  }
+  if (err instanceof SyntaxError) {
+    sendJsonError(res, new BaziError("JSON 格式無效。", "INVALID_JSON", 400));
+    return;
+  }
+  next(err);
+}
+
+async function startServer(): Promise<void> {
   const app = express();
-  const PORT = 3000;
+  const port = RUNTIME.port;
 
-  // Enable JSON request body parser（限制 1mb，避免灌爆）
-  app.use(express.json({ limit: "1mb" }));
+  app.disable("x-powered-by");
 
-  // [AI MOD] CORS 套用
+  if (RUNTIME.trustProxyHops > 0) {
+    app.set("trust proxy", RUNTIME.trustProxyHops);
+  }
+
+  // CORS runs before body parsing so parser failures keep the same origin and
+  // error-response contract as normal API failures.
+  app.use(securityHeaders);
+  app.use(requestContext);
   app.use(corsMiddleware);
+  app.use(express.json({ limit: "1mb" }));
+  app.use(handleJsonParserError);
 
-  // Secure Server-side API Route with Streaming (SSE) supporting both LongCat and Gemini
-  app.options("/api/chat", corsMiddleware, (req, res) => res.status(204).end());
+  app.get("/health/live", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({ status: "ok" });
+  });
+
+  app.get("/health/ready", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({ status: "ready" });
+  });
+
   app.post("/api/chat", rateLimit, async (req, res) => {
-    // Set headers for SSE Server-Sent Events
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
+    const validationError = validateChatInput(req.body as unknown);
+    if (validationError) {
+      sendJsonError(res, validationError);
+      return;
+    }
+
+    const input = req.body as ChatInputBody;
+    const userApiKey = input.apiKey?.trim() || "";
+    const serverApiKey = RUNTIME.allowServerApiKey ? RUNTIME.serverApiKey : "";
+    const nvidiaApiKey = userApiKey || serverApiKey;
+
+    if (!nvidiaApiKey) {
+      sendJsonError(
+        res,
+        new BaziError(
+          "請提供 NVIDIA API Key。伺服器共用金鑰預設停用。",
+          "API_KEY_REQUIRED",
+          401,
+        ),
+      );
+      return;
+    }
+
+    const openAiMessages: Array<{
+      role: "system" | ChatRole;
+      content: string;
+    }> = [{ role: "system", content: BASE_SYSTEM_PROMPT }];
+    if (input.customPrompt?.trim()) {
+      openAiMessages.push({ role: "system", content: input.customPrompt });
+    }
+    openAiMessages.push(...input.messages);
+
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
 
+    const providerAbort = new AbortController();
+    let clientDisconnected = false;
+    let providerTimedOut = false;
+    const abortForDisconnect = () => {
+      clientDisconnected = true;
+      providerAbort.abort();
+    };
+    const abortForPrematureResponseClose = () => {
+      // Express also emits `close` after a normal `res.end()`. Only treat a
+      // response that never finished writing as a client disconnect.
+      if (!res.writableFinished) abortForDisconnect();
+    };
+    const providerTimeout = setTimeout(() => {
+      providerTimedOut = true;
+      providerAbort.abort();
+    }, PROVIDER_TIMEOUT_MS);
+    providerTimeout.unref();
+    req.once("aborted", abortForDisconnect);
+    res.once("close", abortForPrematureResponseClose);
+
     try {
-      const { messages, customPrompt, apiKey: userApiKey } = req.body;
-
-      // [AI MOD] 輸入驗證（數量、長度、型別）
-      const validationError = validateChatInput(req.body);
-      if (validationError) {
-        res.write(`data: ${JSON.stringify({ error: validationError })}\n\n`);
-        return res.end();
-      }
-
-      // [AI MOD] customPrompt 型別淨化：只接受字串，避免物件/陣列被注入。內容不刪改（chat 功能所需）。
-      const safeCustomPrompt = typeof customPrompt === "string" ? customPrompt : "";
-      const rawUserKey = (userApiKey || "").trim();
-      const nvidiaApiKey = rawUserKey || process.env.NVIDIA_API_KEY || "";
-
-      if (!nvidiaApiKey) {
-        res.write(`data: ${JSON.stringify({ error: "未設定 API 金鑰。請在右上角「設定」中填入您的 NVIDIA API Key，或在後端環境設定 NVIDIA_API_KEY。" })}\n\n`);
-        return res.end();
-      }
-
-      const openAiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
-      if (safeCustomPrompt) {
-        openAiMessages.push({ role: "system", content: safeCustomPrompt });
-      }
-      for (const m of messages) {
-        if (!m || !m.content) continue;
-        openAiMessages.push({
-          role: m.role === "user" ? "user" : "assistant",
-          content: m.content
-        });
-      }
-
-      if (openAiMessages.length === 0) {
-        res.write(`data: ${JSON.stringify({ error: "請先輸入您的問題後再送出。" })}\n\n`);
-        return res.end();
-      }
-
-      console.log(`[SERVER] Querying NVIDIA OpenAI API with model z-ai/glm-5.2 (Streaming)...`);
       const openai = new OpenAI({
         apiKey: nvidiaApiKey,
-        baseURL: 'https://integrate.api.nvidia.com/v1',
+        baseURL: "https://integrate.api.nvidia.com/v1",
       });
-
-      try {
-        const completion = await openai.chat.completions.create({
+      const completion = await openai.chat.completions.create(
+        {
           model: "z-ai/glm-5.2",
           messages: openAiMessages,
           temperature: 1,
           top_p: 1,
-          max_tokens: 16384,
+          max_tokens: 16_384,
           seed: 42,
-          stream: true
-        });
+          stream: true,
+        },
+        { signal: providerAbort.signal },
+      );
 
-        for await (const chunk of completion) {
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            res.write(`data: ${JSON.stringify({ content })}\n\n`);
-            if (typeof (res as any).flushHeaders === 'function') {
-              (res as any).flushHeaders();
-            }
-          }
-        }
-      } catch (aiErr: unknown) {
-        console.error("[SERVER] NVIDIA OpenAI request failed:", aiErr);
-        res.write(`data: ${JSON.stringify(formatErrorResponse(aiErr))}\n\n`);
+      for await (const chunk of completion) {
+        if (providerAbort.signal.aborted) break;
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) writeSse(res, "message", { content });
       }
 
-      res.end();
-    } catch (err: unknown) {
-      console.error("[SERVER ERROR]:", err);
-      res.write(`data: ${JSON.stringify(formatErrorResponse(err))}\n\n`);
-      res.end();
+      if (!providerAbort.signal.aborted) writeSse(res, "done", "[DONE]");
+    } catch (error: unknown) {
+      if (!clientDisconnected && !res.destroyed) {
+        console.error(
+          providerTimedOut
+            ? "[SERVER] NVIDIA request timed out"
+            : "[SERVER] NVIDIA request failed",
+          error,
+        );
+        const publicError = providerTimedOut
+          ? new BaziError("AI 服務回應逾時，請稍後再試。", "PROVIDER_TIMEOUT", 504)
+          : new BaziError("AI 服務暫時無法使用，請稍後再試。", "PROVIDER_ERROR", 502);
+        writeSse(res, "error", formatPublicErrorResponse(publicError));
+        writeSse(res, "done", "[DONE]");
+      }
+    } finally {
+      clearTimeout(providerTimeout);
+      req.off("aborted", abortForDisconnect);
+      res.off("close", abortForPrematureResponseClose);
+      if (!res.destroyed && !res.writableEnded) res.end();
     }
   });
 
-  // Vite middleware for development index fallback
-  if (process.env.NODE_ENV !== "production") {
+  if (!RUNTIME.isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
+    const indexHtml = await readFile(path.join(distPath, "index.html"), "utf8");
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache");
+      res.type("html").send(indexHtml);
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[FULLSTACK ENGINE] Server is actively listening on http://0.0.0.0:${PORT}`);
+  app.use(
+    (
+      error: unknown,
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction,
+    ) => {
+      console.error("[SERVER ERROR]", error);
+      if (!res.headersSent) {
+        res.status(500).json(formatPublicErrorResponse(error));
+      } else if (!res.writableEnded) {
+        res.end();
+      }
+    },
+  );
+
+  const httpServer = app.listen(port, "0.0.0.0", () => {
+    console.log(`[FULLSTACK ENGINE] Listening on http://0.0.0.0:${port}`);
   });
+
+  let shuttingDown = false;
+  const shutdown = (signal: NodeJS.Signals) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[FULLSTACK ENGINE] ${signal} received; closing server.`);
+    clearInterval(rateLimitSweep);
+
+    httpServer.close((error) => {
+      if (error) {
+        console.error("[SERVER SHUTDOWN ERROR]", error);
+        process.exitCode = 1;
+      }
+    });
+    httpServer.closeIdleConnections();
+  };
+
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
 }
 
-startServer();
+startServer().catch((error: unknown) => {
+  console.error("[SERVER STARTUP ERROR]", error);
+  process.exitCode = 1;
+});

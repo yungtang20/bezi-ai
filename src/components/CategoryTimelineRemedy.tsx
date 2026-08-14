@@ -68,7 +68,7 @@ export default function CategoryTimelineRemedy({ chart, primaryPattern, favorabl
   const activeLiuNianRules = getLiunianAndRemedy(
     GAN_TO_ELEMENT[chart.dayMaster] as FiveElement,
     strengthArg,
-    daYunQuality === '好運'
+    liuNianQuality === '好運'
   );
   const lnRemedyText = liuNianGuideline?.remedy
     ? `👉 依據五行平衡，目前的流年大運結構，建議多補充【${activeLiuNianRules.remedy.join('、')}】之能量。\n` + liuNianGuideline.remedy

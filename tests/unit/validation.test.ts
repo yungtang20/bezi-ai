@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateBirthInput, assertBirthInput } from '../../src/utils/validation';
+import { validateBirthInput, assertBirthInput, parseBirthHour } from '../../src/utils/validation';
 
 describe('Validation Module (validateBirthInput & assertBirthInput)', () => {
   it('passes valid input with HH:mm time format like 02:00', () => {
@@ -66,6 +66,22 @@ describe('Validation Module (validateBirthInput & assertBirthInput)', () => {
     });
     expect(result.valid).toBe(false);
     expect(result.error).toContain('出生日期格式無效');
+  });
+
+  it.each(['2023-02-29', '2024-02-30', '2026-04-31'])('rejects impossible calendar date %s', (birthDate) => {
+    const result = validateBirthInput({ gender: '女', birthDate, birthTime: '' });
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('出生日期不存在');
+  });
+
+  it('accepts a leap day in a leap year', () => {
+    expect(validateBirthInput({ gender: '男', birthDate: '2024-02-29', birthTime: '7:30' }).valid).toBe(true);
+  });
+
+  it('parses both supported time formats and preserves an unknown hour', () => {
+    expect(parseBirthHour('7')).toBe(7);
+    expect(parseBirthHour('07:30')).toBe(7);
+    expect(parseBirthHour('')).toBeNull();
   });
 
   it('assertBirthInput throws ValidationError on invalid input', () => {
