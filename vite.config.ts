@@ -4,7 +4,13 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
+  const base = process.env.VITE_BASE_PATH?.trim() || '/';
+  if (!base.startsWith('/') || !base.endsWith('/')) {
+    throw new Error('VITE_BASE_PATH must start and end with /');
+  }
+
   return {
+    base,
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

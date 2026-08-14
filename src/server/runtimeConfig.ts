@@ -4,6 +4,7 @@ export interface RuntimeConfig {
   allowedOrigins: ReadonlySet<string>;
   allowServerApiKey: boolean;
   serverApiKey: string;
+  geminiModel: string;
   trustProxyHops: number;
   rateLimitWindowMs: number;
   rateLimitMax: number;
@@ -46,10 +47,14 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     .map((origin) => origin.trim())
     .filter(Boolean);
   const allowServerApiKey = readBoolean(env, 'ALLOW_SERVER_API_KEY');
-  const serverApiKey = env.NVIDIA_API_KEY?.trim() ?? '';
+  const serverApiKey = env.GEMINI_API_KEY?.trim() ?? '';
+  const geminiModel = env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
 
   if (allowServerApiKey && !serverApiKey) {
-    throw new Error('NVIDIA_API_KEY is required when ALLOW_SERVER_API_KEY=true');
+    throw new Error('GEMINI_API_KEY is required when ALLOW_SERVER_API_KEY=true');
+  }
+  if (!/^[A-Za-z0-9._/-]{1,200}$/.test(geminiModel)) {
+    throw new Error('GEMINI_MODEL contains unsupported characters');
   }
 
   return {
@@ -68,6 +73,7 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     ),
     allowServerApiKey,
     serverApiKey,
+    geminiModel,
     trustProxyHops: readInteger(env, 'TRUST_PROXY_HOPS', 0, 0, 10),
     rateLimitWindowMs: readInteger(
       env,

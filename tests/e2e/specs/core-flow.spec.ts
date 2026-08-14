@@ -35,6 +35,9 @@ test('removes API keys persisted by older releases', async ({ page }) => {
 });
 
 test('completes chart creation and calibration without an API key', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-08-14T10:00:00+08:00'));
+  await page.reload();
+
   await page.getByLabel('您的稱呼').fill('E2E 測試');
   await page.getByRole('button', { name: '男' }).click();
   await page.getByLabel('日期 (年/月/日)').fill('19900101');
@@ -52,7 +55,7 @@ test('completes chart creation and calibration without an API key', async ({ pag
   await expect(page.getByText('八字格局 · 五行能量 · 人生藍圖')).toBeVisible();
 
   await page.getByRole('button', { name: '設定' }).click();
-  const apiKeyInput = page.getByPlaceholder('輸入您的 API 金鑰...');
+  const apiKeyInput = page.getByPlaceholder('輸入您的 Gemini API 金鑰...');
   await apiKeyInput.fill('session-only-test-key');
   await page.getByRole('button', { name: '套用金鑰' }).click();
   await expect.poll(
@@ -66,5 +69,14 @@ test('completes chart creation and calibration without an API key', async ({ pag
   await expect(page.getByText('八字格局 · 五行能量 · 人生藍圖')).toBeVisible();
 
   await page.getByRole('button', { name: '設定' }).click();
-  await expect(page.getByPlaceholder('輸入您的 API 金鑰...')).toHaveValue('');
+  await expect(page.getByPlaceholder('輸入您的 Gemini API 金鑰...')).toHaveValue('');
+
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '流月流日' }).click();
+  await expect(page.getByRole('heading', { name: '10秒心流紀錄' })).toBeVisible();
+  await expect(page.getByText('紀錄將在今晚20:00開放')).toBeHidden();
+  await expect(page.getByText(/回顧今天，各領域的感受是？/)).toBeVisible();
+
+  await page.getByRole('button', { name: '▶', exact: true }).click();
+  await expect(page.getByText('未來日期尚未開放紀錄')).toBeVisible();
 });

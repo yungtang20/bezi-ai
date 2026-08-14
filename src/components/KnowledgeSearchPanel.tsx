@@ -2,6 +2,8 @@
 // [AI MOD] 知識搜尋面板 — 整合 LongCat API 白話解釋與追問功能
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { readChatHttpError } from '../api/chatError';
+import { CLIENT_CONFIG } from '../config';
 
 // 知識索引項目介面
 interface KnowledgeItem {
@@ -366,7 +368,7 @@ async function fetchFromBackend(
   systemPrompt: string,
   apiKey?: string,
 ): Promise<string> {
-  const response = await fetch('/api/chat', {
+  const response = await fetch(CLIENT_CONFIG.API.CHAT_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -379,7 +381,7 @@ async function fetchFromBackend(
   });
 
   if (!response.ok) {
-    throw new Error(`API 請求失敗: ${response.status}`);
+    throw new Error(await readChatHttpError(response));
   }
 
   if (!response.body) {

@@ -4,7 +4,7 @@
 
 # Bezi 專業八字命理分析與大運流年推算系統
 
-本專案提供全功能的子平八字排盤、五行格局分析、十年大運與流年推算、合盤配對，以及基於 NVIDIA OpenAI GLM-5.2 的 SSE 即時 AI 命理解析服務。
+本專案提供全功能的子平八字排盤、五行格局分析、十年大運與流年推算、合盤配對，以及基於 Google Gemini 的 SSE 即時 AI 命理解析服務。
 
 主要儲存庫：https://github.com/yungtang20/bezi-ai
 
@@ -29,7 +29,7 @@
 ┌───────────────────────────▼────────────────────────────┐
 │                  Server-Side (Express + Node.js 22+)   │
 │  ├─ Rate Limiting & Security Sanitization Engine       │
-│  └─ /api/chat Proxy (OpenAI SDK → NVIDIA GLM-5.2)      │
+│  └─ /api/chat Proxy (@google/genai → Gemini)           │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -62,7 +62,7 @@ Content-Type: application/json
     { "role": "user", "content": "請根據我的八字分析今年事業運勢。" }
   ],
   "customPrompt": "可選的自訂系統提示詞",
-  "apiKey": "可選的使用者專屬 NVIDIA API Key"
+  "apiKey": "可選的使用者專屬 Gemini API Key"
 }
 ```
 
@@ -116,7 +116,7 @@ npm ci
 
 ### 3. 設定環境變數
 將 `.env.example` 複製為 `.env.local`。預設採 BYOK，由瀏覽器目前分頁的
-記憶體隨請求提供 NVIDIA API Key，不寫入 `localStorage` 或
+記憶體隨請求提供 Gemini API Key，不寫入 `localStorage` 或
 `sessionStorage`；若要啟用伺服器共用金鑰，必須明確設為允許：
 ```bash
 cp .env.example .env.local
@@ -125,7 +125,8 @@ cp .env.example .env.local
 編輯 `.env.local`：
 ```env
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-NVIDIA_API_KEY=your_nvidia_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
 ALLOW_SERVER_API_KEY=true
 PORT=3000
 ```
@@ -135,8 +136,11 @@ PORT=3000
 任意來源。反向代理部署只有在明確知道 hop 數時才設定
 `TRUST_PROXY_HOPS`。
 
+`GEMINI_MODEL` 預設為 `gemini-2.5-flash`；只有部署者需要切換模型時才需
+覆寫。Gemini API 金鑰可由 [Google AI Studio](https://aistudio.google.com/app/apikey) 建立。
+
 伺服器會在啟動時一次驗證所有環境設定；若明確啟用共用金鑰卻沒有
-設定 `NVIDIA_API_KEY`，或 port、proxy hop、限流數值無效，程序會停止而
+設定 `GEMINI_API_KEY`，或 model、port、proxy hop、限流數值無效，程序會停止而
 不是帶著不完整設定接收流量。單機限流可透過
 `RATE_LIMIT_WINDOW_MS`、`RATE_LIMIT_MAX` 調整；多實例公開部署仍應改用
 共享的限流 adapter。
@@ -146,6 +150,28 @@ PORT=3000
 npm run dev
 ```
 開發伺服器將於 `http://localhost:3000` 啟動。
+
+### 5. GitHub Pages + Render 部署
+
+GitHub Pages 只部署靜態前端；Express `/api/chat` 由 Render Web Service
+提供，Gemini 金鑰只設定在 Render 的秘密環境變數中，絕不寫入 Pages
+建置產物。
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yungtang20/bezi-ai)
+
+1. 在 Render 以本儲存庫根目錄的 `render.yaml` 建立 Blueprint，並在建立
+   服務時填入新的 `GEMINI_API_KEY`。
+2. Render 預設服務網址為
+   `https://bezi-ai-api-yungtang20.onrender.com`。若實際網址不同，請在
+   GitHub 儲存庫的 Settings → Secrets and variables → Actions → Variables
+   新增 `API_BASE_URL`，值設為實際的 HTTPS 網址。
+3. GitHub Pages workflow 會在 `main` 更新後建置 `/bezi-ai/` 路徑，並將
+   前端對談請求指向上述 API。
+4. 在 Settings → Pages 將 Source 設為 GitHub Actions；正式網址為
+   `https://yungtang20.github.io/bezi-ai/`。
+
+Render 免費 Web Service 閒置後可能休眠，首次 AI 請求可能需要等待服務
+喚醒；正式環境建議改用不休眠的方案。
 
 ---
 

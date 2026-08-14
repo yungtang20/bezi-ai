@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: bezi-ai-api-yungtang20
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health/ready
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: ALLOW_SERVER_API_KEY
+        value: "true"
+      - key: ALLOWED_ORIGINS
+        value: https://yungtang20.github.io
+      - key: TRUST_PROXY_HOPS
+        value: "1"

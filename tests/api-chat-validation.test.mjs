@@ -83,7 +83,7 @@ before(async () => {
       NODE_ENV: 'production',
       PORT: String(port),
       ALLOWED_ORIGINS: allowedOrigin,
-      NVIDIA_API_KEY: 'server-key-must-require-explicit-opt-in',
+      GEMINI_API_KEY: 'server-key-must-require-explicit-opt-in',
       ALLOW_SERVER_API_KEY: 'false',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -164,7 +164,7 @@ test('server API key is disabled unless explicitly opted in', async () => {
 
   assert.equal(response.status, 401);
   assertErrorContract(body, 'API_KEY_REQUIRED');
-  assert.match(body.error, /API Key/);
+  assert.equal(body.error, '請提供 Gemini API Key。伺服器共用金鑰預設停用。');
 });
 
 test('exposes liveness and readiness without caching deployment details', async () => {

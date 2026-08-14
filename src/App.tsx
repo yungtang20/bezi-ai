@@ -752,17 +752,17 @@ export default function App() {
         {/* API Key 設定 */}
         <div className="space-y-2">
           <label className="block text-xs text-zen-muted tracking-wide">
-             自訂 AI API 金鑰
+             自訂 Gemini API 金鑰
           </label>
           <input
             type="password"
             value={apiKeyInput}
             onChange={(e) => { setApiKeyInput(e.target.value); setApiKeySaved(false); }}
-            placeholder="輸入您的 API 金鑰..."
+            placeholder="輸入您的 Gemini API 金鑰..."
             className="w-full px-3 py-2.5 bg-zen-surface/60 border border-zen-border rounded-lg text-zen-text text-sm placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
           />
           <p className="text-[11px] text-zen-muted/50 leading-relaxed">
-            金鑰只保留在目前分頁的記憶體中；重新整理或關閉分頁後即清除。開始對談時，會連同請求送至本站的 AI 代理伺服器。
+            請輸入 Google AI Studio 建立的 Gemini API 金鑰。金鑰只保留在目前分頁的記憶體中；重新整理或關閉分頁後即清除。開始對談時，會連同請求送至本站的 AI 代理伺服器。
             </p>
         </div>
 

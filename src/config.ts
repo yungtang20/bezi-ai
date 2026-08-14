@@ -1,8 +1,9 @@
 // src/config.ts — 前端核心環境設定與 Storage Key 定義
+import { resolveChatEndpoint } from './api/chatEndpoint';
 
 export const CLIENT_CONFIG = {
   API: {
-    CHAT_ENDPOINT: '/api/chat',
+    CHAT_ENDPOINT: resolveChatEndpoint(import.meta.env.VITE_API_BASE_URL),
   },
   STORAGE_KEYS: {
     NAME: 'bazi_name',
