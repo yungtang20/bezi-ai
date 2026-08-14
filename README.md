@@ -8,6 +8,12 @@
 
 主要儲存庫：https://github.com/yungtang20/bezi-ai
 
+[![CI Pipeline](https://github.com/yungtang20/bezi-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/yungtang20/bezi-ai/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/yungtang20/bezi-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/yungtang20/bezi-ai/actions/workflows/codeql.yml)
+
+參與開發前請閱讀 [`CONTRIBUTING.md`](CONTRIBUTING.md)；安全問題請依
+[`SECURITY.md`](SECURITY.md) 私下回報，勿在公開 issue 張貼憑證或個資。
+
 ---
 
 ## 🏗️ 技術架構與系統設計 (Technical Architecture)

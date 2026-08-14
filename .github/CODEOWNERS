@@ -1,0 +1,10 @@
+# Default owner and high-risk areas. Enforcement requires a repository rule.
+* @yungtang20
+
+/server.ts @yungtang20
+/src/server/ @yungtang20
+/src/domain/ @yungtang20
+/src/data/ @yungtang20
+/LLM_WIKI.md @yungtang20
+/docs/domain-sources.md @yungtang20
+/.github/workflows/ @yungtang20
