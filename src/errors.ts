@@ -56,12 +56,6 @@ export function formatErrorResponse(err: unknown): ErrorResponse {
   };
 }
 
-/**
- * Formats errors for an untrusted HTTP/SSE client. Expected BaziError messages
- * are safe to expose; provider, SDK, and programming errors are deliberately
- * reduced to a stable public contract so internal details never cross the API
- * boundary.
- */
 export function formatPublicErrorResponse(err: unknown): ErrorResponse {
   if (err instanceof BaziError) {
     return {
@@ -70,7 +64,6 @@ export function formatPublicErrorResponse(err: unknown): ErrorResponse {
       timestamp: Date.now(),
     };
   }
-
   return {
     error: PUBLIC_UNEXPECTED_ERROR_MESSAGE,
     code: 'INTERNAL_ERROR',

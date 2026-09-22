@@ -78,8 +78,6 @@ export default function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [showAI, setShowAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [apiKeySaved, setApiKeySaved] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -735,7 +733,7 @@ export default function App() {
                 title="View on GitHub"
               >
                 <Github size={14} />
-                <span>https://github.com/yungtang20/bezi</span>
+                <span>https://github.com/yungtang20/bezi-ai</span>
               </a>
             </div>
           </footer>
@@ -749,44 +747,7 @@ export default function App() {
         title="系統設定" 
         icon={<Settings size={18} className="text-zen-gold" />}
       >
-        {/* API Key 設定 */}
-        <div className="space-y-2">
-          <label className="block text-xs text-zen-muted tracking-wide">
-             自訂 Gemini API 金鑰
-          </label>
-          <input
-            type="password"
-            value={apiKeyInput}
-            onChange={(e) => { setApiKeyInput(e.target.value); setApiKeySaved(false); }}
-            placeholder="輸入您的 Gemini API 金鑰..."
-            className="w-full px-3 py-2.5 bg-zen-surface/60 border border-zen-border rounded-lg text-zen-text text-sm placeholder-zen-muted/40 focus:outline-none focus:border-amber-500/50"
-          />
-          <p className="text-[11px] text-zen-muted/50 leading-relaxed">
-            請輸入 Google AI Studio 建立的 Gemini API 金鑰。金鑰只保留在目前分頁的記憶體中；重新整理或關閉分頁後即清除。開始對談時，會連同請求送至本站的 AI 代理伺服器。
-            </p>
-        </div>
-
-        <div className="flex gap-3 mt-5">
-          <button
-            onClick={() => {
-              setApiKeyInput(apiKeyInput.trim());
-              setApiKeySaved(true);
-              setTimeout(() => setApiKeySaved(false), 2000);
-            }}
-            className="flex-1 py-2.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors"
-          >
-            {apiKeySaved ? '✓ 已套用' : '套用金鑰'}
-          </button>
-          <button
-            onClick={() => {
-              setApiKeyInput('');
-              setApiKeySaved(false);
-            }}
-            className="px-4 py-2.5 bg-white/5 border border-white/10 text-zen-muted rounded-lg text-sm hover:bg-white/10 transition-colors"
-          >
-            清除
-          </button>
-        </div>
+        <p className="text-sm leading-relaxed text-zen-muted">AI 服務由後端 Agnes AI 設定提供。API 金鑰不會儲存在瀏覽器或送入前端。</p>
       </Modal>
 
       {/* AI Chat Panel - Right Side Overlay */}
@@ -799,12 +760,7 @@ export default function App() {
         >
           {showAI && (
             <Suspense fallback={<SkeletonPage />}>
-              <AIChatPanel
-                bazi={bazi}
-                userName={name}
-                apiKey={apiKeyInput}
-                onApiKeyChange={setApiKeyInput}
-              />
+              <AIChatPanel bazi={bazi} userName={name} />
             </Suspense>
           )}
         </Drawer>

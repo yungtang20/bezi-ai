@@ -4,6 +4,7 @@ import {
   ValidationError,
   APIError,
   formatErrorResponse,
+  formatPublicErrorResponse,
 } from '../../src/errors';
 
 describe('Errors Module (BaziError, ValidationError, APIError, formatting)', () => {
@@ -48,5 +49,11 @@ describe('Errors Module (BaziError, ValidationError, APIError, formatting)', () 
     const formatted = formatErrorResponse('非 Error 物件');
     expect(formatted.error).toBe('發生未知錯誤');
     expect(formatted.code).toBe('UNKNOWN_ERROR');
+  });
+
+  it('does not expose unexpected internal error messages to clients', () => {
+    const formatted = formatPublicErrorResponse(new Error('secret provider detail'));
+    expect(formatted.error).toBe('伺服器處理異常，請稍後再試。');
+    expect(formatted.code).toBe('INTERNAL_ERROR');
   });
 });

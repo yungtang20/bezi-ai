@@ -5,6 +5,10 @@ import { GAN_TO_ELEMENT } from '../constants';
 import { TEN_GOD_TRAITS } from '../data';
 import { calculateDaYun, getLiuNian } from '../dayun';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import FiveElementsRadar from './dashboard/FiveElementsRadar';
+import TenGodsPie from './dashboard/TenGodsPie';
+import BaziPillars from './dashboard/BaziPillars';
+import { getFiveElementData, getTenGodData } from '../lib/chartTransform';
 
 const ELEMENT_COLORS: Record<string, string> = {
   '甲': 'text-emerald-400', '乙': 'text-emerald-400',
@@ -84,6 +88,8 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
 
   const dayElement = GAN_TO_ELEMENT[chart.dayMaster];
   const myTenGods = Array.from(new Set([chart.year.tenGod, chart.month.tenGod, chart.hour.tenGod].filter(Boolean)));
+  const fiveElementData = useMemo(() => getFiveElementData(chart), [chart]);
+  const tenGodData = useMemo(() => getTenGodData(chart), [chart]);
 
   const liuNianZhiHidden = currentLiuNian.zhi ? (ZHI_HIDE_GAN[currentLiuNian.zhi] || []) : [];
   const liuNianZhiTenGods = currentLiuNian.zhi ? getHiddenTenGodsForZhi(currentLiuNian.zhi, chart.dayMaster) : [];
@@ -167,7 +173,7 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
             {birthDate && (
               <div className="text-xs text-zinc-500 font-medium font-serif space-y-px">
                 <div className="flex items-center flex-wrap">
-                  <span className="w-[150px]">國曆：{birthDate.replace(/-/g, '/')} {birthTime ? (birthTime.includes(':') ? birthTime : `${birthTime.padStart(2, '0')}:00`) : ''}</span>
+                  <span className="w-[150px]">國曆：{birthDate.replace(/-/g, '/')} {birthTime ? `${birthTime.padStart(2, '0')}:00` : ''}</span>
                   <span className="text-zinc-700 mx-1 hidden md:inline">｜</span>
                   <span>性別{gender === 'male' ? '男' : gender === 'female' ? '女' : ''}</span>
                 </div>
@@ -197,6 +203,21 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
               </div>
             );
           })()}
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3 animate-fade-in-up">
+        <div className="glass-card p-3">
+          <h2 className="mb-2 text-sm font-bold text-zinc-100">四柱命盤</h2>
+          <BaziPillars chart={chart} />
+        </div>
+        <div className="glass-card p-3">
+          <h2 className="mb-1 text-sm font-bold text-zinc-100">五行強弱</h2>
+          <FiveElementsRadar data={fiveElementData} />
+        </div>
+        <div className="glass-card p-3">
+          <h2 className="mb-1 text-sm font-bold text-zinc-100">十神比例</h2>
+          <TenGodsPie data={tenGodData} />
         </div>
       </div>
 

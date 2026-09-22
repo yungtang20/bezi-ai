@@ -55,9 +55,7 @@ test('completes chart creation and calibration without an API key', async ({ pag
   await expect(page.getByText('八字格局 · 五行能量 · 人生藍圖')).toBeVisible();
 
   await page.getByRole('button', { name: '設定' }).click();
-  const apiKeyInput = page.getByPlaceholder('輸入您的 Gemini API 金鑰...');
-  await apiKeyInput.fill('session-only-test-key');
-  await page.getByRole('button', { name: '套用金鑰' }).click();
+  await expect(page.getByText('API 金鑰不會儲存在瀏覽器或送入前端')).toBeVisible();
   await expect.poll(
     () => page.evaluate(() => window.localStorage.getItem('bazi_api_key')),
   ).toBeNull();
@@ -69,7 +67,7 @@ test('completes chart creation and calibration without an API key', async ({ pag
   await expect(page.getByText('八字格局 · 五行能量 · 人生藍圖')).toBeVisible();
 
   await page.getByRole('button', { name: '設定' }).click();
-  await expect(page.getByPlaceholder('輸入您的 Gemini API 金鑰...')).toHaveValue('');
+  await expect(page.getByText('AI 服務由後端 Agnes AI 設定提供')).toBeVisible();
 
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '流月流日' }).click();

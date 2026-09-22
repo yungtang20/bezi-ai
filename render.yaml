@@ -8,12 +8,16 @@ services:
     healthCheckPath: /health/ready
     autoDeployTrigger: checksPass
     envVars:
-      - key: GEMINI_API_KEY
+      - key: AGNES_API_KEY
         sync: false
-      - key: GEMINI_MODEL
-        value: gemini-2.5-flash
-      - key: ALLOW_SERVER_API_KEY
-        value: "true"
+      - key: AGNES_BASE_URL
+        value: https://apihub.agnes-ai.com/v1
+      - key: AGNES_MODEL
+        value: agnes-3.0-flash
+      - key: BEZI_AUTH_CLIENT_SECRET
+        sync: false
+      - key: NODE_ENV
+        value: production
       - key: ALLOWED_ORIGINS
         value: https://yungtang20.github.io
       - key: TRUST_PROXY_HOPS
