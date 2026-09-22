@@ -134,6 +134,12 @@ GitHub Pages 只部署靜態前端；Express API、Session Token、SQLite Eviden
 Bundle 與 Agnes 呼叫由 Render Web Service 提供。Agnes Key 絕不寫入 Pages
 建置產物。
 
+目前正式環境：
+
+- 前端：<https://yungtang20.github.io/bezi-ai/>
+- API：<https://bezi-ai-api-yungtang20.onrender.com>
+- Readiness：<https://bezi-ai-api-yungtang20.onrender.com/health/ready>
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yungtang20/bezi-ai)
 
 1. 在 Render 以本儲存庫根目錄的 `render.yaml` 建立 Blueprint，並在建立
