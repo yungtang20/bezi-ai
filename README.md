@@ -1,193 +1,197 @@
-# Bezi 專業八字命理分析與大運流年推算系統
-
-本專案提供全功能的子平八字排盤、五行格局分析、十年大運與流年推算、合盤配對，以及基於 Agnes AI（OpenAI-compatible API）的 SSE 即時 AI 命理解析服務。
-
-主要儲存庫：https://github.com/yungtang20/bezi-ai
-
-線上網站：[https://bezi-ai-api-yungtang20.onrender.com/](https://bezi-ai-api-yungtang20.onrender.com/)
+# Bezi AI｜八字命理分析與歲運觀測
 
 [![CI Pipeline](https://github.com/yungtang20/bezi-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/yungtang20/bezi-ai/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/yungtang20/bezi-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/yungtang20/bezi-ai/actions/workflows/codeql.yml)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=nodedotjs&logoColor=white)
 
-參與開發前請閱讀 [`CONTRIBUTING.md`](CONTRIBUTING.md)；安全問題請依
-[`SECURITY.md`](SECURITY.md) 私下回報，勿在公開 issue 張貼憑證或個資。
+**把排盤、格局、歲運、生活專項與 AI 問答，整理成一套可持續對照人生經驗的八字分析工具。**
 
----
+Bezi AI 以子平八字為核心，從出生資料建立命盤，再透過人生事件校準、大運流年、流月流日、六大生活專項、合盤與理論對照，協助使用者用一致的介面理解命理資訊。
 
-## 🏗️ 技術架構與系統設計 (Technical Architecture)
+[開啟 GitHub Pages](https://yungtang20.github.io/bezi-ai/) · [開啟完整 Render 服務](https://bezi-ai-api-yungtang20.onrender.com/) · [回報一般問題](https://github.com/yungtang20/bezi-ai/issues)
 
-```
-┌────────────────────────────────────────────────────────┐
-│                  Client-Side (React 19 + Vite + Tailwind)│
-│  ├─ Core Paipan Engine + source-backed domain modules   │
-│  ├─ Interactive UI (Dashboard, Synastry, Timeline)      │
-│  └─ SSE Chat Client (AIChatPanel.tsx + DOMPurify Sanit) │
-└───────────────────────────▲────────────────────────────┘
-                            │ SSE Streaming / HTTPS
-┌───────────────────────────▼────────────────────────────┐
-│                  Server-Side (Express + Node.js 22+)   │
-│  ├─ Rate Limiting & Security Sanitization Engine       │
-│  └─ /api/chat Proxy (OpenAI SDK → Agnes AI)            │
-└────────────────────────────────────────────────────────┘
-```
+> Render 免費服務休眠後，第一次開啟可能需要稍候片刻。AI 問答需要部署者提供授權密碼，並選擇伺服器已有的命盤 Evidence。
 
-- **前端框架**：React 19 + Vite + Tailwind CSS + Lucide Icons + Motion
-- **命理排盤引擎**：`@bezi/core` workspace 封裝 `lunar-javascript`、排盤、格局、大運與流年邏輯
-- **規則來源層**：`src/domain/` 封裝藏干、合化與格局權重；來源雜湊、頁面與未決歧義見 [`docs/domain-sources.md`](docs/domain-sources.md)，統一術語見 [`CONTEXT.md`](CONTEXT.md)
-- **後端服務**：Express Node Server 處理 SSE 即時串流與限流防護
-- **資安與防禦**：
-  - 後端嚴格校驗訊息數量、內容長度與系統提示格式
-  - XSS 防護：使用 `DOMPurify` 洗淨 AI 渲染內容
-  - API 金鑰邊界：Agnes Key 只存在後端環境變數；瀏覽器使用短期 Session Token，不接觸 Provider Key
+## 主要功能
 
----
+- **八字排盤**：顯示四柱、藏干、十神、五行分布、日主與格局；出生時間可留空，改以年月日進行前三柱分析。
+- **人生事件校準**：使用兩個歷史年份的「順利／不順／平穩」回饋，調整格局分數後再進入完整分析。
+- **先天命局**：整理個性核心、外在展現、私下特質、喜用神與五行補運方向。
+- **大運流年**：呈現十年大運與年度變化，讓長期趨勢和單年事件能放在同一條時間軸比較。
+- **流月流日**：查看每月日曆、每日六大領域能量、日誌與歷史回顧。
+- **六大生活專項**：深入查看健康、事業、財富、感情、家庭及朋友人際分析。
+- **合盤配對**：從雙方命盤、五行與十神互動觀察關係傾向。
+- **理論對照與搜尋**：把基礎規則、專項說明與講義知識整理成可查詢內容。
+- **AI 命理問答**：以 Agnes AI SSE 串流回覆，並以伺服器端 Evidence Bundle 限制可回答範圍。
 
-## 🔌 API Reference
+## 使用流程
 
-### POST `/api/chat`
+1. 輸入姓名、性別、出生日期，以及選填的出生時間。
+2. 完成兩個歷史年份的事件校準。
+3. 從「命局、歲運、專項、流日、合盤、理論」切換不同分析。
+4. 如有 AI 權限，輸入授權密碼、選擇伺服器命盤記錄，再開始提問。
 
-與 AI 命理專家進行即時 SSE 串流對話。
+## 資料與 AI 邊界
 
-#### Request Header
-```http
-Content-Type: application/json
-Authorization: Bearer <session-token>
-```
+Bezi AI 將一般排盤與 AI 問答分開處理：
 
-#### Request Body
-```json
-{
-  "messages": [
-    { "role": "user", "content": "請根據我的八字分析今年事業運勢。" }
-  ],
-  "customPrompt": "可選的自訂系統提示詞",
-  "record_id": "demo-001"
-}
-```
+- 姓名、出生資料、校準與日誌主要保存在目前瀏覽器的 LocalStorage 或 IndexedDB。
+- AI 問答啟用後，問題、自訂引導、畫面命盤脈絡及選定的 `record_id` 會送到後端；使用者應避免輸入不必要的個人資訊。
+- 授權密碼只用來交換短期 Session Token；Token 與選定記錄存放在 SessionStorage。
+- 前端不能自行提交 Evidence Bundle。後端只使用受信任的 SQLite／MCP Evidence，缺少資料時會拒絕推測。
+- `AGNES_API_KEY` 只存在伺服器環境變數，不會打包進前端，也不接受瀏覽器提供的 API key。
+- AI 回應需通過結構化 Evidence 驗證，顯示前再由 DOMPurify 清理。
+- 伺服器會驗證授權、來源、請求頻率、訊息筆數與內容長度。
 
-#### 成功回應 (Server-Sent Events)
-```http
-HTTP/1.1 200 OK
-Content-Type: text/event-stream; charset=utf-8
-Cache-Control: no-cache
-Connection: keep-alive
+> 本專案的命理內容僅供文化研究、娛樂與自我觀察，不構成醫療、投資、法律或其他專業建議。
 
-data: {"content":"您好，根據您的命盤..."}
+## 系統架構
 
-data: [DONE]
+```mermaid
+flowchart LR
+    U["使用者瀏覽器"] --> UI["React 19 + Vite"]
+    UI --> CORE["@bezi/core 排盤引擎"]
+    UI --> LOCAL["LocalStorage / IndexedDB"]
+    UI -->|"Session Token + HTTPS"| API["Express API"]
+    API --> AUTH["授權、CORS、限流與輸入驗證"]
+    AUTH --> EVIDENCE["SQLite / MCP Evidence Bundle"]
+    EVIDENCE --> AI["Agnes AI SSE 串流"]
+    AI --> GATE["輸出引用驗證 + DOMPurify"]
+    GATE --> UI
 ```
 
-授權失敗會回傳 `401` JSON；通過授權後，驗證錯誤、Evidence Gate 拒答與
-Provider 錯誤均使用安全的 SSE payload，不回傳內部堆疊或 Provider Key。
+### 技術組成
 
-### Runtime health
+| 區域 | 技術與責任 |
+| --- | --- |
+| Web UI | React 19、TypeScript、Vite、Tailwind CSS、Motion、Recharts |
+| 命理核心 | `@bezi/core`、`lunar-javascript`；排盤、格局、大運、流年與圖表轉換 |
+| 知識層 | `src/domain/`、`src/data/`、`LLM_WIKI.md` 與來源治理文件 |
+| API | Express、短期 Session、CORS、Rate Limit、輸入驗證、SSE |
+| AI 安全 | Server-side Evidence Bundle、引用驗證、缺資料時 fail closed |
+| 儲存 | 瀏覽器 LocalStorage／IndexedDB；伺服器 SQLite Evidence |
+| 品質 | TypeScript、Vitest、Node API tests、Playwright、Docker smoke、CodeQL |
 
-- `GET /health/live`：程序存活探針。
-- `GET /health/ready`：程序可接收流量的基本就緒探針。
+## 線上部署
 
-兩個端點均回傳 `Cache-Control: no-store`，不揭露金鑰或部署設定。
+| 入口 | 用途 |
+| --- | --- |
+| [GitHub Pages](https://yungtang20.github.io/bezi-ai/) | 靜態前端，透過 `VITE_API_BASE_URL` 呼叫 Render API |
+| [Render](https://bezi-ai-api-yungtang20.onrender.com/) | 前端靜態資源與 Express API 的完整服務 |
+| [`/health/live`](https://bezi-ai-api-yungtang20.onrender.com/health/live) | 程序存活檢查 |
+| [`/health/ready`](https://bezi-ai-api-yungtang20.onrender.com/health/ready) | 啟動設定與服務就緒檢查 |
 
----
+`render.yaml` 使用 Docker 部署，並在 CI checks 通過後自動部署 `main`。Render 免費實例的檔案系統不適合保存持久寫入；若未來需要修改 SQLite 資料，應使用 Persistent Disk 或外部資料庫。
 
-## 🚀 本地開發與部署指南 (Getting Started)
+## 本機開發
 
-### 1. 環境準備
-- **Node.js**: v22+
-- **NPM**: 使用 committed `package-lock.json` 進行確定性安裝
+### 需求
 
-### 2. 安裝相依套件
+- Node.js 22 或更新版本
+- npm
+
+### 安裝
+
 ```bash
+git clone https://github.com/yungtang20/bezi-ai.git
+cd bezi-ai
 npm ci
 ```
 
-### 3. 設定環境變數
-將 `.env.example` 複製為 `.env.local`。Agnes Key 與授權密碼只可存在
-本機或部署平台的秘密環境變數，不得放入前端或提交至 Git：
+複製環境設定：
+
 ```bash
+# macOS / Linux
 cp .env.example .env.local
+
+# Windows PowerShell
+Copy-Item .env.example .env.local
 ```
 
-編輯 `.env.local`：
+設定必要的伺服器端環境變數：
+
 ```env
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-AGNES_API_KEY=your_agnes_api_key_here
+AGNES_API_KEY=your_server_only_agnes_key
+BEZI_AUTH_CLIENT_SECRET=your_server_only_auth_secret
 AGNES_BASE_URL=https://apihub.agnes-ai.com/v1
 AGNES_MODEL=agnes-3.0-flash
-BEZI_AUTH_CLIENT_SECRET=your_server_only_auth_secret
-NODE_ENV=development
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 PORT=3000
 ```
 
-Production 應明確設定 `ALLOWED_ORIGINS` 與 `BEZI_AUTH_CLIENT_SECRET`。
-反向代理部署只有在明確知道 hop 數時才設定 `TRUST_PROXY_HOPS`。單機限流
-目前使用記憶體；多實例公開部署應改用共享的限流 adapter。
+請勿使用 `VITE_` 前綴存放任何 secret。Production 必須明確設定允許的瀏覽器來源；多實例部署則應把目前的記憶體限流器替換為共享儲存方案。
 
-### 4. 啟動開發伺服器
+### 啟動與建置
+
 ```bash
+# 開發模式：http://localhost:3000
 npm run dev
+
+# Production bundle 與 server
+npm run build
+npm start
 ```
-開發伺服器將於 `http://localhost:3000` 啟動。
 
-### 5. GitHub Pages + Render 部署
+## API 概覽
 
-GitHub Pages 只部署靜態前端；Express API、Session Token、SQLite Evidence
-Bundle 與 Agnes 呼叫由 Render Web Service 提供。Agnes Key 絕不寫入 Pages
-建置產物。
+| Method | Endpoint | 用途 |
+| --- | --- | --- |
+| `GET` | `/health/live` | 存活檢查 |
+| `GET` | `/health/ready` | 就緒檢查 |
+| `POST` | `/api/auth/token` | 以部署者密碼交換短期 Session Token |
+| `GET` | `/api/records` | 取得授權範圍內的命盤 Evidence 摘要 |
+| `POST` | `/api/chat` | 依選定 Evidence 執行 Agnes AI SSE 問答 |
 
-目前正式環境：
+`/api/records` 與 `/api/chat` 必須攜帶 Bearer Session Token。`/api/chat` 還需要有效的 `record_id`；沒有可信 Evidence 時會回傳安全拒答，而不是自行補完命盤資訊。
 
-- 前端：<https://yungtang20.github.io/bezi-ai/>
-- API：<https://bezi-ai-api-yungtang20.onrender.com>
-- Readiness：<https://bezi-ai-api-yungtang20.onrender.com/health/ready>
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yungtang20/bezi-ai)
-
-1. 在 Render 以本儲存庫根目錄的 `render.yaml` 建立 Blueprint，並在建立
-   服務時填入 `AGNES_API_KEY` 與 `BEZI_AUTH_CLIENT_SECRET`。
-2. Render 預設服務網址為
-   `https://bezi-ai-api-yungtang20.onrender.com`。若實際網址不同，請在
-   GitHub 儲存庫的 Settings → Secrets and variables → Actions → Variables
-   新增 `API_BASE_URL`，值設為實際的 HTTPS 網址。
-3. GitHub Pages workflow 會在 `main` 更新後建置 `/bezi-ai/` 路徑，並將
-   前端對談請求指向上述 API。
-4. 在 Settings → Pages 將 Source 設為 GitHub Actions；正式網址為
-   `https://yungtang20.github.io/bezi-ai/`。
-
-Render 免費 Web Service 閒置後可能休眠，首次 AI 請求可能需要等待服務
-喚醒；重啟或重新部署也會重置未掛載磁碟的 SQLite 寫入。目前資料庫只供
-靜態 Evidence 查詢；若需寫入，請掛載 Persistent Disk 或改用外部資料庫。
-
----
-
-## 🧪 測試與品質檢驗 (Testing & Linting)
-
-專案整合 **Vitest** 單元測試、Node API contract 測試、Playwright Chromium E2E 與 TypeScript 靜態型別檢查。
+## 測試與品質門檻
 
 ```bash
-# 執行 TypeScript 靜態型別與語法檢查
+# TypeScript 靜態檢查
 npm run lint
 
-# 執行單元測試套件（排盤、格局、大運流年與十神常數測試）
+# Vitest 單元測試
 npm test
 
-# 執行後端 API contract / CORS / 輸入邊界測試
+# API validation tests
 npm run test:api
 
-# 首次執行 E2E 前安裝 Chromium
-npx playwright install chromium
-
-# 啟動完整 Express + Vite 並執行核心瀏覽器流程
+# Playwright 瀏覽器流程
 npm run test:e2e
+
+# Production build
+npm run build
 ```
 
----
+CI 另會執行 dependency audit、Docker build、production container smoke test，以及獨立的 CodeQL 分析。
 
-## 🔒 資安政策與注意事項 (Security & Best Practices)
+修改 `packages/core` 後，另執行：
 
-1. **禁止硬編碼憑證**：原始碼中嚴禁存放任何真實 API Key 或私鑰。
-2. **XSS 防範**：前端渲染來自使用者的對話與 AI 回應時，必須經過 `DOMPurify` 處理。
-3. **輸入消毒**：請求到達 LLM 前，伺服器驗證角色、訊息長度、總長度、筆數與請求頻率。
-4. **CORS allowlist**：Production 透過 `ALLOWED_ORIGINS` 限制瀏覽器來源。
-5. **金鑰最小留存**：Agnes Key 只存在後端 Secret Store；瀏覽器只保存短期 Session Token。
-6. **瀏覽器安全標頭**：Production 回應包含 HSTS、X-Frame-Options、nosniff 與 Referrer-Policy。
-7. **可探測性**：容器與 Render 均使用 `/health/ready` readiness healthcheck。
+```bash
+npx tsc -p packages/core/tsconfig.json --noEmit
+```
+
+## 專案結構
+
+```text
+bezi-ai/
+├─ packages/core/       # 排盤、格局、大運、流年等共用核心
+├─ src/components/      # 命局、歲運、專項、流日、合盤與 AI 介面
+├─ src/domain/          # 有來源治理的命理規則模組
+├─ src/data/            # 表格、規則與講義知識資料
+├─ src/ai/              # Evidence 與 AI 輸出驗證
+├─ src/lib/             # API、儲存與安全相關工具
+├─ docs/                # Domain source、部署與維護文件
+├─ tests/               # 單元、API 與 Playwright E2E
+├─ server.ts            # Express、授權、限流與 Agnes SSE proxy
+├─ LLM_WIKI.md          # 命理知識來源與規則索引
+└─ render.yaml          # Render Blueprint
+```
+
+## 貢獻與安全回報
+
+- 開發流程與必要檢查請參考 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+- 命理規則、講義或 `src/data/` 變更必須附上可追溯來源，詳見 [docs/domain-sources.md](./docs/domain-sources.md)。
+- 安全問題請依 [SECURITY.md](./SECURITY.md) 私下聯絡維護者，不要在公開 Issue 張貼憑證、個人出生資料或可利用細節。
