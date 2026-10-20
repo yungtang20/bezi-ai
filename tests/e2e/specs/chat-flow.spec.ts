@@ -113,6 +113,29 @@ test('分享今日運勢可產出 PNG 圖檔並提供 LINE 分享', async ({ pag
   await expect(page.getByRole('button', { name: '分享到 LINE' })).toBeVisible({ timeout: 20000 });
 });
 
+test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context }) => {
+  await seedChart(context);
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+
+  // 進入「流日」頁（step 8）
+  await page.getByRole('button', { name: '流日' }).first().click();
+  await expect(page.getByText('本月流日預報')).toBeVisible({ timeout: 20000 });
+
+  // 尚未打卡 → 報告顯示引導文案
+  await expect(page.getByText('AI 預測吻合度報告')).toBeVisible();
+  await expect(page.getByText(/AI 就會開始學習你的節奏/)).toBeVisible();
+
+  // 打卡：選一個「順利」並送出
+  await page.getByRole('button', { name: '😊 順利' }).first().click();
+  await page.getByRole('button', { name: /記錄今天的能量|記錄這天的能量/ }).click();
+
+  // 打卡成功 → 出現連續天數
+  await expect(page.getByText(/已連續打卡 1 天/)).toBeVisible({ timeout: 20000 });
+  // 報告出現百分比
+  await expect(page.getByText('AI 預測吻合度報告')).toBeVisible();
+});
+
 test('未授權直接呼叫 chat 回傳 401', async ({ request }) => {
   const response = await request.post('/api/chat', { data: { messages: [{ role: 'user', content: '測試' }] } });
   expect(response.status()).toBe(401);

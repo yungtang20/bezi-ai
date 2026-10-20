@@ -94,6 +94,13 @@ export async function getWeekLogs(): Promise<DailyLog[]> {
   return all.filter(log => log.date >= cutoff.toISOString().split('T')[0]);
 }
 
+// 取得所有打卡記錄（連續天數／整體準確率用）
+export async function getAllLogs(): Promise<DailyLog[]> {
+  const db = await openDB();
+  const store = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
+  return await dbRequest<DailyLog[]>(store, 'getAll');
+}
+
 // 通知記錄結構
 export interface AppNotification {
   date: string;

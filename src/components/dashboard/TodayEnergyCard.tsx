@@ -7,6 +7,7 @@ import { BaziChart } from '../../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern } from '../../pattern';
 import { getDailyEnergy, type DailyEnergy } from '../../dailyAnalysis';
 import { useShareImage } from '../../hooks/useShareImage';
+import { useCheckInStats } from '../../hooks/useCheckInStats';
 import { buildDailyShareText, buildLineShareUrl } from '../../lib/shareText';
 import ShareImage from '../share/ShareImage';
 import DailyShareCard from '../share/DailyShareCard';
@@ -44,6 +45,8 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
   const { isSharing, error: shareError, share } = useShareImage();
   const [shareTarget, setShareTarget] = useState(false);
   const [lineShareUrl, setLineShareUrl] = useState<string | null>(null);
+  // [AI MOD] 連續打卡 + 準確率（每日回訪的回饋）
+  const { streak, report } = useCheckInStats();
 
   const patternResult = useMemo(() => determinePattern(chart), [chart]);
   const energy: DailyEnergy = useMemo(() => {
@@ -101,6 +104,19 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
             今日 · {dateLabel}
           </span>
           <div className="flex items-center gap-1.5">
+            {streak.current > 0 && (
+              <span
+                className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-400/30 flex items-center gap-1"
+                title={`已連續打卡 ${streak.current} 天（最長 ${streak.longest} 天）`}
+              >
+                🔥 連續 {streak.current} 天
+              </span>
+            )}
+            {report.samples > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-400/30">
+                準確率 {report.accuracy}%
+              </span>
+            )}
             {energy.isWeaknessDay && (
               <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-300 border border-red-400/25">
                 弱五行受剋

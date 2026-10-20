@@ -3,6 +3,7 @@ import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
 import { DailyEnergy, getDailyEnergy, getUpcomingDatesForCategory } from '../dailyAnalysis';
 import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs } from '../storage';
+import { useCheckInStats } from '../hooks/useCheckInStats';
 import MonthlyForecastCalendar from './MonthlyForecastCalendar';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 
@@ -23,6 +24,8 @@ interface Props {
 
 export default function DailyForecastPage({ chart, scores, onNavigate }: Props) {
   const [dailyEnergy, setDailyEnergy] = useState<DailyEnergy | null>(null);
+  // [AI MOD] 連續打卡 + 準確率報告
+  const { streak, report, refresh: refreshStats } = useCheckInStats();
   const [categoryFeedback, setCategoryFeedback] = useState<Record<string, 'good' | 'bad' | null>>({
     health: null, career: null, romance: null, wealth: null, family: null, friends: null
   });
@@ -147,6 +150,7 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
       }
 
       setIsSubmitted(true);
+      void refreshStats();
     } catch (e) {
       console.error('[AI MOD] handleCheckIn failed:', e);
     }
@@ -289,10 +293,68 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
                  >
                    修改記錄
                  </button>
+                 {streak.current > 0 && (
+                   <div className="text-sm text-orange-300 mt-3">🔥 已連續打卡 {streak.current} 天（最長 {streak.longest} 天）</div>
+                 )}
                </div>
              )}
            </div>
          </div>
+      </div>
+
+      {/* [AI MOD] AI 準確率報告：讓「持續記錄」有回饋（AI 正在學習使用者） */}
+      <div className="info-card bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-zen-text">AI 預測吻合度報告</h2>
+          {streak.current > 0 && (
+            <span className="text-xs px-2 py-1 rounded-lg bg-orange-500/15 text-orange-300 border border-orange-400/30">
+              🔥 連續 {streak.current} 天
+            </span>
+          )}
+        </div>
+
+        {report.samples > 0 ? (
+          <div className="relative z-10">
+            <div className="flex items-end gap-3 mb-1">
+              <span className="text-5xl font-bold text-indigo-400 leading-none">{report.accuracy}</span>
+              <span className="text-2xl text-indigo-400/70 mb-1">%</span>
+              <span className="ml-auto text-sm px-2.5 py-1 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-400/30">
+                {report.level}
+              </span>
+            </div>
+            <p className="text-sm text-zen-text font-medium mt-1">{report.headline}</p>
+            <p className="text-xs text-zen-muted mt-1.5 leading-relaxed">{report.summary}</p>
+
+            <div className="mt-4 space-y-2">
+              {report.categories.map(item => (
+                <div key={item.key} className="flex items-center gap-3">
+                  <span className="text-xs text-zen-muted w-10 shrink-0">{item.label}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-400"
+                      style={{ width: `${item.accuracy}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-zen-text w-20 text-right shrink-0">
+                    {item.accuracy}% <span className="text-zen-muted">({item.match}/{item.total})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[11px] text-zen-muted mt-4 pt-3 border-t border-white/5">
+              依據 {report.checkedDays} 次心流紀錄、{report.samples} 筆可評估回饋計算。持續記錄，預測會越來越貼近你的真實體驗。
+            </p>
+          </div>
+        ) : (
+          <div className="text-center bg-white/5 rounded-xl p-6 border border-white/5">
+            <p className="text-sm text-zen-muted">{report.summary}</p>
+            {streak.totalDays > 0 && (
+              <p className="text-xs text-zen-muted mt-2">已累積 {streak.totalDays} 天紀錄</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 本月吻合度 (校準) */}

@@ -122,33 +122,81 @@ function getScoreByPattern(scores: PatternScores, pattern: string): number {
   return key ? scores[key] : 0;
 }
 
+// [AI MOD] 十神日型 → 可評估領域（單一真實來源，供整體與分領域準確率共用）
+export const DAY_TYPE_FIELDS: Record<string, CategoryKey[]> = {
+  '財星': ['wealth'],
+  '官殺': ['career'],
+  '食傷': ['romance', 'health'],
+  '比劫': ['wealth', 'romance', 'friends', 'family'],
+  '印星': ['career'],
+};
+
+export type CategoryKey = 'health' | 'career' | 'romance' | 'wealth' | 'family' | 'friends';
+
+export const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  health: '健康',
+  career: '事業',
+  romance: '感情',
+  wealth: '財運',
+  family: '家庭',
+  friends: '人際',
+};
+
+export const CATEGORY_ORDER: CategoryKey[] = ['wealth', 'career', 'romance', 'health', 'family', 'friends'];
+
+/** 理論好壞判定（單一真實來源） */
+export function isGoodOutcome(outcome: string): boolean {
+  return outcome === '順利' || outcome.includes('吉') || outcome.includes('好');
+}
+
+export function isBadOutcome(outcome: string): boolean {
+  return outcome === '不順' || outcome.includes('凶') || outcome.includes('壞');
+}
+
+export interface CategoryAccuracy {
+  key: CategoryKey;
+  label: string;
+  match: number;
+  total: number;
+  accuracy: number; // 0-100
+}
+
+/** 分領域準確率：依十神日型評估對應領域的實際回饋 */
+export function calculateCategoryAccuracy(logs: DailyLog[]): CategoryAccuracy[] {
+  const acc: Record<string, { match: number; total: number }> = {};
+
+  for (const log of logs) {
+    const fields = DAY_TYPE_FIELDS[log.dayTenGodType || ''];
+    if (!fields) continue;
+    const good = isGoodOutcome(log.theoreticalOutcome || '');
+    const bad = isBadOutcome(log.theoreticalOutcome || '');
+    for (const field of fields) {
+      const actual = log[field];
+      if (!actual) continue;
+      if (!acc[field]) acc[field] = { match: 0, total: 0 };
+      acc[field].total += 1;
+      if ((actual === 'good' && good) || (actual === 'bad' && bad)) acc[field].match += 1;
+    }
+  }
+
+  return CATEGORY_ORDER.map(key => {
+    const stat = acc[key] || { match: 0, total: 0 };
+    return {
+      key,
+      label: CATEGORY_LABELS[key],
+      match: stat.match,
+      total: stat.total,
+      accuracy: stat.total > 0 ? Math.round((stat.match / stat.total) * 100) : 0,
+    };
+  });
+}
+
 export function calculateAccuracy(logs: DailyLog[]): number {
   if (logs.length === 0) return 0;
-  
-  const stats = logs.reduce((acc, log) => {
-    const dayType = log.dayTenGodType || '';
-    const isGoodTheory = log.theoreticalOutcome === '順利' || ['吉', '好'].some(k => log.theoreticalOutcome.includes(k));
-    const isBadTheory = log.theoreticalOutcome === '不順' || ['凶', '壞'].some(k => log.theoreticalOutcome.includes(k));
-    
-    const evaluate = (actual: 'good' | 'bad' | null | undefined) => {
-       if (!actual) return;
-       acc.total++;
-       if ((actual === 'good' && isGoodTheory) || (actual === 'bad' && isBadTheory)) {
-         acc.match++;
-       }
-    };
 
-    const map: Record<string, () => void> = {
-      '財星': () => evaluate(log.wealth),
-      '官殺': () => evaluate(log.career),
-      '食傷': () => { evaluate(log.romance); evaluate(log.health); },
-      '比劫': () => { evaluate(log.wealth); evaluate(log.romance); evaluate(log.friends); evaluate(log.family); },
-      '印星': () => evaluate(log.career),
-    };
+  const categories = calculateCategoryAccuracy(logs);
+  const total = categories.reduce((sum, item) => sum + item.total, 0);
+  const match = categories.reduce((sum, item) => sum + item.match, 0);
 
-    map[dayType]?.();
-    return acc;
-  }, { total: 0, match: 0 });
-
-  return stats.total > 0 ? Math.round((stats.match / stats.total) * 100) : 0;
+  return total > 0 ? Math.round((match / total) * 100) : 0;
 }
