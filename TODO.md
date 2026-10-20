@@ -25,7 +25,7 @@
 | `npm run lint` | ✅ 通過（tsc --noEmit） |
 | `npm test` | ✅ 通過（13 檔、45 測試全過） |
 | API 驗證（.mjs） | ✅ 12 項全過（chat-validation 4 + evidence-pipeline 7 + dev-auth-bypass 1） |
-| Playwright E2E | ✅ 6/6 全過（含 1 鍵範例命盤試玩流程） |
+| Playwright E2E | ✅ 9/9 全過（含 1 鍵範例命盤試玩、分享圖產出、production 煙霧） |
 | `npm run build` | ✅ 通過（前端 + 後端 bundle 26.6kb） |
 | chunk 大小 | ✅ 已優化（manualChunks 切分 vendor/core/charts，無 >500kB 警告） |
 | codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
@@ -55,3 +55,5 @@
 1. CORS：module script 帶 `crossorigin` → 瀏覽器連同源請求也帶 Origin → 前端資源全 403 → React 無法掛載。修正：同源永不阻擋（新增 `tests/api-cors.test.mjs` 4 項）
 2. `manualChunks`：字串模糊匹配把 `motion/react` 誤歸入 vendor-react → 跨 chunk 循環 → production 崩潰（dev 不重現）。修正：移除自訂分包，改用 Vite 預設
 3. 防火牆：新增 production bundle 煙霧測試並接上 CI（`tests/e2e/specs/prod-smoke.spec.ts`）
+
+**分享卡片（裂變）**：`src/lib/shareText.ts`＋`src/hooks/useShareImage.ts`＋`src/components/share/{ShareImage,DailyShareCard,SynastryShareCard}.tsx`；今日能量卡與合盤頁各有分享按鈕，Web Share API（手機→LINE）→ 桌機降級下載＋LINE 分享按鈕。分享卡全程 inline hex 樣式（html2canvas 不支援 oklch）。正式站實測通過。
