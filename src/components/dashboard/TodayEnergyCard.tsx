@@ -1,7 +1,7 @@
 // src/components/dashboard/TodayEnergyCard.tsx
 // [AI MOD] 今日能量首屏卡：每日鉤子 — 讓使用者每天打開都有新理由（留存機制）
 // 資料來源：getDailyEnergy（packages/core/dailyAnalysis），僅唯讀呈現，不含新領域規則。
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Share2, Zap } from 'lucide-react';
 import { BaziChart } from '../../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern } from '../../pattern';
@@ -11,6 +11,7 @@ import { useCheckInStats } from '../../hooks/useCheckInStats';
 import { buildDailyShareText, buildLineShareUrl } from '../../lib/shareText';
 import ShareImage from '../share/ShareImage';
 import DailyShareCard from '../share/DailyShareCard';
+import { trackProductEvent } from '../../lib/productEvents';
 
 interface TodayEnergyCardProps {
   chart: BaziChart;
@@ -30,8 +31,8 @@ interface OutcomeMeta {
 }
 
 const OUTCOME_META: Record<string, OutcomeMeta> = {
-  '大好': { label: '大吉', tone: 'text-emerald-300 bg-emerald-500/15 border-emerald-400/40', advice: '今日能量高峰，重要的事放心推進。', toneBg: 'rgba(16, 185, 129, 0.18)', toneFg: '#6ee7b7', toneBorder: 'rgba(52, 211, 153, 0.45)' },
-  '順利': { label: '吉', tone: 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30', advice: '諸事平順，穩中有進，適合主動出擊。', toneBg: 'rgba(16, 185, 129, 0.12)', toneFg: '#6ee7b7', toneBorder: 'rgba(52, 211, 153, 0.32)' },
+  '大好': { label: '大吉', tone: 'text-emerald-300 bg-emerald-500/15 border-emerald-400/40', advice: '今日命理能量偏高，可安排重要事項，也請依實際資訊判斷。', toneBg: 'rgba(16, 185, 129, 0.18)', toneFg: '#6ee7b7', toneBorder: 'rgba(52, 211, 153, 0.45)' },
+  '順利': { label: '吉', tone: 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30', advice: '今日命理方向偏順，可穩健推進既有安排。', toneBg: 'rgba(16, 185, 129, 0.12)', toneFg: '#6ee7b7', toneBorder: 'rgba(52, 211, 153, 0.32)' },
   '小吉': { label: '小吉', tone: 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30', advice: '運勢溫和向上，把小事做好就是進帳。', toneBg: 'rgba(16, 185, 129, 0.12)', toneFg: '#6ee7b7', toneBorder: 'rgba(52, 211, 153, 0.32)' },
   '平穩': { label: '平', tone: 'text-zinc-300 bg-white/5 border-white/15', advice: '平常心過日子，宜守成、蓄積能量。', toneBg: 'rgba(255, 255, 255, 0.05)', toneFg: '#d4d4d8', toneBorder: 'rgba(255, 255, 255, 0.16)' },
   '較差': { label: '注意', tone: 'text-amber-300 bg-amber-500/10 border-amber-400/30', advice: '今日阻力較大，重大決定緩一緩。', toneBg: 'rgba(245, 158, 11, 0.14)', toneFg: '#fcd34d', toneBorder: 'rgba(251, 191, 36, 0.34)' },
@@ -45,8 +46,10 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
   const { isSharing, error: shareError, share } = useShareImage();
   const [shareTarget, setShareTarget] = useState(false);
   const [lineShareUrl, setLineShareUrl] = useState<string | null>(null);
+  const [showSharePreview, setShowSharePreview] = useState(false);
+  const [sharePrivateDetails, setSharePrivateDetails] = useState(false);
   // [AI MOD] 連續打卡 + 準確率（每日回訪的回饋）
-  const { streak, report } = useCheckInStats();
+  const { streak, report, logs, today } = useCheckInStats();
 
   const patternResult = useMemo(() => determinePattern(chart), [chart]);
   const energy: DailyEnergy = useMemo(() => {
@@ -59,34 +62,48 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
   const dateLabel = `${now.getMonth() + 1} 月 ${now.getDate()} 日 · 星期${WEEK_LABELS[now.getDay()]}`;
   const explanation = energy.theoreticalExplanation.replace(/^。$/, '').trim();
   const siteUrl = typeof window === 'undefined' ? '' : window.location.origin;
+  const weekStart = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - 6);
+    return start.toISOString().slice(0, 10);
+  }, [today]);
+  const weeklyCheckIns = logs.filter(log => log.date >= weekStart && log.date <= today).length;
+
+  useEffect(() => {
+    trackProductEvent('daily_checkin_viewed');
+  }, []);
 
   const handleCaptureReady = useCallback(async (element: HTMLElement) => {
     const text = buildDailyShareText({
-      name,
+      name: sharePrivateDetails ? name : undefined,
       outcomeLabel: meta.label,
-      ganZhi: energy.dayGanZhi,
-      tenGod: energy.dayTenGodType,
+      ganZhi: sharePrivateDetails ? energy.dayGanZhi : '',
+      tenGod: sharePrivateDetails ? energy.dayTenGodType : '',
       dateLabel,
       advice: meta.advice,
-      favorable: patternResult.favorable,
-      weakestElement: patternResult.weakestElement,
+      favorable: sharePrivateDetails ? patternResult.favorable : [],
+      weakestElement: sharePrivateDetails ? patternResult.weakestElement : '',
     }, siteUrl);
 
     const outcome = await share(element, {
       fileName: `bezi-daily-${Date.now()}.png`,
-      title: name ? `${name} 的今日運勢` : '我的今日運勢',
+      title: sharePrivateDetails && name ? `${name} 的今日運勢` : '我的今日運勢',
       text,
     });
     setShareTarget(false);
+    if (outcome === 'shared' || outcome === 'downloaded') trackProductEvent('share_exported');
 
     // 桌機：Web Share 不支援檔案 → 已下載圖片，再提供 LINE 文字分享按鈕
     // （擷取為非同步，window.open 會失去使用者手勢而被彈出視窗封鎖器攔截）
     if (outcome === 'downloaded') setLineShareUrl(buildLineShareUrl(text));
-  }, [share, name, meta, energy, dateLabel, patternResult, siteUrl]);
+  }, [share, name, meta, energy, dateLabel, patternResult, siteUrl, sharePrivateDetails]);
 
   const handleShare = () => {
     if (isSharing || shareTarget) return;
-    setShareTarget(true);
+    setSharePrivateDetails(false);
+    setShowSharePreview(true);
+    trackProductEvent('share_preview_opened');
   };
 
   return (
@@ -112,9 +129,9 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
                 🔥 連續 {streak.current} 天
               </span>
             )}
-            {report.samples > 0 && (
+            {report.samples >= 3 && (
               <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-400/30">
-                準確率 {report.accuracy}%
+                近期吻合 {report.accuracy}%
               </span>
             )}
             {energy.isWeaknessDay && (
@@ -124,7 +141,7 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
             )}
             {energy.isExtremeDay && (
               <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-400/30 flex items-center gap-1">
-                <Zap size={10} /> 極端能量日
+                <Zap size={10} /> 能量波動日
               </span>
             )}
           </div>
@@ -148,7 +165,12 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
           <p className="text-[11px] text-zinc-500 mb-2 line-clamp-2">{explanation}</p>
         )}
 
-        <p className="text-sm text-zinc-300 mb-3">{meta.advice}</p>
+        <p className="text-sm text-zinc-300 mb-2">{meta.advice}</p>
+        <p className="text-[11px] text-zinc-500 mb-3">
+          {streak.checkedToday
+            ? `本週已記錄 ${weeklyCheckIns} 天；累積感受可回看近期規則吻合情形。`
+            : '今晚花 10 秒記下真實感受，之後可回看近期規則與生活經驗是否同方向。'}
+        </p>
 
         <div className="flex gap-2">
           <button
@@ -178,6 +200,23 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
 
         {shareError && <p className="text-[11px] text-rose-400 mt-2">{shareError}</p>}
 
+        {showSharePreview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="分享前預覽">
+            <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
+              <h3 className="text-base font-bold text-white">分享前隱私預覽</h3>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-400">預設只分享日期、今日方向與一般建議，不包含姓名、日主、喜用神或最弱五行。</p>
+              <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
+                <input type="checkbox" checked={sharePrivateDetails} onChange={event => setSharePrivateDetails(event.target.checked)} className="mt-0.5" />
+                <span>我了解公開風險，仍要顯示姓名與命盤細節</span>
+              </label>
+              <div className="mt-4 flex gap-2">
+                <button onClick={() => setShowSharePreview(false)} className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300">取消</button>
+                <button onClick={() => { setShowSharePreview(false); setShareTarget(true); }} className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-zinc-950">產生分享圖</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* [AI MOD] 分享圖（離屏擷取） */}
         <ShareImage active={shareTarget} onReady={handleCaptureReady}>
           <DailyShareCard
@@ -193,6 +232,7 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
             weakestElement={patternResult.weakestElement}
             dayMaster={chart.dayMaster}
             siteUrl={siteUrl}
+            showPrivateDetails={sharePrivateDetails}
           />
         </ShareImage>
       </div>

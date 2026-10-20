@@ -91,6 +91,51 @@ test('sets CORS headers on /api/chat OPTIONS preflight', async () => {
   assert.match(response.headers.get('access-control-allow-methods') || '', /POST/);
 });
 
+test('creates session-scoped current-chart evidence from validated birth input', async () => {
+  const response = await fetch('http://127.0.0.1:3000/api/evidence/current', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
+    body: JSON.stringify({ birthDate: '1990-01-15', birthTime: '14', gender: 'female' }),
+  });
+  const body = await response.json();
+  assert.equal(response.status, 201);
+  assert.match(body.record_id, /^current-[a-f0-9-]+$/);
+  assert.equal(body.source, 'current');
+  assert.equal(body.gender, '女');
+  assert.equal(body.time_known, true);
+
+  const chatResponse = await fetch('http://127.0.0.1:3000/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
+    body: JSON.stringify({ messages: [{ role: 'user', content: '請分析目前命盤' }], record_id: body.record_id }),
+  });
+  const chatBody = await chatResponse.text();
+  assert.equal(chatResponse.status, 200);
+  assert.doesNotMatch(chatBody, /目前資料不足/);
+  assert.match(chatBody, /目前無法完成分析/);
+});
+
+test('marks unknown birth hour and still creates bounded three-pillar evidence', async () => {
+  const response = await fetch('http://127.0.0.1:3000/api/evidence/current', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
+    body: JSON.stringify({ birthDate: '1990-01-15', birthTime: '', gender: 'male' }),
+  });
+  const body = await response.json();
+  assert.equal(response.status, 201);
+  assert.equal(body.time_known, false);
+});
+
+test('rejects invalid birth input before creating current-chart evidence', async () => {
+  const response = await fetch('http://127.0.0.1:3000/api/evidence/current', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
+    body: JSON.stringify({ birthDate: '2035-02-30', birthTime: '99', gender: 'female' }),
+  });
+  assert.equal(response.status, 400);
+  assert.match(await response.text(), /出生資料格式無效/);
+});
+
 test('rejects oversized request body', async () => {
   const bigContent = 'x'.repeat(2_000_000);
   const response = await fetch('http://127.0.0.1:3000/api/chat', {

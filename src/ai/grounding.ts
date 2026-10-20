@@ -1,4 +1,4 @@
-export type EvidenceSourceType = 'sql' | 'mcp';
+export type EvidenceSourceType = 'sql' | 'mcp' | 'computed';
 export type AIStatus = 'answered' | 'needs_data' | 'conflict' | 'refused';
 export type Confidence = 'high' | 'medium' | 'low';
 
@@ -62,8 +62,8 @@ export function validateEvidenceBundle(bundle: unknown): ValidationResult {
       continue;
     }
     const evidence = item as Partial<EvidenceItem>;
-    if (!/^(sql|mcp):[^\s]+$/.test(evidence.sourceId || '')) errors.push('sourceId 格式無效。');
-    if (evidence.sourceType !== 'sql' && evidence.sourceType !== 'mcp') errors.push('sourceType 無效。');
+    if (!/^(sql|mcp|computed):[^\s]+$/.test(evidence.sourceId || '')) errors.push('sourceId 格式無效。');
+    if (!['sql', 'mcp', 'computed'].includes(evidence.sourceType || '')) errors.push('sourceType 無效。');
     if (typeof evidence.content !== 'string' || !evidence.content) errors.push('Evidence content 不得為空。');
     if (!Array.isArray(evidence.supports)) errors.push('Evidence supports 必須是陣列。');
   }

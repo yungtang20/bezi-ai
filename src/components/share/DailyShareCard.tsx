@@ -46,6 +46,7 @@ interface DailyShareCardProps {
   weakestElement: string;
   dayMaster: string;
   siteUrl: string;
+  showPrivateDetails?: boolean;
 }
 
 export default function DailyShareCard({
@@ -61,6 +62,7 @@ export default function DailyShareCard({
   weakestElement,
   dayMaster,
   siteUrl,
+  showPrivateDetails = false,
 }: DailyShareCardProps) {
   const serif: CSSProperties = { fontFamily: '"Noto Serif TC", "Songti TC", "PingFang TC", serif' };
   const sans: CSSProperties = { fontFamily: '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif' };
@@ -117,19 +119,21 @@ export default function DailyShareCard({
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.3 }}>
-            {name ? `${name} 的今日運勢` : '我的今日運勢'}
+            {showPrivateDetails && name ? `${name} 的今日運勢` : '我的今日運勢'}
           </div>
-          <div style={{ fontSize: 19, color: C.muted, marginTop: 10, ...sans }}>
+          {showPrivateDetails && <div style={{ fontSize: 19, color: C.muted, marginTop: 10, ...sans }}>
             {ganZhi}・日主十神屬「{tenGod}」
-          </div>
-          <div style={{ fontSize: 19, color: C.muted, marginTop: 4, ...sans }}>
-            日主 {dayMaster}　最弱五行 {weakestElement}
-          </div>
+          </div>}
+          {showPrivateDetails && (
+            <div style={{ fontSize: 19, color: C.muted, marginTop: 4, ...sans }}>
+              日主 {dayMaster}　最弱五行 {weakestElement}
+            </div>
+          )}
         </div>
       </div>
 
       {/* 喜用神 */}
-      {favorable.length > 0 && (
+      {showPrivateDetails && favorable.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 15, color: C.muted, letterSpacing: 2, ...sans }}>喜用五行</span>
           {favorable.map(element => (

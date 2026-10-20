@@ -7,7 +7,7 @@ import {
 } from '../calibration';
 import type { DailyLog } from '../storage';
 
-export type AccuracyLevel = '未開始' | '仍在學習' | '逐漸熟悉' | '默契漸長' | '心有靈犀';
+export type AccuracyLevel = '未開始' | '累積中' | '初步觀察' | '待持續觀察' | '多數吻合' | '高度吻合';
 
 export interface AccuracyReport {
   accuracy: number;              // 整體吻合度 0-100
@@ -20,10 +20,9 @@ export interface AccuracyReport {
 }
 
 const LEVELS: { min: number; level: AccuracyLevel; headline: string; summary: string }[] = [
-  { min: 80, level: '心有靈犀', headline: 'AI 已經懂你了', summary: '命中率高達八成以上——你的命理模型正在成形。' },
-  { min: 60, level: '默契漸長', headline: '越來越準了', summary: '多數預測與你的實際感受相符，模型正在收斂。' },
-  { min: 40, level: '逐漸熟悉', headline: '正在認識你', summary: '持續記錄能讓預測更貼近你的真實體驗。' },
-  { min: 1, level: '仍在學習', headline: '剛開始學習', summary: '再累積幾次記錄，AI 就會抓到你的節奏。' },
+  { min: 80, level: '高度吻合', headline: '近期紀錄多數吻合', summary: '目前紀錄與命理規則的方向高度一致。' },
+  { min: 60, level: '多數吻合', headline: '近期紀錄多數吻合', summary: '目前多數可評估紀錄與命理規則的方向一致。' },
+  { min: 0, level: '待持續觀察', headline: '近期紀錄仍有差異', summary: '目前紀錄與命理規則的方向不完全一致，可持續觀察。' },
 ];
 
 export function buildAccuracyReport(logs: DailyLog[]): AccuracyReport {
@@ -47,8 +46,32 @@ export function buildAccuracyReport(logs: DailyLog[]): AccuracyReport {
       headline: '還沒有足夠的記錄',
       summary: pendingLabel && latest?.dayTenGodType
         ? `今天屬「${latest.dayTenGodType}」日，只要記錄「${pendingLabel}」的感受就能開始計算吻合度。`
-        : '完成 10 秒心流紀錄，AI 就會開始學習你的節奏。',
+        : '完成 10 秒心流紀錄，就能開始比較實際感受與命理規則。',
       categories: [],
+    };
+  }
+
+  if (samples < 3) {
+    return {
+      accuracy,
+      samples,
+      checkedDays,
+      level: '累積中',
+      headline: '正在累積可評估紀錄',
+      summary: `目前有 ${matches}/${samples} 筆方向吻合。累積至少 3 筆後顯示初步比例。`,
+      categories: categories.filter(item => item.total > 0),
+    };
+  }
+
+  if (samples < 7) {
+    return {
+      accuracy,
+      samples,
+      checkedDays,
+      level: '初步觀察',
+      headline: '這是初步吻合度',
+      summary: `目前有 ${matches}/${samples} 筆方向吻合；樣本仍少，累積 7 筆後再看趨勢較合適。`,
+      categories: categories.filter(item => item.total > 0),
     };
   }
 
@@ -62,7 +85,7 @@ export function buildAccuracyReport(logs: DailyLog[]): AccuracyReport {
     level: matched.level,
     headline: matched.headline,
     summary: best && best.accuracy > 0
-      ? `${matched.summary}目前以「${best.label}」最準。`
+      ? `${matched.summary}目前「${best.label}」的紀錄吻合度最高。`
       : matched.summary,
     categories: categories.filter(item => item.total > 0),
   };

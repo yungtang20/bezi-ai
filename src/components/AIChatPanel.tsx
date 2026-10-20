@@ -1,18 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Bot, Loader2, RotateCcw, Send, Sparkles, User } from 'lucide-react';
 import { BaziDisplay } from '../types';
 import AIMessage from './chat/AIMessage';
 import { useSSEChat } from '../hooks/useSSEChat';
-import { CLIENT_CONFIG, fetchChatRecords, requestChatSession, type ChatRecordSummary } from '../config';
+import { CLIENT_CONFIG, createCurrentEvidence, fetchChatRecords, requestChatSession, type ChatRecordSummary } from '../config';
+import { trackProductEvent } from '../lib/productEvents';
 
-interface AIChatPanelProps { bazi?: BaziDisplay | null; userName?: string; }
+interface AIChatPanelProps { bazi?: BaziDisplay | null; }
 
 const SYSTEM_PROMPT = `你是一位專業且負責任的八字學術分析師，熟稔子平格局法、調候理氣、五行旺衰等多角度推演。
 
 請使用繁體中文，保持專業、平靜、客觀並具同理心。不得鐵口直斷、製造恐懼、替代醫療或提供確定投資/法律建議。命理專有名詞請以 <term> 標籤包裝。若缺少可信 Evidence Bundle，請依伺服器安全規則拒答。`;
 
-export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
-  const { messages, setMessages, sendMessage, stop, retry, isStreaming, error } = useSSEChat();
+export default function AIChatPanel({ bazi }: AIChatPanelProps) {
   const [input, setInput] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -23,6 +23,52 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
   const [status, setStatus] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastBaziSigRef = useRef('');
+
+  const registerCurrentEvidence = useCallback(async (): Promise<string> => {
+    if (!bazi?.chart) return '';
+    const chart = bazi.chart;
+    const currentRecord = await createCurrentEvidence({
+      birthDate: `${chart.birthYear}-${String(chart.birthMonth).padStart(2, '0')}-${String(chart.birthDay).padStart(2, '0')}`,
+      birthTime: chart.birthHour < 0 ? '' : String(chart.birthHour),
+      gender: chart.gender === '男' ? 'male' : 'female',
+    });
+    setRecords(previous => [currentRecord, ...previous.filter(record => record.source !== 'current')]);
+    sessionStorage.setItem('bezi_chat_record_id', currentRecord.record_id);
+    setRecordId(currentRecord.record_id);
+    setAuthError(null);
+    return currentRecord.record_id;
+  }, [bazi]);
+
+  const { messages, setMessages, sendMessage, stop, retry, isStreaming, error } = useSSEChat(registerCurrentEvidence);
+
+  const loadRecordsAfterAuth = useCallback(async () => {
+    const demoRecords = await fetchChatRecords();
+    setRecords(demoRecords);
+    setHasSession(true);
+
+    const savedRecordId = sessionStorage.getItem('bezi_chat_record_id') || '';
+    if (savedRecordId.startsWith('current-')) {
+      sessionStorage.removeItem('bezi_chat_record_id');
+      setRecordId('');
+    }
+
+    if (bazi?.chart) {
+      try {
+        await registerCurrentEvidence();
+      } catch {
+        sessionStorage.removeItem('bezi_chat_record_id');
+        setRecordId('');
+        setAuthError('目前命盤驗證資料建立失敗，請重試連結；範例資料不會自動取代。');
+      }
+      return;
+    }
+
+    const nextRecordId = demoRecords.some(record => record.record_id === savedRecordId)
+      ? savedRecordId
+      : demoRecords[0]?.record_id || '';
+    if (nextRecordId) sessionStorage.setItem('bezi_chat_record_id', nextRecordId);
+    setRecordId(nextRecordId);
+  }, [bazi, registerCurrentEvidence]);
 
   useEffect(() => {
     setHasSession(Boolean(sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CHAT_SESSION_TOKEN)));
@@ -40,12 +86,12 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
       } catch {
         if (!cancelled) {
           setHasSession(Boolean(sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CHAT_SESSION_TOKEN)));
+          setAuthError('AI 驗證資料載入失敗，請稍後重試。');
         }
       }
     })();
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadRecordsAfterAuth]);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, status]);
   useEffect(() => {
@@ -55,36 +101,18 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
     setMessages([{
       id: crypto.randomUUID(), role: 'assistant', status: 'done', createdAt: Date.now(),
       content: bazi
-        ? `您好！我已經順利載入 ${userName || '您'} 的八字命局檔案（日主為 ${bazi.chart?.dayMaster || '？'}）。\n\n您可以詢問喜用神、事業、感情或流年。`
+        ? `您好！畫面上的命盤已載入。AI 問答會先由伺服器依出生資料重新排盤，建立本次工作階段的驗證資料，再回答喜用神、事業、感情或流年問題。`
         : '您好！我是您的專屬 AI 智慧八字理氣師。請輸入您的問題。',
     }]);
-  }, [bazi, setMessages, userName]);
-
-  const buildContext = () => {
-    if (!bazi?.chart) return '';
-    const c = bazi.chart;
-    return `\n\n命主資訊：姓名 ${userName || '未提供'}；性別 ${c.gender}；出生 ${bazi.year}年${bazi.month}月${bazi.day}日 ${bazi.time}時；年柱 ${c.year.gan}${c.year.zhi}；月柱 ${c.month.gan}${c.month.zhi}；日柱 ${c.day.gan}${c.day.zhi}；時柱 ${c.hour.gan}${c.hour.zhi}；日主 ${c.dayMaster}。`;
-  };
+  }, [bazi, setMessages]);
 
   const submit = () => {
     const value = input.trim();
     if (!value || isStreaming || !hasSession || !recordId) return;
     setInput('');
     setStatus('分析中...');
-    void sendMessage(value, SYSTEM_PROMPT + buildContext() + (customPrompt.trim() ? `\n\n使用者偏好：${customPrompt.trim()}` : ''), recordId).finally(() => setStatus(null));
-  };
-
-  // [AI MOD] 取得 token 後的共用後續：載入命盤清單、選定 recordId
-  const loadRecordsAfterAuth = async () => {
-    const availableRecords = await fetchChatRecords();
-    setRecords(availableRecords);
-    setHasSession(true);
-    if (availableRecords.length > 0) {
-      const current = sessionStorage.getItem('bezi_chat_record_id') || recordId;
-      const nextRecordId = availableRecords.some(record => record.record_id === current) ? current : availableRecords[0].record_id;
-      sessionStorage.setItem('bezi_chat_record_id', nextRecordId);
-      setRecordId(nextRecordId);
-    }
+    trackProductEvent('ai_question_sent');
+    void sendMessage(value, SYSTEM_PROMPT + (customPrompt.trim() ? `\n\n使用者偏好：${customPrompt.trim()}` : ''), recordId).finally(() => setStatus(null));
   };
 
   const authenticate = async () => {
@@ -100,15 +128,28 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
     }
   };
 
+  const retryEvidence = async () => {
+    setAuthError(null);
+    try {
+      if (bazi?.chart) await registerCurrentEvidence();
+      else await loadRecordsAfterAuth();
+    } catch {
+      setAuthError('目前命盤驗證資料仍無法建立，請稍後再試。');
+    }
+  };
+
   return <div className="flex h-full flex-col rounded-2xl border border-zen-border bg-zen-surface/10 p-4">
     <div className="mb-3 grid gap-2 border-b border-white/5 pb-3 sm:grid-cols-[1fr_auto_1fr_auto]">
       <input aria-label="授權密碼" type="password" value={clientSecret} onChange={event => setClientSecret(event.target.value)} placeholder="輸入授權密碼" disabled={hasSession || isStreaming} className="rounded-lg border border-white/20 bg-black/60 px-2.5 py-1.5 text-xs text-zen-text focus:outline-none" />
       <button onClick={() => void authenticate()} disabled={hasSession || isStreaming} className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-400 disabled:opacity-30">{hasSession ? '已授權' : '取得權限'}</button>
       <select aria-label="命盤記錄" value={recordId} onChange={event => { setRecordId(event.target.value); sessionStorage.setItem('bezi_chat_record_id', event.target.value); }} disabled={isStreaming || !hasSession} className="rounded-lg border border-white/20 bg-black/60 px-2.5 py-1.5 text-xs text-zen-text focus:outline-none">
         <option value="">{hasSession ? '選擇命盤' : '請先取得權限'}</option>
-        {records.map(record => <option key={record.record_id} value={record.record_id}>{record.record_id} · {record.birth}</option>)}
+        {records.map(record => <option key={record.record_id} value={record.record_id}>{record.source === 'current' ? '目前命盤（本次工作階段）' : `範例 · ${record.birth}`}</option>)}
       </select>
-      <span className="self-center text-[10px] text-zen-muted">{authError || (hasSession && recordId ? '可開始分析' : '需授權並選擇命盤')}</span>
+      <div className="self-center text-[10px] text-zen-muted">
+        <span>{authError || (hasSession && recordId ? (records.find(record => record.record_id === recordId)?.source === 'current' ? '已連結目前命盤 Evidence' : '目前選用範例 Evidence') : '需授權並選擇命盤')}</span>
+        {authError && hasSession && <button onClick={() => void retryEvidence()} className="ml-2 text-amber-400 underline">重試連結</button>}
+      </div>
     </div>
     <div className="mb-3 shrink-0 border-b border-white/5 pb-3">
       <div className="mb-1 flex items-center justify-between">

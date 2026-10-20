@@ -14,6 +14,7 @@ import { useShareImage } from '../hooks/useShareImage';
 import { buildSynastryShareText, buildLineShareUrl, synastryHeadline } from '../lib/shareText';
 import ShareImage from './share/ShareImage';
 import SynastryShareCard from './share/SynastryShareCard';
+import { trackProductEvent } from '../lib/productEvents';
 
 type RelationshipType = '伴侶' | '合作夥伴' | '家人' | '其他';
 
@@ -44,6 +45,8 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
   const { isSharing, error: shareError, share } = useShareImage();
   const [shareTarget, setShareTarget] = useState(false);
   const [lineShareUrl, setLineShareUrl] = useState<string | null>(null);
+  const [showSharePreview, setShowSharePreview] = useState(false);
+  const [sharePrivateDetails, setSharePrivateDetails] = useState(false);
 
   const handleCaptureReady = useCallback(async (element: HTMLElement) => {
     if (!myChart || !selectedPartner?.chart) {
@@ -53,28 +56,31 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
     const scoreData = getCompatibilityScore(myChart, selectedPartner.chart, selectedPartner.relationship);
     const siteUrl = typeof window === 'undefined' ? '' : window.location.origin;
     const text = buildSynastryShareText({
-      myName: myName || '我',
-      partnerName: selectedPartner.name || 'TA',
+      myName: sharePrivateDetails ? (myName || '我') : '我',
+      partnerName: sharePrivateDetails ? (selectedPartner.name || 'TA') : '夥伴',
       score: scoreData.score,
-      myDayMaster: myChart.dayMaster,
-      partnerDayMaster: selectedPartner.chart.dayMaster,
-      topFactor: scoreData.details[0]?.factor,
-      topDesc: scoreData.details[0]?.desc,
+      myDayMaster: sharePrivateDetails ? myChart.dayMaster : '',
+      partnerDayMaster: sharePrivateDetails ? selectedPartner.chart.dayMaster : '',
+      topFactor: sharePrivateDetails ? scoreData.details[0]?.factor : undefined,
+      topDesc: sharePrivateDetails ? scoreData.details[0]?.desc : undefined,
     }, siteUrl);
 
     const outcome = await share(element, {
       fileName: `bezi-synastry-${Date.now()}.png`,
-      title: `${myName || '我'} × ${selectedPartner.name || 'TA'} 合盤報告`,
+      title: sharePrivateDetails ? `${myName || '我'} × ${selectedPartner.name || 'TA'} 合盤報告` : '匿名合盤報告',
       text,
     });
     setShareTarget(false);
+    if (outcome === 'shared' || outcome === 'downloaded') trackProductEvent('share_exported');
     // 桌機：已下載圖片 → 提供 LINE 文字分享按鈕（避免彈出視窗封鎖器）
     if (outcome === 'downloaded') setLineShareUrl(buildLineShareUrl(text));
-  }, [share, myChart, myName, selectedPartner]);
+  }, [share, myChart, myName, selectedPartner, sharePrivateDetails]);
 
   const handleShare = () => {
     if (isSharing || shareTarget) return;
-    setShareTarget(true);
+    setSharePrivateDetails(false);
+    setShowSharePreview(true);
+    trackProductEvent('share_preview_opened');
   };
 
   useEffect(() => {
@@ -530,6 +536,22 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
               </div>
 
               {/* [AI MOD] 分享圖（離屏擷取） */}
+              {showSharePreview && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="合盤分享前預覽">
+                  <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
+                    <h3 className="text-base font-bold text-white">分享前隱私預覽</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-zinc-400">預設只分享匿名契合度與摘要，不包含雙方姓名、日主或日柱。</p>
+                    <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
+                      <input type="checkbox" checked={sharePrivateDetails} onChange={event => setSharePrivateDetails(event.target.checked)} className="mt-0.5" />
+                      <span>我已取得對方同意，仍要顯示雙方姓名與命盤細節</span>
+                    </label>
+                    <div className="mt-4 flex gap-2">
+                      <button onClick={() => setShowSharePreview(false)} className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300">取消</button>
+                      <button onClick={() => { setShowSharePreview(false); setShareTarget(true); }} className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-zinc-950">產生分享圖</button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <ShareImage active={shareTarget} onReady={handleCaptureReady}>
                 <SynastryShareCard
                   myName={myName || '我'}
@@ -540,8 +562,11 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
                   partnerDayMaster={selectedPartner.chart.dayMaster}
                   myPillar={`${selectedPartner.chart.year ? myChart.day.gan : ''}${myChart.day.zhi}`}
                   partnerPillar={`${selectedPartner.chart.day.gan}${selectedPartner.chart.day.zhi}`}
-                  details={getCompatibilityScore(myChart, selectedPartner.chart, selectedPartner.relationship).details.map(detail => ({ factor: detail.factor, desc: detail.desc }))}
+                  details={sharePrivateDetails
+                    ? getCompatibilityScore(myChart, selectedPartner.chart, selectedPartner.relationship).details.map(detail => ({ factor: detail.factor, desc: detail.desc }))
+                    : []}
                   siteUrl={typeof window === 'undefined' ? '' : window.location.origin}
+                  showPrivateDetails={sharePrivateDetails}
                 />
               </ShareImage>
               {lineShareUrl && (

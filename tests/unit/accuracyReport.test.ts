@@ -50,6 +50,13 @@ describe('calculateCategoryAccuracy', () => {
     expect(categories.find(item => item.key === 'wealth')?.accuracy).toBe(100);
   });
 
+  it.each(['較差', '不佳'])('%s 日實際不順也會列為吻合', theoreticalOutcome => {
+    const categories = calculateCategoryAccuracy([
+      makeLog({ theoreticalOutcome, wealth: 'bad' }),
+    ]);
+    expect(categories.find(item => item.key === 'wealth')?.accuracy).toBe(100);
+  });
+
   it('食傷日同時評估感情與健康', () => {
     const categories = calculateCategoryAccuracy([
       makeLog({ dayTenGodType: '食傷', romance: 'good', health: 'good' }),
@@ -68,6 +75,13 @@ describe('calculateCategoryAccuracy', () => {
 
   it('未回饋的領域不列入樣本', () => {
     const categories = calculateCategoryAccuracy([makeLog({ wealth: null })]);
+    expect(categories.every(item => item.total === 0)).toBe(true);
+  });
+
+  it('理論為平穩時不強迫對照二元感受', () => {
+    const categories = calculateCategoryAccuracy([
+      makeLog({ theoreticalOutcome: '平穩', wealth: 'good' }),
+    ]);
     expect(categories.every(item => item.total === 0)).toBe(true);
   });
 });
@@ -104,21 +118,33 @@ describe('buildAccuracyReport', () => {
     expect(report.categories).toHaveLength(0);
   });
 
-  it('高吻合度提升等級', () => {
-    const logs = Array.from({ length: 5 }, (_, i) =>
+  it('至少七筆後才顯示穩定等級', () => {
+    const logs = Array.from({ length: 7 }, (_, i) =>
       makeLog({ date: `2026-10-0${i + 1}`, wealth: 'good', theoreticalOutcome: '順利' }),
     );
     const report = buildAccuracyReport(logs);
     expect(report.accuracy).toBe(100);
-    expect(report.level).toBe('心有靈犀');
-    expect(report.headline).toBe('AI 已經懂你了');
-    expect(report.samples).toBe(5);
+    expect(report.level).toBe('高度吻合');
+    expect(report.headline).toBe('近期紀錄多數吻合');
+    expect(report.samples).toBe(7);
   });
 
-  it('摘要會指出最準的領域', () => {
+  it('少於三筆時不把單筆結果包裝成百分比結論', () => {
     const logs = [makeLog({ wealth: 'good', theoreticalOutcome: '順利' })];
     const report = buildAccuracyReport(logs);
-    expect(report.summary).toContain('財運');
+    expect(report.level).toBe('累積中');
+    expect(report.summary).toContain('1/1');
+    expect(report.summary).toContain('至少 3 筆');
+  });
+
+  it('三到六筆標示為初步觀察', () => {
+    const logs = Array.from({ length: 5 }, (_, i) =>
+      makeLog({ date: `2026-10-0${i + 1}`, wealth: i < 4 ? 'good' : 'bad' }),
+    );
+    const report = buildAccuracyReport(logs);
+    expect(report.level).toBe('初步觀察');
+    expect(report.accuracy).toBe(80);
+    expect(report.summary).toContain('4/5');
   });
 
   it('打卡天數會被記錄', () => {

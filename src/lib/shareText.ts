@@ -28,7 +28,9 @@ export function buildDailyShareText(info: DailyShareInfo, url: string): string {
   const title = info.name ? `${info.name} 的今日運勢` : '我的今日運勢';
   const lines = [
     `【${SHARE_BRAND}】${title}`,
-    `${info.dateLabel}　${info.ganZhi}・${info.tenGod}　運勢：${info.outcomeLabel}`,
+    info.ganZhi && info.tenGod
+      ? `${info.dateLabel}　${info.ganZhi}・${info.tenGod}　運勢：${info.outcomeLabel}`
+      : `${info.dateLabel}　今日方向：${info.outcomeLabel}`,
     info.advice,
   ];
   if (info.favorable.length > 0) lines.push(`喜用五行：${info.favorable.join('、')}`);
@@ -40,8 +42,8 @@ export function buildDailyShareText(info: DailyShareInfo, url: string): string {
 export function buildSynastryShareText(info: SynastryShareInfo, url: string): string {
   const lines = [
     `【${SHARE_BRAND}】${info.myName} × ${info.partnerName} 合盤契合度 ${info.score}%`,
-    `日主：${info.myDayMaster} × ${info.partnerDayMaster}`,
   ];
+  if (info.myDayMaster && info.partnerDayMaster) lines.push(`日主：${info.myDayMaster} × ${info.partnerDayMaster}`);
   if (info.topFactor) lines.push(`${info.topFactor}：${info.topDesc || ''}`);
   lines.push(`👉 測試我們的合盤：${url}`);
   return lines.filter(line => line.trim().length > 0).join('\n');

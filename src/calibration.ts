@@ -150,7 +150,11 @@ export function isGoodOutcome(outcome: string): boolean {
 }
 
 export function isBadOutcome(outcome: string): boolean {
-  return outcome === '不順' || outcome.includes('凶') || outcome.includes('壞');
+  return outcome === '不順'
+    || outcome === '較差'
+    || outcome === '不佳'
+    || outcome.includes('凶')
+    || outcome.includes('壞');
 }
 
 export interface CategoryAccuracy {
@@ -170,6 +174,8 @@ export function calculateCategoryAccuracy(logs: DailyLog[]): CategoryAccuracy[] 
     if (!fields) continue;
     const good = isGoodOutcome(log.theoreticalOutcome || '');
     const bad = isBadOutcome(log.theoreticalOutcome || '');
+    // 實際回饋只有「順利／不順」兩值，理論為平穩時沒有可比較的同義選項。
+    if (!good && !bad) continue;
     for (const field of fields) {
       const actual = log[field];
       if (!actual) continue;

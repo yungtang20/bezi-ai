@@ -1,4 +1,3 @@
-import { Solar } from 'lunar-javascript';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Compass, Moon, Sun, Github, X, Sparkles, Settings } from 'lucide-react';
@@ -22,6 +21,7 @@ const ReferenceTablePage = lazy(() => import('./components/ReferenceTablePage'))
 import { calculateChart, type BaziChart, determinePattern, type PatternResult, type PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements, GAN_TO_ELEMENT, getShiChen, type BaziDisplay } from '@bezi/core';
 import { CLIENT_CONFIG } from './config';
 import { validateBirthInput } from './utils/validation';
+import { trackProductEvent } from './lib/productEvents';
 
 // [AI MOD] 定義有效的步驟型別（供 Sidebar 等元件匯入）
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
@@ -47,6 +47,10 @@ export default function App() {
     }
     return 1;
   });
+
+  useEffect(() => {
+    trackProductEvent('app_view');
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -81,6 +85,11 @@ export default function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [showAI, setShowAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  const openAI = () => {
+    trackProductEvent('ai_panel_opened');
+    setShowAI(true);
+  };
 
   useEffect(() => {
     // Load persisted state from localStorage
@@ -159,6 +168,7 @@ export default function App() {
     const dBirthDate = override?.birthDate ?? birthDate;
     const dBirthTime = override?.birthTime ?? birthTime;
     if (override) {
+      trackProductEvent('example_chart_started');
       setName(dName);
       setGender(dGender);
       setBirthDate(dBirthDate);
@@ -212,6 +222,7 @@ export default function App() {
       });
       setPattern(patternResult);
       setScores(initPatternScores(patternResult.score));
+      trackProductEvent('chart_created');
 
       setTimeout(() => {
         setIsGenerating(false);
@@ -231,11 +242,18 @@ export default function App() {
 
   const advanceToDashboard = (calibrations: Record<string, string>) => {
     if (Object.keys(calibrations).length === 2) {
+      trackProductEvent('calibration_completed');
       setTimeout(() => {
         setStep(4);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 500);
     }
+  };
+
+  const skipCalibration = () => {
+    trackProductEvent('calibration_skipped');
+    setStep(4);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const CALIBRATION_DELTAS: Record<string, Record<string, Partial<PatternScores>>> = {
@@ -297,7 +315,7 @@ export default function App() {
 
       {/* Main Container */}
       <div className={`w-full ${step <= 3 ? 'max-w-md flex items-center justify-center min-h-screen' : 'md:pl-44 pt-[5vh] pb-32 min-h-screen'} px-4 md:px-6 py-8 md:py-12 relative z-10 hidden-scrollbar`}>
-        {step >= 4 && <Sidebar currentStep={step} onNavigate={handleNavigate} showAI={showAI} onToggleAI={() => setShowAI(!showAI)} onOpenSettings={() => setShowSettings(true)} />}
+        {step >= 4 && <Sidebar currentStep={step} onNavigate={handleNavigate} showAI={showAI} onToggleAI={() => showAI ? setShowAI(false) : openAI()} onOpenSettings={() => setShowSettings(true)} />}
         {step >= 4 && <div className="md:hidden"><NavigationBar currentStep={step} onNavigate={handleNavigate} /></div>}
         {/* 手機版頂部/懸浮設定按鈕 */}
         {step >= 4 && (
@@ -321,7 +339,7 @@ export default function App() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => setShowAI(true)}
+              onClick={openAI}
               className="relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-zen-gold to-amber-600 text-zinc-950 font-bold shadow-[0_8px_24px_rgba(212,168,83,0.35)] border border-amber-400/30 transition-all duration-300 text-xs focus:outline-none"
             >
               <Sparkles size={14} className="animate-pulse" />
@@ -586,6 +604,9 @@ export default function App() {
                            ℹ️ 若為 23:00~00:59 出生（子時），系統將依照八字規則，自動視為隔日並排定日期的氣場。
                          </div>
                        )}
+                       <p className="mt-3 text-[11px] leading-relaxed text-zen-muted/70">
+                         姓名與出生資料預設只保存在這台裝置。只有開啟 AI 問答時，出生資料才會送至本服務後端建立當次工作階段的驗證資料；不會送出姓名。
+                       </p>
                     </div>
                   </div>
 
@@ -695,6 +716,13 @@ export default function App() {
                 )}) : null}
               </div>
 
+              <button
+                onClick={skipCalibration}
+                className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-zen-muted transition-colors hover:bg-white/10 hover:text-zen-text"
+              >
+                先看完整結果，稍後再校準
+              </button>
+
             </motion.div>
           )}
 
@@ -740,11 +768,15 @@ export default function App() {
         title="系統設定" 
         icon={<Settings size={18} className="text-zen-gold" />}
       >
-        <p className="text-sm leading-relaxed text-zen-muted">AI 服務由後端 Agnes AI 設定提供。API 金鑰不會儲存在瀏覽器或送入前端。</p>
+        <div className="space-y-2 text-sm leading-relaxed text-zen-muted">
+          <p>AI 服務由後端 Agnes AI 設定提供。API 金鑰不會儲存在瀏覽器或送入前端。</p>
+          <p>姓名、出生資料與日誌主要保存在此裝置。開啟 AI 問答時，出生資料會送至本服務後端建立短期驗證資料，但不會送出姓名。</p>
+          <p>產品使用事件僅在本機以彙總次數保存，不記錄生日、命盤或問答內容，也不傳送至外部分析服務。</p>
+        </div>
       </Modal>
 
       {/* AI Chat Panel - Right Side Overlay */}
-      {step >= 4 && (
+      {step >= 4 && showAI && (
         <Drawer
           isOpen={showAI}
           onClose={() => setShowAI(false)}
@@ -752,7 +784,7 @@ export default function App() {
           icon={<Sparkles size={16} className="text-zen-gold" />}
         >
           <Suspense fallback={<SkeletonPage />}>
-            <AIChatPanel bazi={bazi} userName={name} />
+            <AIChatPanel bazi={bazi} />
           </Suspense>
         </Drawer>
       )}

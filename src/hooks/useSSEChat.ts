@@ -6,7 +6,7 @@ export type ChatMessage = { id: string; role: 'user' | 'assistant'; content: str
 const SAFE_ERROR = '目前無法完成分析，請稍後再試。';
 const AUTH_ERROR = '授權失敗，請重新登入後再試。';
 
-export function useSSEChat() {
+export function useSSEChat(refreshRecordId?: () => Promise<string>) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +28,16 @@ export function useSSEChat() {
     const controller = new AbortController();
     controllerRef.current = controller;
     try {
-      const doFetch = () => fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...getChatAuthHeaders() }, body: JSON.stringify({ messages: requestMessages, customPrompt, record_id: recordId }), signal: controller.signal });
-      let response = await doFetch();
+      const doFetch = (activeRecordId: string) => fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...getChatAuthHeaders() }, body: JSON.stringify({ messages: requestMessages, customPrompt, record_id: activeRecordId }), signal: controller.signal });
+      let activeRecordId = recordId;
+      let response = await doFetch(activeRecordId);
       if (response.status === 401) {
-        // [AI MOD] 靜默換發 token（匿名模式或重新取得）後重試一次，使用者無感
+        // 換發 token 後，session-owned Evidence 也必須重新建立，避免沿用舊 owner。
         try {
           await requestChatSession();
-          response = await doFetch();
+          activeRecordId = refreshRecordId ? await refreshRecordId() : recordId;
+          if (!activeRecordId) throw new Error('evidence refresh failed');
+          response = await doFetch(activeRecordId);
         } catch { /* 換發失敗 → 走原本 401 錯誤路徑 */ }
       }
       if (response.status === 401) throw new Error('unauthorized');
@@ -70,7 +73,7 @@ export function useSSEChat() {
       controllerRef.current = null;
       setIsStreaming(false);
     }
-  }, []);
+  }, [refreshRecordId]);
 
   const stop = useCallback(() => controllerRef.current?.abort(), []);
   const retry = useCallback(() => {

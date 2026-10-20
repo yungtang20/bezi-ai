@@ -25,6 +25,7 @@ interface SynastryShareCardProps {
   partnerPillar: string;
   details: { factor: string; desc: string }[];
   siteUrl: string;
+  showPrivateDetails?: boolean;
 }
 
 export default function SynastryShareCard({
@@ -38,6 +39,7 @@ export default function SynastryShareCard({
   partnerPillar,
   details,
   siteUrl,
+  showPrivateDetails = false,
 }: SynastryShareCardProps) {
   const serif: CSSProperties = { fontFamily: '"Noto Serif TC", "Songti TC", "PingFang TC", serif' };
   const sans: CSSProperties = { fontFamily: '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif' };
@@ -68,17 +70,17 @@ export default function SynastryShareCard({
       {/* 雙方 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, paddingTop: 8 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 30, fontWeight: 700 }}>{myName || '我'}</div>
-          <div style={{ fontSize: 15, color: C.muted, marginTop: 8, ...sans }}>
+          <div style={{ fontSize: 30, fontWeight: 700 }}>{showPrivateDetails ? (myName || '我') : '我'}</div>
+          {showPrivateDetails && <div style={{ fontSize: 15, color: C.muted, marginTop: 8, ...sans }}>
             日主 {myDayMaster}・{myPillar}
-          </div>
+          </div>}
         </div>
         <div style={{ fontSize: 34, color: C.gold }}>×</div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 30, fontWeight: 700 }}>{partnerName || 'TA'}</div>
-          <div style={{ fontSize: 15, color: C.muted, marginTop: 8, ...sans }}>
+          <div style={{ fontSize: 30, fontWeight: 700 }}>{showPrivateDetails ? (partnerName || 'TA') : '夥伴'}</div>
+          {showPrivateDetails && <div style={{ fontSize: 15, color: C.muted, marginTop: 8, ...sans }}>
             日主 {partnerDayMaster}・{partnerPillar}
-          </div>
+          </div>}
         </div>
       </div>
 

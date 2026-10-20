@@ -114,19 +114,19 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
         </p>
         <p className="text-base text-zinc-300 leading-relaxed">
           <strong className="text-amber-400">得財日</strong>：
-          適合談判、簽約、投資、開發新客戶，或是進行重要財務決策。
+          可安排談判或開發客戶。投資、簽約與重要財務決策仍應依風險、契約與專業意見獨立評估。
         </p>
         <p className="text-base text-zinc-300 leading-relaxed">
           <strong className="text-emerald-400">事業機會日</strong>：
-          宜做重大決策、提案、安排會議、面試或與重要客戶/長官對接。
+          可安排提案、會議、面試或重要對接。重大決策仍應以實際資訊為準。
         </p>
         <p className="text-base text-zinc-300 leading-relaxed">
           <strong className="text-slate-400">犯小人日</strong>：
-          容易遇到口角是非、競爭對手暗中作梗，或事情橫生枝節。建議低調行事，不宜做重大決定。
+          命理規則提示人際摩擦可能增加。可多確認溝通內容，重大決定仍應依實際資訊評估。
         </p>
         <p className="text-base text-zinc-300 leading-relaxed">
           <strong className="text-red-400">健康注意日</strong>：
-          身體較易疲累或免疫力下降，請注意休息、飲食，避免過度勞累或危險活動。
+          命理規則提示可多留意休息與飲食。若有不適或健康疑慮，請諮詢醫療專業人員。
         </p>
       </div>
     </div>

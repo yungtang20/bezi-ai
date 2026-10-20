@@ -4,6 +4,7 @@ import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElement
 import { DailyEnergy, getDailyEnergy, getUpcomingDatesForCategory } from '../dailyAnalysis';
 import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs } from '../storage';
 import { useCheckInStats } from '../hooks/useCheckInStats';
+import { CATEGORY_LABELS, DAY_TYPE_FIELDS, isBadOutcome, isGoodOutcome } from '../calibration';
 import MonthlyForecastCalendar from './MonthlyForecastCalendar';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 
@@ -46,6 +47,11 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
   const primaryPattern = getPrimaryPattern(scores);
   const patternResult = determinePattern(chart);
   const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
+  const hasComparableDirection = dailyEnergy
+    ? isGoodOutcome(dailyEnergy.theoreticalOutcome) || isBadOutcome(dailyEnergy.theoreticalOutcome)
+    : false;
+  const evaluatedFields = dailyEnergy && hasComparableDirection ? (DAY_TYPE_FIELDS[dailyEnergy.dayTenGodType] || []) : [];
+  const evaluatedLabels = evaluatedFields.map(field => CATEGORY_LABELS[field]);
 
   useEffect(() => {
     const dTokens = selectedDateStr.split('-');
@@ -243,6 +249,16 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
              {canCheckIn && !isSubmitted && (
                <div className="space-y-3">
                  <p className="text-sm text-zen-muted">回顧{selectedDateStr === new Date().toISOString().split('T')[0] ? '今天' : '該日'}，各領域的感受是？（可只選有感的）</p>
+                 {evaluatedLabels.length > 0 && (
+                   <p className="text-xs rounded-lg border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-indigo-200">
+                     今日「{dailyEnergy?.dayTenGodType}」日會以「{evaluatedLabels.join('、')}」計入近期紀錄吻合度；其他欄位只留在你的日誌中。
+                   </p>
+                 )}
+                 {dailyEnergy && !hasComparableDirection && (
+                   <p className="text-xs rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-zen-muted">
+                     今日理論方向為「平穩」，目前的二元感受不計入吻合度；你仍可將各領域感受保存在日誌中。
+                   </p>
+                 )}
                  <div className="grid grid-cols-2 gap-2">
                    {CATEGORY_OPTIONS.map(cat => (
                      <div key={cat.key} className="bg-white/5 rounded-xl p-3 border border-white/5">
@@ -302,11 +318,11 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
          </div>
       </div>
 
-      {/* [AI MOD] AI 準確率報告：讓「持續記錄」有回饋（AI 正在學習使用者） */}
+      {/* 近期紀錄與規則方向的比較，不宣稱 AI 學習或預測準確率。 */}
       <div className="info-card bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-zen-text">AI 預測吻合度報告</h2>
+          <h2 className="text-xl font-bold text-zen-text">近期紀錄吻合度</h2>
           {streak.current > 0 && (
             <span className="text-xs px-2 py-1 rounded-lg bg-orange-500/15 text-orange-300 border border-orange-400/30">
               🔥 連續 {streak.current} 天
@@ -317,8 +333,14 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
         {report.samples > 0 ? (
           <div className="relative z-10">
             <div className="flex items-end gap-3 mb-1">
-              <span className="text-5xl font-bold text-indigo-400 leading-none">{report.accuracy}</span>
-              <span className="text-2xl text-indigo-400/70 mb-1">%</span>
+              {report.samples >= 3 ? (
+                <>
+                  <span className="text-5xl font-bold text-indigo-400 leading-none">{report.accuracy}</span>
+                  <span className="text-2xl text-indigo-400/70 mb-1">%</span>
+                </>
+              ) : (
+                <span className="text-3xl font-bold text-indigo-300 leading-none">{report.samples}/3 筆</span>
+              )}
               <span className="ml-auto text-sm px-2.5 py-1 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-400/30">
                 {report.level}
               </span>
@@ -332,19 +354,19 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
                   <span className="text-xs text-zen-muted w-10 shrink-0">{item.label}</span>
                   <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-400"
-                      style={{ width: `${item.accuracy}%` }}
+                      className={`h-full rounded-full ${item.total >= 3 ? 'bg-gradient-to-r from-indigo-500 to-purple-400' : 'bg-indigo-400/35'}`}
+                      style={{ width: `${item.total >= 3 ? item.accuracy : Math.round((item.total / 3) * 100)}%` }}
                     />
                   </div>
                   <span className="text-xs text-zen-text w-20 text-right shrink-0">
-                    {item.accuracy}% <span className="text-zen-muted">({item.match}/{item.total})</span>
+                    {item.total >= 3 ? `${item.accuracy}% ` : ''}<span className="text-zen-muted">({item.match}/{item.total})</span>
                   </span>
                 </div>
               ))}
             </div>
 
             <p className="text-[11px] text-zen-muted mt-4 pt-3 border-t border-white/5">
-              依據 {report.checkedDays} 次心流紀錄、{report.samples} 筆可評估回饋計算。持續記錄，預測會越來越貼近你的真實體驗。
+              依據 {report.checkedDays} 次心流紀錄、{report.samples} 筆可評估回饋計算。這是命理規則與主觀紀錄的方向比較，不代表科學驗證或個人結果保證。
             </p>
           </div>
         ) : (

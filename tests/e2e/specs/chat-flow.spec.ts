@@ -75,10 +75,40 @@ async function seedChart(context: BrowserContext): Promise<void> {
 
 test('開啟 AI 問答即自動匿名授權並載入命盤清單', async ({ page, context }) => {
   await seedChart(context);
-  await openChat(page);
+  const evidenceRequests: string[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/evidence/current') evidenceRequests.push(request.url());
+  });
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+  expect(evidenceRequests).toHaveLength(0);
+  await page.getByRole('button', { name: 'AI 問答' }).first().click();
   // [AI MOD] 匿名模式：免按「取得權限」，掛載即自動授權
   await expect(page.getByText('已授權', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('命盤記錄').locator('option')).toContainText(['demo-001', 'demo-002']);
+  await expect(page.getByLabel('命盤記錄').locator('option')).toContainText(['目前命盤（本次工作階段）', '範例']);
+  await expect(page.getByText('已連結目前命盤 Evidence')).toBeVisible();
+});
+
+test('current Evidence 僅限建立它的 session token 使用', async ({ request }) => {
+  const firstTokenResponse = await request.post('/api/auth/token', { data: {} });
+  const secondTokenResponse = await request.post('/api/auth/token', { data: {} });
+  const { token: firstToken } = (await firstTokenResponse.json()) as { token: string };
+  const { token: secondToken } = (await secondTokenResponse.json()) as { token: string };
+  const evidenceResponse = await request.post('/api/evidence/current', {
+    headers: { Authorization: `Bearer ${firstToken}` },
+    data: { birthDate: '1990-01-01', birthTime: '', gender: 'male' },
+  });
+  expect(evidenceResponse.status()).toBe(201);
+  const evidence = (await evidenceResponse.json()) as { record_id: string; time_known: boolean };
+  expect(evidence.time_known).toBe(false);
+
+  const denied = await request.post('/api/chat', {
+    headers: { Authorization: `Bearer ${secondToken}` },
+    data: { messages: [{ role: 'user', content: '請分析' }], record_id: evidence.record_id },
+  });
+  const deniedBody = await denied.text();
+  expect(deniedBody).toContain('目前資料不足');
+  expect(deniedBody).not.toContain('身強');
 });
 
 test('選擇命盤後取得 SSE 並渲染 term Tooltip', async ({ page, context }) => {
@@ -106,6 +136,8 @@ test('分享今日運勢可產出 PNG 圖檔並提供 LINE 分享', async ({ pag
   // html2canvas 擷取 → 桌機降級為下載
   const downloadPromise = page.waitForEvent('download', { timeout: 60000 });
   await shareButton.click();
+  await expect(page.getByRole('dialog', { name: '分享前預覽' })).toBeVisible();
+  await page.getByRole('button', { name: '產生分享圖' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^bezi-daily-.*\.png$/);
 
@@ -123,8 +155,8 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
   await expect(page.getByText('本月流日預報')).toBeVisible({ timeout: 20000 });
 
   // 尚未打卡 → 報告顯示引導文案
-  await expect(page.getByText('AI 預測吻合度報告')).toBeVisible();
-  await expect(page.getByText(/AI 就會開始學習你的節奏/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
+  await expect(page.getByText(/比較實際感受與命理規則/)).toBeVisible();
 
   // 打卡：選一個「順利」並送出
   await page.getByRole('button', { name: '😊 順利' }).first().click();
@@ -132,8 +164,9 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
 
   // 打卡成功 → 出現連續天數
   await expect(page.getByText(/已連續打卡 1 天/)).toBeVisible({ timeout: 20000 });
-  // 報告出現百分比
-  await expect(page.getByText('AI 預測吻合度報告')).toBeVisible();
+  // 單筆樣本只顯示累積狀態，不把 1 筆資料包裝成百分比結論
+  await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
+  await expect(page.getByText(/1\/3 筆|還沒有足夠的記錄/)).toBeVisible();
 });
 
 test('未授權直接呼叫 chat 回傳 401', async ({ request }) => {

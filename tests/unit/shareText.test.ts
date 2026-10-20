@@ -44,6 +44,13 @@ describe('buildDailyShareText', () => {
     const text = buildDailyShareText({ ...info, favorable: [] }, URL);
     expect(text).not.toContain('喜用五行');
   });
+
+  it('匿名分享時不輸出干支與個人十神', () => {
+    const text = buildDailyShareText({ ...info, ganZhi: '', tenGod: '', favorable: [] }, URL);
+    expect(text).toContain('今日方向：大吉');
+    expect(text).not.toContain('戊午日');
+    expect(text).not.toContain('正印');
+  });
 });
 
 describe('buildSynastryShareText', () => {
@@ -69,6 +76,11 @@ describe('buildSynastryShareText', () => {
   it('缺少重點發現時不產生空行', () => {
     const text = buildSynastryShareText({ ...info, topFactor: undefined, topDesc: undefined }, URL);
     expect(text.split('\n').every(line => line.trim().length > 0)).toBe(true);
+  });
+
+  it('匿名分享時不輸出空白日主欄', () => {
+    const text = buildSynastryShareText({ ...info, myName: '我', partnerName: '夥伴', myDayMaster: '', partnerDayMaster: '' }, URL);
+    expect(text).not.toContain('日主：');
   });
 });
 

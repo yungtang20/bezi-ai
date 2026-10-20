@@ -11,7 +11,7 @@ export interface EvidenceData {
 }
 
 export interface EvidenceSource {
-  type: 'sql' | 'mcp';
+  type: 'sql' | 'mcp' | 'computed';
   getData(recordId: string): Promise<EvidenceData>;
 }
 

@@ -10,6 +10,7 @@ import { missingEvidenceOutput, validateAIOutput, type EvidenceBundle } from "./
 import { BAZI_SYSTEM_PROMPT, SYNASTRY_SYSTEM_PROMPT, DAYUN_SYSTEM_PROMPT } from "./src/ai/prompts";
 import { parseAgnesResponse } from "./src/lib/parseAgnesResponse";
 import { SqliteEvidenceSource, type EvidenceData } from "./src/lib/evidence/provider";
+import { calculateChart, calculateDaYun, getFutureLiuNian, getFiveElementData, getTenGodData } from "./packages/core/src/index";
 
 // [AI MOD] CORS 中介程式：僅允許相同 origin 或明確允許的來源。
 // 預設開放（向後相容），但可透過 ALLOWED_ORIGINS 環境變數限制。
@@ -95,6 +96,12 @@ const DEV_AUTH_BYPASS = process.env.NODE_ENV === 'development' && process.env.EN
 const ANONYMOUS_CHAT_ENABLED = process.env.ENABLE_ANONYMOUS_CHAT === 'true';
 const SESSION_TTL_MS = 60 * 60_000;
 const sessions = new Map<string, number>();
+const computedEvidence = new Map<string, { owner: string; expiresAt: number; data: EvidenceData }>();
+
+function getSuppliedCredential(req: express.Request): string {
+  const authorization = req.header('authorization');
+  return (authorization?.startsWith('Bearer ') ? authorization.slice(7) : req.header('x-api-key')) || '';
+}
 
 function constantTimeEqual(receivedValue: string, expectedValue: string): boolean {
   const received = Buffer.from(receivedValue);
@@ -103,9 +110,7 @@ function constantTimeEqual(receivedValue: string, expectedValue: string): boolea
 }
 
 function requireChatAuthorization(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const authorization = req.header('authorization');
-  const apiKey = req.header('x-api-key');
-  const supplied = authorization?.startsWith('Bearer ') ? authorization.slice(7) : apiKey;
+  const supplied = getSuppliedCredential(req);
   const expiresAt = supplied ? sessions.get(supplied) : undefined;
   const sessionValid = Boolean(expiresAt && expiresAt > Date.now());
   if (supplied && expiresAt && !sessionValid) sessions.delete(supplied);
@@ -184,6 +189,51 @@ interface ChatInputBody {
   record_id?: string;
 }
 
+interface CurrentEvidenceInput {
+  birthDate?: string;
+  birthTime?: string;
+  gender?: 'male' | 'female';
+}
+
+function buildComputedEvidence(input: CurrentEvidenceInput): EvidenceData | null {
+  if (typeof input.birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) return null;
+  if (input.gender !== 'male' && input.gender !== 'female') return null;
+  if (input.birthTime !== undefined && input.birthTime !== '' && !/^\d{1,2}$/.test(input.birthTime)) return null;
+  const [year, month, day] = input.birthDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const today = new Date();
+  if (year < 1900 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day || date > today) return null;
+  const unknownHour = !input.birthTime;
+  const hour = unknownHour ? 12 : Number(input.birthTime);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return null;
+
+  const chart = calculateChart(year, month, day, hour, input.gender === 'male' ? '男' : '女', unknownHour);
+  const fiveElements = Object.fromEntries(
+    getFiveElementData(chart).map(item => {
+      const key = ({ 木: 'wood', 火: 'fire', 土: 'earth', 金: 'metal', 水: 'water' } as const)[item.name as '木' | '火' | '土' | '金' | '水'];
+      return [key, item.value];
+    }),
+  ) as EvidenceData['fiveElements'];
+  const tenGods = Object.fromEntries(getTenGodData(chart).map(item => [item.name, item.value]));
+  const recordId = `current-${randomUUID()}`;
+  return {
+    record_id: recordId,
+    bazi: {
+      year: `${chart.year.gan}${chart.year.zhi}`,
+      month: `${chart.month.gan}${chart.month.zhi}`,
+      day: `${chart.day.gan}${chart.day.zhi}`,
+      time: unknownHour ? '時辰未知' : `${chart.hour.gan}${chart.hour.zhi}`,
+      dayMaster: chart.dayMaster,
+      gender: chart.gender,
+    },
+    fiveElements,
+    tenGods,
+    // 未知時辰時不產生以中午近似推算的精確起運資料。
+    dayun: unknownHour ? [] : calculateDaYun(chart).map(item => ({ ...item })),
+    liunian: getFutureLiuNian(new Date().getFullYear(), 10, chart.dayMaster).map(item => ({ ...item })),
+  };
+}
+
 // System prompts moved to src/ai/prompts.ts — imported above (BAZI/SYNASTRY/DAYUN_SYSTEM_PROMPT).
 
 // [AI MOD] 輸入驗證：限制 messages 數量、單則長度、customPrompt/apiKey 長度
@@ -213,25 +263,35 @@ function validateChatInput(body: ChatInputBody): string | null {
   return null;
 }
 
-function createEvidenceBundle(data: EvidenceData, query: string): EvidenceBundle {
+function createEvidenceBundle(data: EvidenceData, query: string, sourceType: 'sql' | 'computed' = 'sql'): EvidenceBundle {
   const now = new Date();
+  const timeUnknown = data.bazi.time === '時辰未知';
   return {
-    requestId: `sql-${data.record_id}-${now.getTime()}`,
+    requestId: `${sourceType}-${data.record_id}-${now.getTime()}`,
     userId: 'anonymous',
     query,
     items: [{
-      sourceId: `sql:${data.record_id}`,
-      sourceType: 'sql',
+      sourceId: `${sourceType}:${data.record_id}`,
+      sourceType,
       title: `Bazi record ${data.record_id}`,
       content: JSON.stringify(data),
       retrievedAt: now.toISOString(),
       schemaVersion: 'bazi-record-v1',
-      supports: ['命盤資料', '五行分數', '十神比例', '大運流年'],
+      supports: timeUnknown
+        ? ['前三柱命盤資料', '五行分數', '十神比例', '流年']
+        : ['命盤資料', '五行分數', '十神比例', '大運流年'],
     }],
-    limitations: ['資料來自 server-side SQL evidence source。'],
-    allowedClaims: ['僅可根據此 Evidence Bundle 回答。'],
+    limitations: [
+      sourceType === 'computed'
+        ? '資料由伺服器依本次工作階段提供的出生資訊重新排盤，工作階段到期後即失效。'
+        : '資料來自 server-side SQL evidence source。',
+      ...(timeUnknown ? ['出生時辰未知；時柱與精確起運資料未納入，不得推論相關結果。'] : []),
+    ],
+    allowedClaims: [timeUnknown
+      ? '僅可根據前三柱、五行、十神與流年 Evidence 回答；不得聲稱精確時柱或起運。'
+      : '僅可根據此 Evidence Bundle 回答。'],
     expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
-    source: { type: 'sql', id: data.record_id },
+    source: { type: sourceType, id: data.record_id },
   };
 }
 
@@ -269,19 +329,32 @@ function createChatHandler(systemPrompt: string) {
       let evidenceBundle: EvidenceBundle | null = null;
       let evidenceData: EvidenceData | null = null;
       if (record_id) {
-        try {
-          evidenceData = await sqlEvidenceSource.getData(record_id);
-          evidenceBundle = createEvidenceBundle(evidenceData, query);
-          console.log(`[SERVER] Using SQL evidence source ${record_id}`);
-        } catch {
-          evidenceBundle = null;
+        const current = computedEvidence.get(record_id);
+        const credential = getSuppliedCredential(req);
+        if (record_id.startsWith('current-')) {
+          if (current && current.expiresAt > Date.now() && current.owner === credential) {
+            evidenceData = current.data;
+            evidenceBundle = createEvidenceBundle(evidenceData, query, 'computed');
+            console.log(`[SERVER] Using computed session evidence ${record_id}`);
+          } else {
+            if (current && current.expiresAt <= Date.now()) computedEvidence.delete(record_id);
+            evidenceBundle = null;
+          }
+        } else {
+          try {
+            evidenceData = await sqlEvidenceSource.getData(record_id);
+            evidenceBundle = createEvidenceBundle(evidenceData, query);
+            console.log(`[SERVER] Using SQL evidence source ${record_id}`);
+          } catch {
+            evidenceBundle = null;
+          }
         }
       } else if (DEV_FIXTURE_ENABLED) {
         evidenceBundle = createDevFixtureEvidence(query);
         evidenceData = DEV_FIXTURE_BAZI as unknown as EvidenceData;
       }
       if (!evidenceBundle) {
-        const output = missingEvidenceOutput(['已驗證的 SQL 或 MCP Evidence Bundle']);
+        const output = missingEvidenceOutput(['伺服器已驗證的 Evidence Bundle']);
         res.write(`data: ${JSON.stringify({ content: output.answer, result: output })}\n\n`);
         return res.end();
       }
@@ -430,6 +503,32 @@ async function startServer() {
       res.json(await sqlEvidenceSource.listRecords());
     } catch {
       res.status(500).json({ error: '目前無法取得命盤清單。' });
+    }
+  });
+
+  app.post("/api/evidence/current", requireChatAuthorization, rateLimit("evidence"), (req, res) => {
+    try {
+      const now = Date.now();
+      for (const [recordId, record] of computedEvidence) {
+        if (record.expiresAt <= now) computedEvidence.delete(recordId);
+      }
+      const data = buildComputedEvidence(req.body || {});
+      if (!data) {
+        res.status(400).json({ error: '出生資料格式無效。' });
+        return;
+      }
+      const owner = getSuppliedCredential(req);
+      computedEvidence.set(data.record_id, { owner, expiresAt: now + SESSION_TTL_MS, data });
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(201).json({
+        record_id: data.record_id,
+        birth: `${data.bazi.year}-${data.bazi.month}-${data.bazi.day}`,
+        gender: data.bazi.gender,
+        source: 'current',
+        time_known: data.bazi.time !== '時辰未知',
+      });
+    } catch {
+      res.status(400).json({ error: '無法建立目前命盤的驗證資料。' });
     }
   });
 

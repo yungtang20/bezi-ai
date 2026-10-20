@@ -30,13 +30,24 @@ export function getChatRecordId(): string {
   return window.sessionStorage.getItem('bezi_chat_record_id') || '';
 }
 
-export interface ChatRecordSummary { record_id: string; birth: string; gender: string; }
+export interface ChatRecordSummary { record_id: string; birth: string; gender: string; source?: 'current' | 'demo'; time_known?: boolean; }
 
 export async function fetchChatRecords(): Promise<ChatRecordSummary[]> {
   const response = await fetch('/api/records', { headers: getChatAuthHeaders() });
   if (response.status === 401) throw new Error('unauthorized');
   if (!response.ok) throw new Error('records unavailable');
-  return await response.json() as ChatRecordSummary[];
+  return (await response.json() as ChatRecordSummary[]).map(record => ({ ...record, source: record.source || 'demo' }));
+}
+
+export async function createCurrentEvidence(input: { birthDate: string; birthTime: string; gender: 'male' | 'female' }): Promise<ChatRecordSummary> {
+  const response = await fetch('/api/evidence/current', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getChatAuthHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (response.status === 401) throw new Error('unauthorized');
+  if (!response.ok) throw new Error('current evidence unavailable');
+  return await response.json() as ChatRecordSummary;
 }
 
 export async function requestChatSession(clientSecret: string = ''): Promise<void> {
