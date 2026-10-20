@@ -1,7 +1,7 @@
 # Stage 1: Build
-FROM node:20-bookworm-slim AS builder
+FROM node:24-bookworm-slim AS builder
 
-# glibc 映像：better-sqlite3 直接下載預編譯二進位（免 python/make）
+# Node 24 LTS：與本機/CI 一致；better-sqlite3 v13 有 node24 預編譯二進位（node20 已 EOL 無預編譯）
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 2: Production
-FROM node:20-bookworm-slim AS runner
+FROM node:24-bookworm-slim AS runner
 
 WORKDIR /app
 
