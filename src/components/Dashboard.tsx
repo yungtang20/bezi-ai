@@ -154,7 +154,7 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
       </div>
 
       {/* [AI MOD] 今日能量卡（每日鉤子）：首屏第一眼 */}
-      <TodayEnergyCard chart={chart} scores={scores} onNavigate={onNavigate} />
+      <TodayEnergyCard chart={chart} scores={scores} name={name} onNavigate={onNavigate} />
 
       {/* 命主資訊卡片（永遠顯示） */}
       <div className="glass-card p-3 md:p-4 relative overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.1s' }}>

@@ -94,6 +94,25 @@ test('選擇命盤後取得 SSE 並渲染 term Tooltip', async ({ page, context 
   await expect(page.locator('[title]').filter({ hasText: '身強' }).first()).toBeVisible();
 });
 
+test('分享今日運勢可產出 PNG 圖檔並提供 LINE 分享', async ({ page, context }) => {
+  await seedChart(context);
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+
+  // 今日能量卡上的分享按鈕
+  const shareButton = page.getByRole('button', { name: '分享今日運勢' });
+  await expect(shareButton).toBeVisible();
+
+  // html2canvas 擷取 → 桌機降級為下載
+  const downloadPromise = page.waitForEvent('download', { timeout: 60000 });
+  await shareButton.click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^bezi-daily-.*\.png$/);
+
+  // 下載後提供 LINE 分享按鈕
+  await expect(page.getByRole('button', { name: '分享到 LINE' })).toBeVisible({ timeout: 20000 });
+});
+
 test('未授權直接呼叫 chat 回傳 401', async ({ request }) => {
   const response = await request.post('/api/chat', { data: { messages: [{ role: 'user', content: '測試' }] } });
   expect(response.status()).toBe(401);

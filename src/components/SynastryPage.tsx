@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Users, Edit2 } from 'lucide-react';
+import React, { useCallback, useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Share2, Trash2, Users, Edit2 } from 'lucide-react';
 import { BaziChart, calculateChart } from '../paipan';
 import { PartnerChart } from '../matchmaking';
 import { getPartners, savePartner, deletePartner } from '../storage';
@@ -10,6 +10,10 @@ import { getTenGodType } from '../data';
 import { LECTURE_DATA, getFamilyRole, PARTNER_MATCHING_DATA } from '../data';
 import { getCompatibilityScore } from './CategorySynastry';
 import { SynastryDetail } from '../types';
+import { useShareImage } from '../hooks/useShareImage';
+import { buildSynastryShareText, buildLineShareUrl, synastryHeadline } from '../lib/shareText';
+import ShareImage from './share/ShareImage';
+import SynastryShareCard from './share/SynastryShareCard';
 
 type RelationshipType = '伴侶' | '合作夥伴' | '家人' | '其他';
 
@@ -35,6 +39,43 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
   });
 
   const timeInputRef = React.useRef<HTMLInputElement>(null);
+
+  // [AI MOD] 分享合盤結果（裂變：一個人分享＝兩個人進來）
+  const { isSharing, error: shareError, share } = useShareImage();
+  const [shareTarget, setShareTarget] = useState(false);
+  const [lineShareUrl, setLineShareUrl] = useState<string | null>(null);
+
+  const handleCaptureReady = useCallback(async (element: HTMLElement) => {
+    if (!myChart || !selectedPartner?.chart) {
+      setShareTarget(false);
+      return;
+    }
+    const scoreData = getCompatibilityScore(myChart, selectedPartner.chart, selectedPartner.relationship);
+    const siteUrl = typeof window === 'undefined' ? '' : window.location.origin;
+    const text = buildSynastryShareText({
+      myName: myName || '我',
+      partnerName: selectedPartner.name || 'TA',
+      score: scoreData.score,
+      myDayMaster: myChart.dayMaster,
+      partnerDayMaster: selectedPartner.chart.dayMaster,
+      topFactor: scoreData.details[0]?.factor,
+      topDesc: scoreData.details[0]?.desc,
+    }, siteUrl);
+
+    const outcome = await share(element, {
+      fileName: `bezi-synastry-${Date.now()}.png`,
+      title: `${myName || '我'} × ${selectedPartner.name || 'TA'} 合盤報告`,
+      text,
+    });
+    setShareTarget(false);
+    // 桌機：已下載圖片 → 提供 LINE 文字分享按鈕（避免彈出視窗封鎖器）
+    if (outcome === 'downloaded') setLineShareUrl(buildLineShareUrl(text));
+  }, [share, myChart, myName, selectedPartner]);
+
+  const handleShare = () => {
+    if (isSharing || shareTarget) return;
+    setShareTarget(true);
+  };
 
   useEffect(() => {
     loadPartners();
@@ -363,6 +404,14 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
                           <div className="bg-amber-950/10 p-5 rounded-2xl border border-amber-900/30 space-y-4 shadow-lg shadow-amber-900/5">
                             <h4 className="font-bold text-amber-400 text-sm flex items-center justify-between gap-2">
                               <span><span className="mr-2">✨</span>五行磁場交流 (契合度 {scoreData.score}%)</span>
+                              <button
+                                onClick={handleShare}
+                                disabled={isSharing}
+                                aria-label="分享合盤結果"
+                                className="flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/10 hover:bg-amber-400/20 px-2.5 py-1 text-[11px] font-bold text-amber-300 transition-colors disabled:opacity-50"
+                              >
+                                <Share2 size={12} /> {isSharing ? '產生中' : '分享結果'}
+                              </button>
                             </h4>
                             <div className="space-y-3">
                               {scoreData.details.map((detail: SynastryDetail, idx: number) => (
@@ -479,6 +528,31 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
                   })()}
                 </div>
               </div>
+
+              {/* [AI MOD] 分享圖（離屏擷取） */}
+              <ShareImage active={shareTarget} onReady={handleCaptureReady}>
+                <SynastryShareCard
+                  myName={myName || '我'}
+                  partnerName={selectedPartner.name || 'TA'}
+                  score={getCompatibilityScore(myChart, selectedPartner.chart, selectedPartner.relationship).score}
+                  headline={synastryHeadline(getCompatibilityScore(myChart, selectedPartner.chart, selectedPartner.relationship).score)}
+                  myDayMaster={myChart.dayMaster}
+                  partnerDayMaster={selectedPartner.chart.dayMaster}
+                  myPillar={`${selectedPartner.chart.year ? myChart.day.gan : ''}${myChart.day.zhi}`}
+                  partnerPillar={`${selectedPartner.chart.day.gan}${selectedPartner.chart.day.zhi}`}
+                  details={getCompatibilityScore(myChart, selectedPartner.chart, selectedPartner.relationship).details.map(detail => ({ factor: detail.factor, desc: detail.desc }))}
+                  siteUrl={typeof window === 'undefined' ? '' : window.location.origin}
+                />
+              </ShareImage>
+              {lineShareUrl && (
+                <button
+                  onClick={() => window.open(lineShareUrl, '_blank', 'noopener')}
+                  className="mt-3 w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-2 text-xs font-bold text-emerald-300 transition-colors"
+                >
+                  圖片已下載 · 分享到 LINE
+                </button>
+              )}
+              {shareError && <p className="text-xs text-red-400 mt-2">{shareError}</p>}
             </div>
           ) : (
              <div className="h-full min-h-[300px] flex items-center justify-center border border-dashed border-zinc-800 rounded-2xl p-6 bg-black/20 text-center">
