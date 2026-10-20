@@ -8,6 +8,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import FiveElementsRadar from './dashboard/FiveElementsRadar';
 import TenGodsPie from './dashboard/TenGodsPie';
 import BaziPillars from './dashboard/BaziPillars';
+import TodayEnergyCard from './dashboard/TodayEnergyCard';
 import { getFiveElementData, getTenGodData } from '../lib/chartTransform';
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -151,6 +152,9 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
         </p>
         <div className="gold-divider mt-2 mx-auto max-w-[200px]" />
       </div>
+
+      {/* [AI MOD] 今日能量卡（每日鉤子）：首屏第一眼 */}
+      <TodayEnergyCard chart={chart} scores={scores} onNavigate={onNavigate} />
 
       {/* 命主資訊卡片（永遠顯示） */}
       <div className="glass-card p-3 md:p-4 relative overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.1s' }}>

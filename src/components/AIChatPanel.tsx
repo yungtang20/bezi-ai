@@ -28,6 +28,25 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
     setHasSession(Boolean(sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CHAT_SESSION_TOKEN)));
   }, []);
 
+  // [AI MOD] 靜默匿名授權：ENABLE_ANONYMOUS_CHAT 開啟時，掛載即自動取得 token，
+  // 使用者免按「取得權限」。失敗（匿名模式未啟用）則保留手動授權 UI。
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await requestChatSession();
+        if (cancelled) return;
+        await loadRecordsAfterAuth();
+      } catch {
+        if (!cancelled) {
+          setHasSession(Boolean(sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CHAT_SESSION_TOKEN)));
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, status]);
   useEffect(() => {
     const signature = bazi ? `${bazi.year}-${bazi.month}-${bazi.day}-${bazi.time}-${bazi.chart?.gender}-${bazi.chart?.dayMaster}` : 'none';
@@ -55,19 +74,25 @@ export default function AIChatPanel({ bazi, userName }: AIChatPanelProps) {
     void sendMessage(value, SYSTEM_PROMPT + buildContext() + (customPrompt.trim() ? `\n\n使用者偏好：${customPrompt.trim()}` : ''), recordId).finally(() => setStatus(null));
   };
 
+  // [AI MOD] 取得 token 後的共用後續：載入命盤清單、選定 recordId
+  const loadRecordsAfterAuth = async () => {
+    const availableRecords = await fetchChatRecords();
+    setRecords(availableRecords);
+    setHasSession(true);
+    if (availableRecords.length > 0) {
+      const current = sessionStorage.getItem('bezi_chat_record_id') || recordId;
+      const nextRecordId = availableRecords.some(record => record.record_id === current) ? current : availableRecords[0].record_id;
+      sessionStorage.setItem('bezi_chat_record_id', nextRecordId);
+      setRecordId(nextRecordId);
+    }
+  };
+
   const authenticate = async () => {
     setAuthError(null);
     try {
       await requestChatSession(clientSecret);
-      const availableRecords = await fetchChatRecords();
-      setRecords(availableRecords);
+      await loadRecordsAfterAuth();
       setClientSecret('');
-      setHasSession(true);
-      if (availableRecords.length > 0) {
-        const nextRecordId = availableRecords.some(record => record.record_id === recordId) ? recordId : availableRecords[0].record_id;
-        setRecordId(nextRecordId);
-        sessionStorage.setItem('bezi_chat_record_id', nextRecordId);
-      }
     } catch {
       sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CHAT_SESSION_TOKEN);
       setHasSession(false);

@@ -43,6 +43,7 @@ test.beforeAll(async () => {
       ...process.env,
       NODE_ENV: 'development',
       ENABLE_DEV_AUTH_BYPASS: 'true',
+      ENABLE_ANONYMOUS_CHAT: 'true',
       ENABLE_DEV_FIXTURE: 'false',
       AGNES_API_KEY: 'e2e-test-key',
       AGNES_BASE_URL: 'http://127.0.0.1:4011/v1',
@@ -70,16 +71,16 @@ test.beforeEach(async ({ context }: { context: BrowserContext }) => {
   });
 });
 
-test('授權流程取得 Session Token 並載入命盤清單', async ({ page }) => {
+test('開啟 AI 問答即自動匿名授權並載入命盤清單', async ({ page }) => {
   await openChat(page);
-  await page.getByRole('button', { name: '取得權限' }).click();
+  // [AI MOD] 匿名模式：免按「取得權限」，掛載即自動授權
   await expect(page.getByText('已授權', { exact: true })).toBeVisible();
   await expect(page.getByLabel('命盤記錄').locator('option')).toContainText(['demo-001', 'demo-002']);
 });
 
 test('選擇命盤後取得 SSE 並渲染 term Tooltip', async ({ page }) => {
   await openChat(page);
-  await page.getByRole('button', { name: '取得權限' }).click();
+  await expect(page.getByText('已授權', { exact: true })).toBeVisible();
   await page.getByLabel('命盤記錄').selectOption('demo-001');
   await page.getByPlaceholder('向命理師提問...').fill('請分析五行');
   const chatResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/chat');

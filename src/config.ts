@@ -39,11 +39,11 @@ export async function fetchChatRecords(): Promise<ChatRecordSummary[]> {
   return await response.json() as ChatRecordSummary[];
 }
 
-export async function requestChatSession(clientSecret: string): Promise<void> {
+export async function requestChatSession(clientSecret: string = ''): Promise<void> {
   const response = await fetch('/api/auth/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ client_secret: clientSecret }),
+    body: JSON.stringify(clientSecret ? { client_secret: clientSecret } : {}),
   });
   if (!response.ok) throw new Error('unauthorized');
   const payload = await response.json() as { token?: string };

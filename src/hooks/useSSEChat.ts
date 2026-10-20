@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getChatAuthHeaders } from '../config';
+import { getChatAuthHeaders, requestChatSession } from '../config';
 
 export type ChatMessageStatus = 'streaming' | 'done' | 'error' | 'stopped';
 export type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string; status: ChatMessageStatus; createdAt: number };
@@ -28,7 +28,15 @@ export function useSSEChat() {
     const controller = new AbortController();
     controllerRef.current = controller;
     try {
-      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...getChatAuthHeaders() }, body: JSON.stringify({ messages: requestMessages, customPrompt, record_id: recordId }), signal: controller.signal });
+      const doFetch = () => fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...getChatAuthHeaders() }, body: JSON.stringify({ messages: requestMessages, customPrompt, record_id: recordId }), signal: controller.signal });
+      let response = await doFetch();
+      if (response.status === 401) {
+        // [AI MOD] 靜默換發 token（匿名模式或重新取得）後重試一次，使用者無感
+        try {
+          await requestChatSession();
+          response = await doFetch();
+        } catch { /* 換發失敗 → 走原本 401 錯誤路徑 */ }
+      }
       if (response.status === 401) throw new Error('unauthorized');
       if (!response.ok || !response.body) throw new Error('request failed');
       const reader = response.body.getReader();

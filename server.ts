@@ -78,6 +78,9 @@ const sqlEvidenceSource = new SqliteEvidenceSource();
 const chatAuthToken = process.env.BEZI_CHAT_API_KEY || "";
 const authClientSecret = process.env.BEZI_AUTH_CLIENT_SECRET || "";
 const DEV_AUTH_BYPASS = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEV_AUTH_BYPASS === 'true';
+// [AI MOD] 匿名模式：開啟後 /api/auth/token 無需 client_secret 即可發放 session token（仍受 per-IP 限流約束），
+// 讓終端使用者零授權摩擦。生產環境的成本保護主要依賴 rateLimit，而非 client_secret。
+const ANONYMOUS_CHAT_ENABLED = process.env.ENABLE_ANONYMOUS_CHAT === 'true';
 const SESSION_TTL_MS = 60 * 60_000;
 const sessions = new Map<string, number>();
 
@@ -397,8 +400,9 @@ async function startServer() {
   app.post("/api/auth/token", rateLimit(), (req, res) => {
     const clientSecret = req.body?.client_secret;
     const devBypass = DEV_AUTH_BYPASS;
-    const secretValid = typeof clientSecret === 'string' && constantTimeEqual(clientSecret, authClientSecret);
-    if (!devBypass && !secretValid) {
+    const secretValid = typeof clientSecret === 'string' && clientSecret.length > 0 && constantTimeEqual(clientSecret, authClientSecret);
+    // 匿名模式（ENABLE_ANONYMOUS_CHAT=true）允許無 secret 發放 token；secret 仍可提供（向後相容）。
+    if (!devBypass && !secretValid && !ANONYMOUS_CHAT_ENABLED) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
