@@ -388,7 +388,8 @@ function createChatHandler(systemPrompt: string) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  // [AI MOD] Render Docker runtime 會注入 PORT（預設 10000）；本機開發走 3000
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Enable JSON request body parser（限制 1mb，避免灌爆）
   app.use(express.json({ limit: "1mb" }));
