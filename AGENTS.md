@@ -2,7 +2,7 @@
 
 Agent OS Compatibility: **Agent OS Core v0.1.0**（Policy Precedence 與 Decision Matrix 以 Core 為準，本檔不複製 Core）。
 
-本檔為 `D:\徐玉蘭\bezi`（非 git repo）的 **Primary Mapping**。
+本檔為 `D:\徐玉蘭\bezi`（git repo；remote: `github.com/yungtang20/bezi`）的 **Primary Mapping**。
 
 ---
 
@@ -10,7 +10,7 @@ Agent OS Compatibility: **Agent OS Core v0.1.0**（Policy Precedence 與 Decisio
 
 - project_name: bezi（Bezi 八字命理分析與大運流年推算系統）
 - project_root: `D:\徐玉蘭\bezi`
-- git_root: 無（本機非 git repo；不得 git init；遠端 repo: `github.com/yungtang20/bezi`）
+- git_root: `D:\徐玉蘭\bezi`（2026-10-21 經授權 git init；remote: `origin` → `github.com/yungtang20/bezi`，private；branch `main`）
 - package: name=`bezi-ai`（`package.json`，type=module）
 - project_type: TypeScript full-stack（React/Vite + Express）八字命理 Web 應用
 
@@ -86,5 +86,5 @@ Agent OS Compatibility: **Agent OS Core v0.1.0**（Policy Precedence 與 Decisio
 - `D:\徐玉蘭\bezi\package.json`（scripts: dev/build/start/clean/lint/test）
 - `D:\徐玉蘭\bezi\src\data\`（core/charts/rules/lecture + elementRemedyHelper）
 - `D:\徐玉蘭\bezi\server.ts`、`vite.config.ts`、`tsconfig.json`、`playwright.config.ts`、`vitest.config.ts`
-- `D:\徐玉蘭\bezi\.github\workflows\ci.yml`（lint + test + build）
-- 非 git repo，不得 git init
+- `D:\徐玉蘭\bezi\.github\workflows\ci.yml`（lint + test + build；**尚未推送至遠端**——需 token workflow scope）
+- 2026-10-21 經授權 `git init` 並推送遠端（private repo `github.com/yungtang20/bezi`）；正常提交即可，勿 force push

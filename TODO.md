@@ -29,8 +29,8 @@
 | `npm run build` | ✅ 通過（前端 + 後端 bundle 26.6kb） |
 | chunk 大小 | ✅ 已優化（manualChunks 切分 vendor/core/charts，無 >500kB 警告） |
 | codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
-| git repo | ❌ 受限（AGENTS.md：本機不得 git init） |
-| CI/CD | ❌ 檔案存在但未跑（`.github/workflows/ci.yml`，需遠端 repo 觸發） |
+| git repo | ✅ 完成（2026-10-21 經授權 init + push；remote `origin` → `github.com/yungtang20/bezi`，private，branch `main`） |
+| CI/CD | ⏳ 待補（`.github/workflows/ci.yml` 本機就緒；推送需 token workflow scope：`gh auth refresh -h github.com -s workflow` 後 `git add .github/workflows/ci.yml && git commit && git push`） |
 
 ## 📝 本輪完成工作（2026-10-21）
 
