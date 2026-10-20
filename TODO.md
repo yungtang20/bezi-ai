@@ -23,7 +23,7 @@
 | 檢查項目 | 結果 |
 |----------|------|
 | `npm run lint` | ✅ 通過（tsc --noEmit） |
-| `npm test` | ✅ 通過（13 檔、45 測試全過） |
+| `npm test` | ✅ 通過（16 檔、78 測試全過） |
 | API 驗證（.mjs） | ✅ 12 項全過（chat-validation 4 + evidence-pipeline 7 + dev-auth-bypass 1） |
 | Playwright E2E | ✅ 9/9 全過（含 1 鍵範例命盤試玩、分享圖產出、production 煙霧） |
 | `npm run build` | ✅ 通過（前端 + 後端 bundle 26.6kb） |
@@ -57,3 +57,5 @@
 3. 防火牆：新增 production bundle 煙霧測試並接上 CI（`tests/e2e/specs/prod-smoke.spec.ts`）
 
 **分享卡片（裂變）**：`src/lib/shareText.ts`＋`src/hooks/useShareImage.ts`＋`src/components/share/{ShareImage,DailyShareCard,SynastryShareCard}.tsx`；今日能量卡與合盤頁各有分享按鈕，Web Share API（手機→LINE）→ 桌機降級下載＋LINE 分享按鈕。分享卡全程 inline hex 樣式（html2canvas 不支援 oklch）。正式站實測通過。
+
+**連續打卡 + 準確率報告**：`src/lib/streak.ts`（連續天數純函式）＋`src/lib/accuracyReport.ts`（報告組裝）＋`src/hooks/useCheckInStats.ts`；`calibration.ts` 抽出 `DAY_TYPE_FIELDS` 單一真實來源並新增 `calculateCategoryAccuracy`。UI：今日能量卡 🔥 連續 N 天徽章＋準確率%；每日運勢頁「AI 預測吻合度報告」卡（大數字百分比、等級、分領域進度條）。空狀態會依當天十神提示該記錄哪個領域。正式站實測通過。
