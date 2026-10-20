@@ -24,27 +24,13 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
     build: {
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('recharts')) return 'vendor-recharts';
-              if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) return 'vendor-react';
-              if (id.includes('motion') || id.includes('framer-motion')) return 'vendor-motion';
-              if (id.includes('lucide-react')) return 'vendor-lucide';
-              if (id.includes('html2canvas')) return 'vendor-html2canvas';
-              if (id.includes('dompurify')) return 'vendor-dompurify';
-              if (id.includes('@google/genai') || id.includes('openai')) return 'vendor-ai';
-              return 'vendor-core';
-            }
-            if (id.includes('src/data/lecture')) return 'charts-lecture';
-            if (id.includes('src/data/charts')) return 'charts-data';
-            if (id.includes('src/data/rules')) return 'charts-rules';
-            if (id.includes('src/data/core')) return 'charts-core';
-          },
-        },
-      },
-      chunkSizeWarningLimit: 800,
+      // [AI MOD] 不使用自訂 manualChunks。
+      // 本專案的模組圖（react ↔ react-dom ↔ motion ↔ @bezi/core barrel ↔ src/data）存在循環依賴，
+      // Rollup 手工分包會產生跨 chunk 循環 → 正式版 runtime 直接崩潰
+      // （症狀：Cannot read properties of undefined (reading 'exports') / w is not a function），
+      // 且 dev 模式不會觸發、只有 production bundle 會壞（E2E 抓不到）。
+      // 改採 Vite 預設分包（route 層已由 React.lazy 自動切分），並以 chunkSizeWarningLimit 反映實際最大 chunk。
+      chunkSizeWarningLimit: 900,
     },
   };
 });
