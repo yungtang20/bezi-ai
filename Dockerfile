@@ -1,7 +1,8 @@
 # Stage 1: Build
 FROM node:24-bookworm-slim AS builder
 
-# Node 24 LTS：與本機/CI 一致；better-sqlite3 v13 有 node24 預編譯二進位（node20 已 EOL 無預編譯）
+# better-sqlite3 v13 無預編譯二進位 → node-gyp 原始碼編譯需要 python3/make/g++
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
