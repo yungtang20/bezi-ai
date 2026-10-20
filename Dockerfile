@@ -1,6 +1,9 @@
 # Stage 1: Build
 FROM node:20-alpine AS builder
 
+# better-sqlite3 在 alpine(musl) 無預編譯二進位，需原始碼編譯 → 補 node-gyp 必要工具
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
 
 COPY package*.json ./
