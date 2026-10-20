@@ -19,7 +19,17 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
   .filter(Boolean);
 function corsMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.length > 0 && !ALLOWED_ORIGINS.includes(origin)) {
+  // [AI MOD] 同源請求永不阻擋：Vite 產出的 module script 帶 crossorigin 屬性，
+  // 瀏覽器連同源請求也會附帶 Origin header，若用 ALLOWED_ORIGINS 過濾會誤殺前端資源。
+  let sameOrigin = false;
+  if (origin && req.headers.host) {
+    try {
+      sameOrigin = new URL(origin).host === req.headers.host;
+    } catch {
+      sameOrigin = false;
+    }
+  }
+  if (origin && !sameOrigin && ALLOWED_ORIGINS.length > 0 && !ALLOWED_ORIGINS.includes(origin)) {
     res.status(403).json({ error: "Origin not allowed" });
     return;
   }
@@ -45,6 +55,7 @@ function securityHeaders(_req: express.Request, res: express.Response, next: exp
 
 // Load local environment variables first; explicit process environment wins for production checks.
 const explicitNodeEnv = process.env.NODE_ENV;
+const explicitPort = process.env.PORT;
 const explicitFixtureFlag = process.env.ENABLE_DEV_FIXTURE;
 const explicitAgnesApiKey = process.env.AGNES_API_KEY;
 const explicitAgnesBaseUrl = process.env.AGNES_BASE_URL;
@@ -55,6 +66,7 @@ const explicitDevAuthBypass = process.env.ENABLE_DEV_AUTH_BYPASS;
 dotenv.config({ path: '.env.local', override: true });
 dotenv.config();
 if (explicitNodeEnv !== undefined) process.env.NODE_ENV = explicitNodeEnv;
+if (explicitPort !== undefined) process.env.PORT = explicitPort;
 if (explicitFixtureFlag !== undefined) process.env.ENABLE_DEV_FIXTURE = explicitFixtureFlag;
 if (explicitAgnesApiKey !== undefined) process.env.AGNES_API_KEY = explicitAgnesApiKey;
 if (explicitAgnesBaseUrl !== undefined) process.env.AGNES_BASE_URL = explicitAgnesBaseUrl;

@@ -20,4 +20,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: ALLOWED_ORIGINS
-        value: https://yungtang20.github.io
+        value: https://yungtang20.github.io,https://bezi-ai-api.onrender.com
