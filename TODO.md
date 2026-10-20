@@ -30,7 +30,7 @@
 | chunk 大小 | ✅ 已優化（manualChunks 切分 vendor/core/charts，無 >500kB 警告） |
 | codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
 | git repo | ✅ 完成（2026-10-21 經授權 init + push；remote `origin` → `github.com/yungtang20/bezi`，private，branch `main`） |
-| CI/CD | ⏳ 待補（`.github/workflows/ci.yml` 本機就緒；推送需 token workflow scope：`gh auth refresh -h github.com -s workflow` 後 `git add .github/workflows/ci.yml && git commit && git push`） |
+| CI/CD | ✅ 完成（2026-10-21 ci.yml 已推送；首次 CI Pipeline 執行 success 57s——lint + test + build 每次 push 自動跑） |
 
 ## 📝 本輪完成工作（2026-10-21）
 

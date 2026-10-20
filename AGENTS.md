@@ -86,5 +86,5 @@ Agent OS Compatibility: **Agent OS Core v0.1.0**（Policy Precedence 與 Decisio
 - `D:\徐玉蘭\bezi\package.json`（scripts: dev/build/start/clean/lint/test）
 - `D:\徐玉蘭\bezi\src\data\`（core/charts/rules/lecture + elementRemedyHelper）
 - `D:\徐玉蘭\bezi\server.ts`、`vite.config.ts`、`tsconfig.json`、`playwright.config.ts`、`vitest.config.ts`
-- `D:\徐玉蘭\bezi\.github\workflows\ci.yml`（lint + test + build；**尚未推送至遠端**——需 token workflow scope）
+- `D:\徐玉蘭\bezi\.github\workflows\ci.yml`（lint + test + build；已上遠端，CI Pipeline 每次 push 自動執行）
 - 2026-10-21 經授權 `git init` 並推送遠端（private repo `github.com/yungtang20/bezi`）；正常提交即可，勿 force push
