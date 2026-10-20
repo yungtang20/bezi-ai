@@ -31,6 +31,7 @@
 | codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
 | git repo | ✅ 完成（2026-10-21 經授權 init + push；remote `origin` → `github.com/yungtang20/bezi`，private，branch `main`） |
 | CI/CD | ✅ 完成（2026-10-21 ci.yml 已推送；首次 CI Pipeline 執行 success 57s——lint + test + build 每次 push 自動跑） |
+| 正式部署 | ✅ 上線（2026-10-21）Render `bezi-ai-api` → https://bezi-ai-api.onrender.com，匿名授權已啟用，端到端驗證通過（token／records／SSE AI 回答） |
 
 ## 📝 本輪完成工作（2026-10-21）
 
