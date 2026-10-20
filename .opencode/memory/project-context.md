@@ -59,10 +59,17 @@
 ## 驗收關卡（Reviewer 角色）
 ```bash
 npm run lint      # tsc --noEmit（型別檢查）
-npm test          # vitest run（36 測試：排盤、格局、大運流年、十神常數）
+npm test          # vitest run（45 測試：排盤、格局、大運流年、十神常數、validation）
 npm run build     # vite build + esbuild server bundle
-npm run test:e2e  # Playwright（設定檔存在：playwright.config.ts）
+npx playwright test   # 8 項 E2E：chat 流程（6）+ production bundle 煙霧（2）
+node --test tests/api-*.test.mjs   # API 驗證 16 項（chat 4 + evidence 7 + dev-auth 1 + cors 4）
 ```
+
+### ⚠️ Production 驗收鐵律（2026-10-21 教訓）
+- **dev 全綠 ≠ production 可用**：曾發生 dev 正常、正式版直接崩潰（跨 chunk 循環 → `undefined.exports`）與正式版全白（CORS 403 → React 不掛載）兩起事故
+- 任何 `manualChunks` / 分包調整，**必須**跑 `tests/e2e/specs/prod-smoke.spec.ts`（已接進 CI：build → prod smoke）
+- 正式站驗收網址：`https://bezi-ai-api.onrender.com`（Render，`srv-dbbrq3on74is73e7rc4g`）
+- 部署後務必用真實瀏覽器開一次正式站確認 React 有掛載（`#root` 內容 > 500 bytes）
 
 ## 記憶體結構（`.opencode/memory/`）
 ```

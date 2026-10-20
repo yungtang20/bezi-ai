@@ -31,6 +31,7 @@
 | codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
 | git repo | ✅ 完成（2026-10-21 經授權 init + push；remote `origin` → `github.com/yungtang20/bezi`，private，branch `main`） |
 | CI/CD | ✅ 完成（2026-10-21 ci.yml 已推送；首次 CI Pipeline 執行 success 57s——lint + test + build 每次 push 自動跑） |
+| Production 煙霧關卡 | ✅ 完成（2026-10-21 新增：build → prod smoke，跑 dist/server.cjs 驗 React 掛載／無 runtime 錯誤／無 CORS 403） |
 | 正式部署 | ✅ 上線（2026-10-21）Render `bezi-ai-api` → https://bezi-ai-api.onrender.com，匿名授權已啟用，端到端驗證通過（token／records／SSE AI 回答） |
 
 ## 📝 本輪完成工作（2026-10-21）
@@ -49,3 +50,8 @@
 **範例試玩**：`App.tsx` 一鍵範例命盤（1984-03-25 10:00 男 → 甲子年戊午日，與 demo-001 證據一致）
 **時辰提示**：`App.tsx` 「不知道出生時辰也沒關係」常駐提示（引擎 `isHourUnknown` 早已支援）
 **🐛 重大 bug 修復**：`validateBirthInput` 只接受 `HH:mm`，但主表單儲存的是小時 → **填了時辰的使用者完全無法送出表單**（已支援 HH/HH:mm/HHmm 三格式 + 9 項回歸測試 `tests/unit/validation.test.ts`）
+
+**🐛 正式站全白修復（上線後才發現）**：
+1. CORS：module script 帶 `crossorigin` → 瀏覽器連同源請求也帶 Origin → 前端資源全 403 → React 無法掛載。修正：同源永不阻擋（新增 `tests/api-cors.test.mjs` 4 項）
+2. `manualChunks`：字串模糊匹配把 `motion/react` 誤歸入 vendor-react → 跨 chunk 循環 → production 崩潰（dev 不重現）。修正：移除自訂分包，改用 Vite 預設
+3. 防火牆：新增 production bundle 煙霧測試並接上 CI（`tests/e2e/specs/prod-smoke.spec.ts`）
