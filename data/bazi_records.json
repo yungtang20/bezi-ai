@@ -1,0 +1,18 @@
+[
+  {
+    "record_id": "demo-001",
+    "bazi": { "year": "甲子", "month": "丙寅", "day": "戊午", "time": "壬戌", "dayMaster": "戊", "gender": "男" },
+    "fiveElements": { "wood": 22, "fire": 28, "earth": 31, "metal": 8, "water": 11 },
+    "tenGods": { "比肩": 2, "劫財": 1, "食神": 1, "傷官": 1, "偏財": 1, "正財": 1, "七殺": 1, "正官": 1, "偏印": 1, "正印": 1 },
+    "dayun": [{ "ganZhi": "丁卯", "startAge": 6, "endAge": 15, "tenGod": "正印" }],
+    "liunian": [{ "year": 2026, "ganZhi": "丙午", "relation": "正印" }]
+  },
+  {
+    "record_id": "demo-002",
+    "bazi": { "year": "乙丑", "month": "己卯", "day": "辛巳", "time": "癸巳", "dayMaster": "辛", "gender": "女" },
+    "fiveElements": { "wood": 24, "fire": 26, "earth": 18, "metal": 20, "water": 12 },
+    "tenGods": { "比肩": 1, "劫財": 1, "食神": 1, "傷官": 1, "偏財": 1, "正財": 1, "七殺": 2, "正官": 1, "偏印": 1, "正印": 1 },
+    "dayun": [{ "ganZhi": "庚辰", "startAge": 4, "endAge": 13, "tenGod": "劫財" }],
+    "liunian": [{ "year": 2026, "ganZhi": "丙午", "relation": "正官" }]
+  }
+]

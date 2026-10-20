@@ -1,0 +1,230 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Serif TC", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+
+  /* 色彩系統 — 深翡翠 + 琥珀金 */
+  --color-zen-bg: #080c0a;
+  --color-zen-surface: #0f1a14;
+  --color-zen-card: rgba(15, 40, 25, 0.6);
+  --color-zen-glass: rgba(10, 30, 20, 0.4);
+
+  --color-zen-text: #f5f0e8;
+  --color-zen-muted: #a89b84;
+  --color-zen-border: rgba(212, 168, 83, 0.1);
+
+  --color-zen-gold: #d4a853;
+  --color-zen-gold-dim: rgba(212, 168, 83, 0.15);
+  --color-zen-jade: #2d8a5e;
+  --color-zen-jade-dim: rgba(45, 138, 94, 0.15);
+  --color-zen-rose: #c45c5c;
+  --color-zen-rose-dim: rgba(196, 92, 92, 0.15);
+
+  /* 保留舊 class name 相容性 */
+  --color-zen-accent: #d4a853;
+  --color-zen-sage: #2d8a5e;
+
+  --color-primary: #2d8a5e;
+  --color-secondary: #d4a853;
+}
+
+:root {
+  /* 間距 */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 4rem;
+
+  /* 圓角 */
+  --radius-sm: 0.5rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
+
+  /* 陰影 */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow-gold: 0 0 20px rgba(212, 168, 83, 0.15);
+  --shadow-glow-jade: 0 0 20px rgba(45, 138, 94, 0.15);
+}
+
+html {
+  font-size: 112%; /* Boost root font-size globally for excellent readability across all screens */
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-zen-bg);
+  color: var(--color-zen-text);
+  font-family: var(--font-sans);
+  color-scheme: dark;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+}
+
+/* 中式紋理背景 */
+.bg-texture {
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(45, 138, 94, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(212, 168, 83, 0.06) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='none' stroke='rgba(212,168,83,0.03)' stroke-width='0.5'/%3E%3C/svg%3E");
+}
+
+/* 玻璃卡片 */
+.glass-card {
+  background: var(--color-zen-glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-zen-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(212, 168, 83, 0.25);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-gold);
+}
+
+/* 金色裝飾線 */
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-zen-gold), transparent);
+}
+
+/* 大標題樣式 */
+.display-title {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, var(--color-zen-text) 0%, var(--color-zen-gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 動畫 */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(212, 168, 83, 0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+/* 保留舊 class 相容性 */
+.info-card {
+  background: var(--color-zen-glass);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-zen-border);
+  color: var(--color-zen-text);
+  backdrop-filter: blur(20px);
+  transition: all 0.3s ease;
+}
+
+.info-card:hover {
+  border-color: rgba(212, 168, 83, 0.25);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-gold);
+}
+
+/* 深色極簡表格樣式 */
+.zebra-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--color-zen-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.zebra-table th {
+  background: var(--color-zen-surface);
+  color: var(--color-zen-gold);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--color-zen-border);
+}
+
+.zebra-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.05);
+  color: var(--color-zen-text);
+}
+
+.zebra-table tbody tr:nth-child(even) {
+  background: rgba(15, 40, 25, 0.3);
+}
+
+.zebra-table tbody tr:hover {
+  background: rgba(212, 168, 83, 0.08);
+}
+
+.zebra-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 五行元素顏色 */
+.wuxing-mui { color: #22C55E; }
+.wuxing-huo { color: #EF4444; }
+.wuxing-tu  { color: #F59E0B; }
+.wuxing-jin { color: #94A3B8; }
+.wuxing-shui { color: #3B82F6; }
+
+/* 中式裝飾邊框 */
+.chinese-border {
+  position: relative;
+}
+
+.chinese-border::before,
+.chinese-border::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--color-zen-gold);
+  opacity: 0.4;
+}
+
+.chinese-border::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.chinese-border::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+select option {
+  background-color: #0f1a14;
+  color: #f5f0e8;
+}
