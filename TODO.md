@@ -23,9 +23,9 @@
 | 檢查項目 | 結果 |
 |----------|------|
 | `npm run lint` | ✅ 通過（tsc --noEmit） |
-| `npm test` | ✅ 通過（12 檔、36 測試全過） |
+| `npm test` | ✅ 通過（13 檔、45 測試全過） |
 | API 驗證（.mjs） | ✅ 12 項全過（chat-validation 4 + evidence-pipeline 7 + dev-auth-bypass 1） |
-| Playwright E2E | ✅ 5/5 全過（含 2 個新分流端點測試） |
+| Playwright E2E | ✅ 6/6 全過（含 1 鍵範例命盤試玩流程） |
 | `npm run build` | ✅ 通過（前端 + 後端 bundle 26.6kb） |
 | chunk 大小 | ✅ 已優化（manualChunks 切分 vendor/core/charts，無 >500kB 警告） |
 | codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
@@ -41,3 +41,11 @@
 4. `.opencode/memory/` — project-context / knowledge-index / domain-rule-map / domain-module-contracts 四份記憶檔
 5. `vite.config.ts` — manualChunks 優化
 6. `TODO.md` — 本檔
+
+## 📝 激活用意願批次（2026-10-21 晚）
+
+**#3 拆授權牆**：server `ENABLE_ANONYMOUS_CHAT` ＋ 前端靜默授權 ＋ 401 自動換發 token
+**#1 今日首屏**：`dashboard/TodayEnergyCard.tsx` 今日能量卡（吉凶徽章/干支十神/農曆/建議/警示/CTA）
+**範例試玩**：`App.tsx` 一鍵範例命盤（1984-03-25 10:00 男 → 甲子年戊午日，與 demo-001 證據一致）
+**時辰提示**：`App.tsx` 「不知道出生時辰也沒關係」常駐提示（引擎 `isHourUnknown` 早已支援）
+**🐛 重大 bug 修復**：`validateBirthInput` 只接受 `HH:mm`，但主表單儲存的是小時 → **填了時辰的使用者完全無法送出表單**（已支援 HH/HH:mm/HHmm 三格式 + 9 項回歸測試 `tests/unit/validation.test.ts`）

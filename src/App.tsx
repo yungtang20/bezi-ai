@@ -29,6 +29,9 @@ const VALID_STEPS: Step[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 // [AI MOD] step 11 為側邊欄知識搜尋，不在主要導航中
 export const KNOWLEDGE_SEARCH_STEP = 11;
 
+// [AI MOD] 範例命盤：甲子年 丁卯月 戊午日（日主戊土與 server 端 demo-001 證據一致，AI 回答與畫面不矛盾）
+const DEMO_BIRTH = { name: '範例命盤', gender: 'male' as const, birthDate: '1984-03-25', birthTime: '10' };
+
 export default function App() {
   const [step, setStep] = useState<Step>(() => {
     const saved = sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
@@ -147,22 +150,35 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleStart = () => {
-    if (!isFormValid || isGenerating) return;
-    
-    const isHourUnknown = !birthTime;
+  const handleStart = (override?: { name: string; gender: 'male' | 'female'; birthDate: string; birthTime: string }) => {
+    if (!override && (!isFormValid || isGenerating)) return;
+
+    // [AI MOD] 範例命盤可直接帶入覆寫值（不需使用者輸入任何資料）
+    const dName = override?.name ?? name;
+    const dGender = override?.gender ?? gender;
+    const dBirthDate = override?.birthDate ?? birthDate;
+    const dBirthTime = override?.birthTime ?? birthTime;
+    if (override) {
+      setName(dName);
+      setGender(dGender);
+      setBirthDate(dBirthDate);
+      setBirthTime(dBirthTime);
+      setBirthTimeInput(dBirthTime);
+    }
+
+    const isHourUnknown = !dBirthTime;
     const validation = validateBirthInput({
-      name: name || '未提供',
-      gender: gender === 'male' ? '男' : '女',
-      birthDate,
-      birthTime: isHourUnknown ? '' : birthTime,
+      name: dName || '未提供',
+      gender: dGender === 'male' ? '男' : '女',
+      birthDate: dBirthDate,
+      birthTime: isHourUnknown ? '' : dBirthTime,
     });
     if (!validation.valid) {
       setErrorMsg(validation.error!);
       return;
     }
 
-    const [y, m, d] = birthDate.split('-').map(Number);
+    const [y, m, d] = dBirthDate.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     const today = new Date();
     if (dateObj > today) {
@@ -175,16 +191,16 @@ export default function App() {
     }
     setErrorMsg('');
     setIsGenerating(true);
-    
+
     // Save to localStorage (keep birthTime empty if omitted, do not force or prefill)
-    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.NAME, name);
-    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER, gender ?? '');
-    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.DATE, birthDate);
-    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.TIME, birthTime);
-    
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.NAME, dName);
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER, dGender ?? '');
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.DATE, dBirthDate);
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.TIME, dBirthTime);
+
     try {
-      const hour = isHourUnknown ? 12 : parseInt(birthTime, 10);
-      const chart = calculateChart(y, m, d, hour, gender === 'male' ? '男' : '女', isHourUnknown);
+      const hour = isHourUnknown ? 12 : parseInt(dBirthTime, 10);
+      const chart = calculateChart(y, m, d, hour, dGender === 'male' ? '男' : '女', isHourUnknown);
       const patternResult = determinePattern(chart);
 
       setBazi({
@@ -552,6 +568,11 @@ export default function App() {
                             {hourError && (
                               <p className="text-rose-400 text-sm mt-2 pl-2">{hourError}</p>
                             )}
+                            {!birthTime && !hourError && (
+                              <p className="text-zen-muted/70 text-[11px] md:text-xs mt-2 pl-2 leading-relaxed">
+                                不知道出生時辰也沒關係——僅憑年月日（前三柱）同樣能完成格局、大運與流年分析。
+                              </p>
+                            )}
                           </div>
                         </div>
                        
@@ -573,7 +594,7 @@ export default function App() {
                     {errorMsg && <p className="text-rose-400 text-sm text-center mb-2 font-medium">{errorMsg}</p>}
                     <button
                       id="start-calculation-btn"
-                      onClick={handleStart}
+                      onClick={() => handleStart()}
                       disabled={!isFormValid || isGenerating}
                       className={`group w-full py-3 md:py-4 rounded-xl flex items-center justify-center gap-2 md:gap-3 transition-all duration-500 overflow-hidden relative ${
                         isFormValid && !isGenerating
@@ -586,6 +607,16 @@ export default function App() {
                       )}
                       <span className="font-serif tracking-[0.2em] text-sm relative z-10">{isGenerating ? '排盤中...' : '進入觀測'}</span>
                       {!isGenerating && <ArrowRight size={16} className={`relative z-10 transition-transform duration-300 ${isFormValid ? 'group-hover:translate-x-1' : ''}`} />}
+                    </button>
+
+                    {/* [AI MOD] 範例命盤：降低首次使用門檻（激活用意願），免輸入直接體驗 */}
+                    <button
+                      onClick={() => handleStart(DEMO_BIRTH)}
+                      disabled={isGenerating}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs text-zen-muted hover:text-zen-text hover:bg-white/5 transition-colors disabled:opacity-40"
+                    >
+                      <Sparkles size={13} />
+                      不想輸入資料？先看範例命盤
                     </button>
                   </div>
                 </div>

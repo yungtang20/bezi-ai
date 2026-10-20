@@ -61,7 +61,9 @@ test.afterAll(async () => {
   await new Promise<void>(resolve => mockAgnes?.close(() => resolve()));
 });
 
-test.beforeEach(async ({ context }: { context: BrowserContext }) => {
+// [AI MOD] 需要既有命盤的測試才注入預設資料（addInitScript 會在每次導頁重跑，
+// 全域注入會讓「首次使用／試玩」測試永遠進不了表單頁）
+async function seedChart(context: BrowserContext): Promise<void> {
   await context.addInitScript(() => {
     localStorage.setItem('bazi_name', 'E2E');
     localStorage.setItem('bazi_gender', 'male');
@@ -69,16 +71,18 @@ test.beforeEach(async ({ context }: { context: BrowserContext }) => {
     localStorage.setItem('bazi_time', '12');
     sessionStorage.setItem('bazi_current_step', '4');
   });
-});
+}
 
-test('開啟 AI 問答即自動匿名授權並載入命盤清單', async ({ page }) => {
+test('開啟 AI 問答即自動匿名授權並載入命盤清單', async ({ page, context }) => {
+  await seedChart(context);
   await openChat(page);
   // [AI MOD] 匿名模式：免按「取得權限」，掛載即自動授權
   await expect(page.getByText('已授權', { exact: true })).toBeVisible();
   await expect(page.getByLabel('命盤記錄').locator('option')).toContainText(['demo-001', 'demo-002']);
 });
 
-test('選擇命盤後取得 SSE 並渲染 term Tooltip', async ({ page }) => {
+test('選擇命盤後取得 SSE 並渲染 term Tooltip', async ({ page, context }) => {
+  await seedChart(context);
   await openChat(page);
   await expect(page.getByText('已授權', { exact: true })).toBeVisible();
   await page.getByLabel('命盤記錄').selectOption('demo-001');
@@ -93,6 +97,36 @@ test('選擇命盤後取得 SSE 並渲染 term Tooltip', async ({ page }) => {
 test('未授權直接呼叫 chat 回傳 401', async ({ request }) => {
   const response = await request.post('/api/chat', { data: { messages: [{ role: 'user', content: '測試' }] } });
   expect(response.status()).toBe(401);
+});
+
+test('一鍵範例命盤：免輸入 → 校準 → 今日能量首屏', async ({ page }) => {
+  // 首次使用狀態（不注入任何 localStorage）
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+
+  // 時辰安心提示（未填時辰時可見）
+  await expect(page.getByText('不知道出生時辰也沒關係')).toBeVisible();
+
+  // 一鍵範例命盤（不需輸入任何資料）
+  await page.getByRole('button', { name: /先看範例命盤/ }).click();
+
+  // 校準頁
+  await expect(page.getByText('初步推算完成')).toBeVisible({ timeout: 20000 });
+  const smooth = page.getByRole('button', { name: '順利' });
+  await smooth.nth(0).click();
+  await smooth.nth(1).click();
+
+  // Dashboard 首屏今日能量卡
+  await expect(page.getByLabel('今日能量')).toBeVisible({ timeout: 20000 });
+  // 範例命盤資料已正確寫入（1984-03-25 10:00 男 → 戊午日）
+  const demo = await page.evaluate(() => ({
+    date: localStorage.getItem('bazi_date'),
+    time: localStorage.getItem('bazi_time'),
+    name: localStorage.getItem('bazi_name'),
+  }));
+  expect(demo.date).toBe('1984-03-25');
+  expect(demo.time).toBe('10');
+  expect(demo.name).toBe('範例命盤');
 });
 
 test('未授權呼叫分流端點 synastry 與 dayun 回傳 401', async ({ request }) => {
