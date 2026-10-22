@@ -2,7 +2,7 @@
 // [AI MOD] 今日能量首屏卡：每日鉤子 — 讓使用者每天打開都有新理由（留存機制）
 // 資料來源：getDailyEnergy（packages/core/dailyAnalysis），僅唯讀呈現，不含新領域規則。
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Share2, Zap } from 'lucide-react';
+import { ArrowRight, Share2 } from 'lucide-react';
 import { BaziChart } from '../../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern } from '../../pattern';
 import { getDailyEnergy, type DailyEnergy } from '../../dailyAnalysis';
@@ -42,6 +42,16 @@ const OUTCOME_META: Record<string, OutcomeMeta> = {
 
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
+const DIRECTION_HEADLINES: Record<string, string> = {
+  '大好': '今天適合把握機會',
+  '順利': '今天可以穩健推進',
+  '小吉': '今天適合從小事開始',
+  '平穩': '今天維持原有節奏',
+  '較差': '今天先確認，再決定',
+  '不順': '今天適合放慢腳步',
+  '不佳': '今天適合放慢腳步',
+};
+
 export default function TodayEnergyCard({ chart, scores, name, onNavigate }: TodayEnergyCardProps) {
   const { isSharing, error: shareError, share } = useShareImage();
   const [shareTarget, setShareTarget] = useState(false);
@@ -58,6 +68,7 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
   }, [chart, scores, patternResult]);
 
   const meta = OUTCOME_META[energy.theoreticalOutcome] || OUTCOME_META['平穩'];
+  const directionHeadline = DIRECTION_HEADLINES[energy.theoreticalOutcome] || DIRECTION_HEADLINES['平穩'];
   const now = new Date();
   const dateLabel = `${now.getMonth() + 1} 月 ${now.getDate()} 日 · 星期${WEEK_LABELS[now.getDay()]}`;
   const explanation = energy.theoreticalExplanation.replace(/^。$/, '').trim();
@@ -131,53 +142,37 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
             )}
             {report.samples >= 3 && (
               <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-400/30">
-                近期吻合 {report.accuracy}%
-              </span>
-            )}
-            {energy.isWeaknessDay && (
-              <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-300 border border-red-400/25">
-                弱五行受剋
-              </span>
-            )}
-            {energy.isExtremeDay && (
-              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-400/30 flex items-center gap-1">
-                <Zap size={10} /> 能量波動日
+                {report.samples < 7 ? `${report.matches}/${report.samples} 同方向・初步` : `近期吻合 ${report.accuracy}%`}
               </span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mb-2">
-          <span className={`shrink-0 px-2.5 py-1 rounded-lg border text-base md:text-lg font-bold ${meta.tone}`}>
-            {meta.label}
-          </span>
-          <div className="leading-tight min-w-0">
-            <div className="text-sm font-bold text-white font-serif">
-              {energy.lunarDate}
-            </div>
-            <div className="text-[11px] text-zinc-500">
-              {energy.dayGanZhi} · 日主十神屬「{energy.dayTenGodType}」
-            </div>
-          </div>
+        <div className="mb-3">
+          <span className={`inline-flex shrink-0 rounded-lg border px-2 py-1 text-[11px] font-bold ${meta.tone}`}>命理觀察 · {meta.label}</span>
+          <h2 className="mt-3 text-2xl font-bold leading-tight text-white">{directionHeadline}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-300">{meta.advice}</p>
         </div>
 
-        {explanation && explanation !== '。' && (
-          <p className="text-[11px] text-zinc-500 mb-2 line-clamp-2">{explanation}</p>
-        )}
+        <details className="mb-3 rounded-lg border border-white/10 bg-black/10 px-3 py-2 text-[11px] text-zinc-400">
+          <summary className="cursor-pointer font-medium text-zinc-300">為什麼這樣說？</summary>
+          <div className="mt-2 space-y-1.5 leading-relaxed">
+            <p>{explanation && explanation !== '。' ? explanation : '今日沒有額外的五行加減分說明。'}</p>
+            <p className="text-zinc-500">日期：{energy.solarDate}（{energy.lunarDate}）</p>
+            <p className="text-zinc-500">依據：{energy.dayGanZhi} · 十神 {energy.dayTenGodType} · 喜用神 {patternResult.favorable.join('、') || '未列出'} · 最弱五行 {patternResult.weakestElement}</p>
+            {(energy.isExtremeDay || energy.isWeaknessDay) && <p className="text-amber-300/80">特殊訊號：{[energy.extremeType, energy.weaknessType].filter(Boolean).join('；')}</p>}
+            <p className="text-zinc-500">這是命理規則的觀察方向，不是事實預測；重要決定請依實際資訊判斷。</p>
+          </div>
+        </details>
 
-        <p className="text-sm text-zinc-300 mb-2">{meta.advice}</p>
-        <p className="text-[11px] text-zinc-500 mb-3">
-          {streak.checkedToday
-            ? `本週已記錄 ${weeklyCheckIns} 天；累積感受可回看近期規則吻合情形。`
-            : '今晚花 10 秒記下真實感受，之後可回看近期規則與生活經驗是否同方向。'}
-        </p>
+        <p className="text-[11px] text-zinc-500 mb-3">{streak.checkedToday ? `本週已記錄 ${weeklyCheckIns} 天` : '10 秒記錄今天，累積你的個人趨勢'}</p>
 
         <div className="flex gap-2">
           <button
             onClick={() => onNavigate?.(8)}
             className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-2 text-xs font-bold text-amber-300 transition-colors"
           >
-            查看今日詳解與打卡 <ArrowRight size={13} />
+            {streak.checkedToday ? '查看今日詳解' : '10 秒記錄今天'} <ArrowRight size={13} />
           </button>
           <button
             onClick={handleShare}
@@ -202,8 +197,13 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
 
         {showSharePreview && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="分享前預覽">
-            <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
-              <h3 className="text-base font-bold text-white">分享前隱私預覽</h3>
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
+            <h3 className="text-base font-bold text-white">分享前隱私預覽</h3>
+              <div className="mt-3 rounded-xl border border-amber-400/20 bg-gradient-to-br from-emerald-950 to-zinc-950 p-3">
+                <p className="text-[10px] tracking-widest text-amber-300/80">BEZI · 今日觀察</p>
+                <p className="mt-2 text-sm font-bold text-white">{dateLabel} · {meta.label}</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-300">{meta.advice}</p>
+              </div>
               <p className="mt-2 text-xs leading-relaxed text-zinc-400">預設只分享日期、今日方向與一般建議，不包含姓名、日主、喜用神或最弱五行。</p>
               <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
                 <input type="checkbox" checked={sharePrivateDetails} onChange={event => setSharePrivateDetails(event.target.checked)} className="mt-0.5" />

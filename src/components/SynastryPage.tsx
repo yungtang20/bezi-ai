@@ -227,11 +227,11 @@ export default function SynastryPage({ myChart, myName, myScores, onNavigate }: 
     <div className="w-full max-w-4xl mx-auto pt-8 pb-32 px-4 md:px-0 text-zen-text text-sm animate-in fade-in duration-500">
       <div className="flex items-center justify-between mb-8">
         <button 
-          onClick={() => onNavigate(7)}
+          onClick={() => onNavigate(11)}
           className="flex items-center gap-2 text-zen-muted hover:text-zen-text transition-colors"
         >
           <ArrowLeft size={16} />
-          <span className="font-bold">返回專項</span>
+          <span className="font-bold">返回探索</span>
         </button>
       </div>
 

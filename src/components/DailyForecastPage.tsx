@@ -166,10 +166,10 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
     <div className="space-y-6 animate-in fade-in duration-500 max-w-2xl mx-auto pb-8">
       <div className="flex justify-between items-center mb-4 md:hidden">
         <button 
-          onClick={() => onNavigate?.(4)}
+          onClick={() => onNavigate?.(11)}
           className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition-colors bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 text-sm font-bold"
         >
-          <span>←</span> 返回儀表板
+          <span>←</span> 返回探索
         </button>
       </div>
 

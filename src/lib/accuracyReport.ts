@@ -11,6 +11,7 @@ export type AccuracyLevel = '未開始' | '累積中' | '初步觀察' | '待持
 
 export interface AccuracyReport {
   accuracy: number;              // 整體吻合度 0-100
+  matches: number;               // 方向吻合筆數
   samples: number;               // 可評估樣本數
   checkedDays: number;           // 打卡天數
   level: AccuracyLevel;
@@ -40,6 +41,7 @@ export function buildAccuracyReport(logs: DailyLog[]): AccuracyReport {
     const pendingLabel = fields?.length ? CATEGORY_LABELS[fields[0]] : null;
     return {
       accuracy: 0,
+      matches: 0,
       samples: 0,
       checkedDays,
       level: '未開始',
@@ -54,6 +56,7 @@ export function buildAccuracyReport(logs: DailyLog[]): AccuracyReport {
   if (samples < 3) {
     return {
       accuracy,
+      matches,
       samples,
       checkedDays,
       level: '累積中',
@@ -66,6 +69,7 @@ export function buildAccuracyReport(logs: DailyLog[]): AccuracyReport {
   if (samples < 7) {
     return {
       accuracy,
+      matches,
       samples,
       checkedDays,
       level: '初步觀察',
@@ -80,6 +84,7 @@ export function buildAccuracyReport(logs: DailyLog[]): AccuracyReport {
 
   return {
     accuracy,
+    matches,
     samples,
     checkedDays,
     level: matched.level,

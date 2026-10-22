@@ -4,11 +4,13 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 
 let mockAgnes: Server;
 let appProcess: ChildProcess;
+const APP_PORT = Number(process.env.E2E_APP_PORT || 3000);
+const APP_BASE_URL = process.env.E2E_BASE_URL || `http://127.0.0.1:${APP_PORT}`;
 
 async function waitForApp(): Promise<void> {
   for (let attempt = 0; attempt < 180; attempt += 1) {
     try {
-      const response = await fetch('http://127.0.0.1:3000/');
+      const response = await fetch(`${APP_BASE_URL}/`);
       if (response.status >= 200) return;
     } catch { /* server is still starting */ }
     await new Promise(resolve => setTimeout(resolve, 250));
@@ -41,6 +43,7 @@ test.beforeAll(async () => {
     cwd: process.cwd(),
     env: {
       ...process.env,
+      PORT: String(APP_PORT),
       NODE_ENV: 'development',
       ENABLE_DEV_AUTH_BYPASS: 'true',
       ENABLE_ANONYMOUS_CHAT: 'true',
@@ -150,23 +153,45 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
   await page.goto('/');
   await page.waitForTimeout(1500);
 
-  // 進入「流日」頁（step 8）
-  await page.getByRole('button', { name: '流日' }).first().click();
+  // 從「探索」進入近期日子（step 8）
+  await page.getByRole('button', { name: '探索' }).first().click();
+  await page.getByRole('button', { name: /近期日子/ }).click();
   await expect(page.getByText('本月流日預報')).toBeVisible({ timeout: 20000 });
 
   // 尚未打卡 → 報告顯示引導文案
   await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
-  await expect(page.getByText(/比較實際感受與命理規則/)).toBeVisible();
+  await expect(page.getByText(/比較實際感受與命理規則|感受就能開始計算吻合度/)).toBeVisible();
 
-  // 打卡：選一個「順利」並送出
-  await page.getByRole('button', { name: '😊 順利' }).first().click();
+  // 打卡：依當日十神日型選「順利」。
+  // 理論方向可評估的日期，banner 會列出計入吻合度的領域（打卡表單固定順序：
+  // 健康、事業、感情、金錢、家人、人際），點對應領域才會計入樣本；
+  // 平穩日沒有領域可評估（calibration.ts 設計上二元感受不計入）。
+  const CATEGORY_ORDER = ['健康', '事業', '感情', '金錢', '家人', '人際'];
+  const banner = page.getByText(/會以「[^」]+」計入近期紀錄吻合度/);
+  let evaluableDay = false;
+  try {
+    await expect(banner).toBeVisible({ timeout: 3000 });
+    evaluableDay = true;
+    const bannerText = (await banner.textContent()) ?? '';
+    const firstField = /會以「([^、」]+)/.exec(bannerText)?.[1];
+    const fieldIndex = CATEGORY_ORDER.indexOf(firstField ?? '');
+    expect(fieldIndex).toBeGreaterThanOrEqual(0);
+    await page.getByRole('button', { name: '😊 順利' }).nth(fieldIndex).click();
+  } catch {
+    await page.getByRole('button', { name: '😊 順利' }).first().click();
+  }
   await page.getByRole('button', { name: /記錄今天的能量|記錄這天的能量/ }).click();
 
   // 打卡成功 → 出現連續天數
   await expect(page.getByText(/已連續打卡 1 天/)).toBeVisible({ timeout: 20000 });
-  // 單筆樣本只顯示累積狀態，不把 1 筆資料包裝成百分比結論
   await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
-  await expect(page.getByText(/1\/3 筆|還沒有足夠的記錄/)).toBeVisible();
+  if (evaluableDay) {
+    // 單筆樣本只顯示累積狀態，不把 1 筆資料包裝成百分比結論
+    await expect(page.getByText(/1\/3 筆/)).toBeVisible();
+  } else {
+    // 平穩日：二元感受不計入 → 顯示該日型應記錄領域的引導文案
+    await expect(page.getByText(/感受就能開始計算吻合度/)).toBeVisible();
+  }
 });
 
 test('未授權直接呼叫 chat 回傳 401', async ({ request }) => {
@@ -202,6 +227,50 @@ test('一鍵範例命盤：免輸入 → 校準 → 今日能量首屏', async (
   expect(demo.date).toBe('1984-03-25');
   expect(demo.time).toBe('10');
   expect(demo.name).toBe('範例命盤');
+});
+
+test('四區導覽保留探索、學習與命盤功能', async ({ page, context }) => {
+  await seedChart(context);
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+
+  await expect(page.getByLabel('今日能量')).toBeVisible();
+
+  await page.getByRole('button', { name: '探索' }).first().click();
+  await expect(page.getByRole('heading', { name: '你現在想理解什麼？' })).toBeVisible();
+  await page.getByRole('button', { name: /工作與方向/ }).click();
+  await expect(page.getByText('事業深度解析')).toBeVisible({ timeout: 20000 });
+  await page.getByRole('button', { name: '返回探索' }).click();
+  await expect(page.getByRole('heading', { name: '你現在想理解什麼？' })).toBeVisible();
+
+  await page.getByRole('button', { name: '學習' }).first().click();
+  await expect(page.getByRole('heading', { name: '學習' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /八字基礎/ })).toBeVisible();
+
+  await page.getByRole('button', { name: '我的' }).first().click();
+  await expect(page.getByRole('heading', { name: 'E2E 的命盤' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '四柱命盤' })).toBeVisible();
+});
+
+test('四區導覽在手機、平板與桌機皆可重排', async ({ page, context }, testInfo) => {
+  await seedChart(context);
+  const viewports = [
+    { name: 'mobile', width: 375, height: 812 },
+    { name: 'tablet', width: 768, height: 1024 },
+    { name: 'desktop', width: 1440, height: 1000 },
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/');
+    await page.waitForTimeout(800);
+    await page.getByRole('button', { name: '探索' }).first().click();
+    await expect(page.getByRole('heading', { name: '你現在想理解什麼？' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '探索' }).first()).toHaveAttribute('aria-current', 'page');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+    expect(overflow, `${viewport.name} 不應出現水平溢位`).toBe(false);
+    await page.screenshot({ path: testInfo.outputPath(`four-areas-${viewport.name}.png`), fullPage: false });
+  }
 });
 
 test('未授權呼叫分流端點 synastry 與 dayun 回傳 401', async ({ request }) => {
