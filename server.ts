@@ -122,12 +122,14 @@ function requireChatAuthorization(req: express.Request, res: express.Response, n
   next();
 }
 
+// [AI MOD] dev fixture 四柱與 server-side demo-001（1984-03-25 10:00 男）一致，
+// 由 packages/core calculateChart 實排產生（見 data/bazi_records.json）。
 const DEV_FIXTURE_BAZI = {
   chart: {
-    year: '甲子', month: '丙寅', day: '戊午', time: '壬戌', dayMaster: '戊', gender: '男',
+    year: '甲子', month: '丁卯', day: '戊午', time: '丁巳', dayMaster: '戊', gender: '男',
   },
-  fiveElements: { wood: 22, fire: 28, earth: 31, metal: 8, water: 11 },
-  tenGods: { '比肩': 2, '劫財': 1, '食神': 1, '傷官': 1, '偏財': 1, '正財': 1, '七殺': 1, '正官': 1, '偏印': 1, '正印': 1 },
+  fiveElements: { wood: 50, fire: 100, earth: 25, metal: 0, water: 25 },
+  tenGods: { '比肩': 2, '劫財': 1, '食神': 1, '傷官': 1, '偏財': 1, '正財': 1, '七殺': 1, '正官': 1, '偏印': 1, '正印': 3 },
 };
 
 function createDevFixtureEvidence(query: string): EvidenceBundle {

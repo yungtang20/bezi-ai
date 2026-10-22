@@ -7,6 +7,7 @@ export { getTenGod as getTenGodForDaYun } from './constants';
 
 export interface DaYun {
   startAge: number;      // 起運歲數
+  endAge: number;        // 交運歲數（含）
   startYear: number;     // 起運西元年
   endYear: number;       // 結束西元年
   ganZhi: string;        // 大運干支
@@ -56,6 +57,7 @@ export function calculateDaYun(chart: BaziChart): DaYun[] {
     
     // 某些版本的 lunar-javascript，大運預設可能有空白或其它東西
     const startAge = dy.getStartAge();
+    const endAge = dy.getEndAge();
     const startYear = dy.getStartYear();
     const endYear = startYear + 9; // 每十年換一次大運
     
@@ -67,6 +69,7 @@ export function calculateDaYun(chart: BaziChart): DaYun[] {
     
     daYunList.push({
       startAge,
+      endAge,
       startYear,
       endYear,
       ganZhi,

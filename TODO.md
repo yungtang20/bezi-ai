@@ -18,21 +18,36 @@
 - [x] **定義 domain module 介面契約** → 完成：`.opencode/memory/domain-module-contracts.md`（paipan/pattern/dayun/dailyAnalysis 經 `@bezi/core` workspace shim；matchmaking/calibration 為真實實作；含邊界審查結論）
 - [x] **補齊 Playwright E2E** → 完成：`chat-flow.spec.ts` 從 3 測試擴充至 5（新增分流端點 401 保護 + 授權後 SSE grounding 驗證）
 
-## 📌 當前狀態摘要（2026-10-21 更新）
+## 📌 當前狀態摘要（2026-10-22 更新）
 
 | 檢查項目 | 結果 |
 |----------|------|
 | `npm run lint` | ✅ 通過（tsc --noEmit） |
-| `npm test` | ✅ 通過（16 檔、78 測試全過） |
-| API 驗證（.mjs） | ✅ 12 項全過（chat-validation 4 + evidence-pipeline 7 + dev-auth-bypass 1） |
+| `npm test` | ✅ 通過（17 檔、99 測試全過，含 paipan/dayun golden 回歸） |
+| API 驗證（.mjs） | ✅ 19 項全過（chat-validation 7 + cors 4 + evidence-pipeline 7 + dev-auth-bypass 1；須 `--test-concurrency=1` 避免 port 3000 衝突） |
 | Playwright E2E | ✅ 9/9 全過（含 1 鍵範例命盤試玩、分享圖產出、production 煙霧） |
-| `npm run build` | ✅ 通過（前端 + 後端 bundle 26.6kb） |
-| chunk 大小 | ✅ 已優化（manualChunks 切分 vendor/core/charts，無 >500kB 警告） |
+| `npm run build` | ✅ 通過（前端 + 後端 bundle） |
+| chunk 大小 | ✅ 已優化（Vite 預設分包，無跨 chunk 循環） |
 | codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
 | git repo | ✅ 完成（2026-10-21 經授權 init + push；remote `origin` → `github.com/yungtang20/bezi`，private，branch `main`） |
-| CI/CD | ✅ 完成（2026-10-21 ci.yml 已推送；首次 CI Pipeline 執行 success 57s——lint + test + build 每次 push 自動跑） |
-| Production 煙霧關卡 | ✅ 完成（2026-10-21 新增：build → prod smoke，跑 dist/server.cjs 驗 React 掛載／無 runtime 錯誤／無 CORS 403） |
-| 正式部署 | ✅ 上線（2026-10-21）Render `bezi-ai-api` → https://bezi-ai-api.onrender.com，匿名授權已啟用，端到端驗證通過（token／records／SSE AI 回答） |
+| CI/CD | ✅ 完成（2026-10-21 ci.yml 已推送；每次 push 自動跑 lint + test + build + production 煙霧） |
+| 正式部署 | ✅ 上線（2026-10-21）Render `bezi-ai-api` → https://bezi-ai-api.onrender.com，匿名授權已啟用 |
+
+## 📝 本輪完成工作（2026-10-22，排盤正確性 P0）
+
+**🐛 排盤學派 bug 修復**（獨立天文驗證發現）：
+1. `packages/core/src/paipan.ts` — 年柱改用 `getYearInGanZhiExact`（立春精確時刻）、月柱改用 `getMonthInGanZhiExact`（節氣精確時刻）。原實作年柱用農曆正月初一學派、月柱用節氣日 00:00 日界，與 `calculateDaYun` 採用的 `getYearGanIndexExact`（立春學派）不一致 → 立春日數小時內的出生者，顯示年柱與大運順逆矛盾（6000 樣本掃描 ~2.5% 年柱與標準八字系統不符）。現引擎與 lunar-javascript 標準 EightChar 10/10 案例一致。
+2. `packages/core/src/dayun.ts` — `DaYun` 補上 `endAge`（原為 `undefined`）。
+
+**🐛 demo 證據假資料修復**（AI 會讀到錯誤命盤）：
+3. `data/bazi_records.json`、`data/bezi.db` — 以 engine 實排重生 demo-001/demo-002。原 fixture 四柱為手寫假值（demo-002 日柱 辛巳 實為 壬辰、日主 辛 實為 壬、起運 4 歲實為 7 歲）。
+4. `server.ts` `DEV_FIXTURE_BAZI` — 原月柱丙寅/時柱壬戌 為假值，改為與 demo-001 engine 輸出一致（丁卯/丁巳）＋真實五行/十神分佈。
+5. `src/App.tsx` — 修正過時註解（原寫「甲子年 丁卯月 戊午日」與 demo-001 時柱矛盾）。
+
+**Golden 回歸測試**（Q4：不靠 AI 自述或感覺證明正確）：
+6. `tests/unit/paipan.test.ts` — 12 項 golden：四柱硬編碼值（獨立驗證：日柱 JDN 錨點 1949-10-01=甲子；節氣 Meeus 太陽黃經計算）、立春前/後邊界、早子時、時辰未知、五行/十神分佈。
+7. `tests/unit/dayun.test.ts` — 6 項 golden：四組起運年齡（節氣日數÷3 獨立驗證）＋大運干支順逆＋流年干支/十神。
+8. `README.md` — 新增「排盤方法與正確性證據」章節（立春學派聲明、證據鏈、學派差異說明）。
 
 ## 📝 本輪完成工作（2026-10-21）
 

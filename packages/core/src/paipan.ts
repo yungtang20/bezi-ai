@@ -89,8 +89,12 @@ export function calculateChart(
   const lunar = solar.getLunar();
 
   // 2. 取得四柱的天干地支（lunar-javascript 返回 i18n 鍵，需翻譯為中文）
-  const yearGanZhi = translateGanZhi(lunar.getYearInGanZhi());    // 年柱
-  const monthGanZhi = translateGanZhi(lunar.getMonthInGanZhi());  // 月柱
+  // [AI MOD] 年柱/月柱改用 Exact（立春/節氣精確時刻切換），與子平法及本程式碼
+  // calculateDaYun 所採用的 getYearGanIndexExact（大運順逆判定）保持同一學派。
+  // 一般版 getYearInGanZhi() 以農曆正月初一換年、getMonthInGanZhi() 以節氣日 00:00 換月，
+  // 會在節氣切換時刻前數小時的出生者產出與大運方向矛盾的年柱（立春日~1-2 週窗口）。
+  const yearGanZhi = translateGanZhi(lunar.getYearInGanZhiExact());  // 年柱（立春時刻）
+  const monthGanZhi = translateGanZhi(lunar.getMonthInGanZhiExact());  // 月柱（節氣精確時刻）
   const dayGanZhi = translateGanZhi(lunar.getDayInGanZhi());      // 日柱
   const hourGanZhi = translateGanZhi(lunar.getTimeInGanZhi());    // 時柱
 
