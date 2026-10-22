@@ -25,7 +25,7 @@
 | `npm run lint` | ✅ 通過（tsc --noEmit） |
 | `npm test` | ✅ 通過（17 檔、99 測試全過，含 paipan/dayun golden 回歸） |
 | API 驗證（.mjs） | ✅ 19 項全過（chat-validation 7 + cors 4 + evidence-pipeline 7 + dev-auth-bypass 1；須 `--test-concurrency=1` 避免 port 3000 衝突） |
-| Playwright E2E | ✅ 9/9 全過（含 1 鍵範例命盤試玩、分享圖產出、production 煙霧） |
+| Playwright E2E | ✅ 13/13 全過(chat-flow 11 + prod-smoke 2;含一鍵範例命盤、打卡吻合度、四區導覽三斷點、分享圖、production 煙霧) |
 | `npm run build` | ✅ 通過（前端 + 後端 bundle） |
 | chunk 大小 | ✅ 已優化（Vite 預設分包，無跨 chunk 循環） |
 | codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
