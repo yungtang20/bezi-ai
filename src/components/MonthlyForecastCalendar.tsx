@@ -1,18 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, getFavorableElements, determinePattern } from '../pattern';
 import { getDailyEnergy } from '../dailyAnalysis';
-import { Solar } from 'lunar-javascript';
-
-interface JieQiSolarTime {
-  getHour(): number;
-  getMinute(): number;
-}
-
-interface LunarWithJieQiTable {
-  getJieQiTable(): Record<string, JieQiSolarTime>;
-}
-import { formatLocalDate } from '../utils/localDate';
+import { GAN_TO_ELEMENT } from '../constants';
 
 interface Props {
   chart: BaziChart;
@@ -24,45 +14,22 @@ interface Props {
 }
 
 export default function MonthlyForecastCalendar({ chart, scores, selectedYear, selectedMonth, onDateClick, selectedDateStr }: Props) {
-  const { primaryPattern, favorable, unfavorable, weakest } = useMemo(() => {
-    const nextPrimaryPattern = getPrimaryPattern(scores);
-    const patternResult = determinePattern(chart);
-    const elements = getFavorableElements(chart.dayMaster, nextPrimaryPattern);
-    return {
-      primaryPattern: nextPrimaryPattern,
-      favorable: elements.favorable,
-      unfavorable: elements.unfavorable,
-      weakest: patternResult.weakestElement || '',
-    };
-  }, [chart, scores]);
+  const dmElement = GAN_TO_ELEMENT[chart.dayMaster];
+  const primaryPattern = getPrimaryPattern(scores);
+  const patternResult = determinePattern(chart);
+  const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
+  const weakest = patternResult.weakestElement || '';
 
   const daysInMonth = useMemo(() => {
     const days = [];
     const date = new Date(selectedYear, selectedMonth - 1, 1);
     while (date.getMonth() === selectedMonth - 1) {
-      const dateStr = formatLocalDate(date);
+      const dateStr = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
       const energy = getDailyEnergy(chart, weakest, favorable, unfavorable, primaryPattern, new Date(date));
-      
-      const solar = Solar.fromDate(new Date(date));
-      const lunar = solar.getLunar();
-      const jieQi = lunar.getJieQi();
-      let jieQiTime = '';
-      if (jieQi) {
-        // lunar-javascript exposes this at runtime, but its bundled declaration
-        // omits the method. Keep the compatibility cast local to this boundary.
-        const table = (lunar as unknown as LunarWithJieQiTable).getJieQiTable();
-        const jqDate = table[jieQi];
-        if (jqDate) {
-          jieQiTime = `${jqDate.getHour()}:${String(jqDate.getMinute()).padStart(2, '0')}`;
-        }
-      }
-
       days.push({
-        date: new Date(date),
+        date: new Date(dateStr),
         dateStr,
-        energy,
-        jieQi,
-        jieQiTime
+        energy
       });
       date.setDate(date.getDate() + 1);
     }
@@ -71,7 +38,6 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
 
   const firstDayOfWeek = new Date(selectedYear, selectedMonth - 1, 1).getDay();
   const paddingDays = Array(firstDayOfWeek).fill(null);
-  const todayDateStr = formatLocalDate(new Date());
 
   const renderShape = (type: string) => {
     let colorClass = '';
@@ -118,15 +84,12 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
         {paddingDays.map((_, i) => <div key={`pad-${i}`} className="min-h-[60px] sm:min-h-[80px]"></div>)}
         {daysInMonth.map(day => {
           const isSelected = day.dateStr === selectedDateStr;
-          const isToday = day.dateStr === todayDateStr;
+          const isToday = day.dateStr === new Date().toISOString().split('T')[0];
           return (
-            <button
-              type="button"
+            <div 
               key={day.dateStr}
               onClick={() => onDateClick?.(day.dateStr)}
-              aria-label={`${day.dateStr}${day.jieQi ? `，${day.jieQi}` : ''}`}
-              aria-pressed={isSelected}
-              className={`min-h-[60px] sm:min-h-[80px] relative flex flex-col p-1 cursor-pointer transition-colors border hover:bg-white/10 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400
+              className={`min-h-[60px] sm:min-h-[80px] relative flex flex-col p-1 cursor-pointer transition-colors border hover:bg-white/10 rounded-xl
                 ${isSelected ? 'bg-indigo-500/20 border-indigo-500/50' : 'border-transparent bg-black/20'}
                 ${isToday ? 'ring-1 ring-white/20' : ''}
               `}
@@ -136,16 +99,11 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
                  <span className="text-[9px] text-zinc-500 hidden sm:inline">{day.energy.lunarDate.slice(-2)}</span>
               </div>
               <div className="flex-1 flex flex-col gap-0.5 items-stretch justify-start">
-                 {day.jieQi && (
-                   <span className="text-[9px] sm:text-xs px-1 py-0.5 rounded border bg-purple-500/20 text-purple-300 border-purple-500/30 whitespace-nowrap overflow-hidden max-w-full text-center block leading-none shadow-sm" title={`${day.jieQi} ${day.jieQiTime}`}>
-                     {day.jieQi} {day.jieQiTime}
-                   </span>
-                 )}
                  {day.energy.dayTypes.map((t, idx) => (
                    <React.Fragment key={idx}>{renderShape(t)}</React.Fragment>
                  ))}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -156,19 +114,19 @@ export default function MonthlyForecastCalendar({ chart, scores, selectedYear, s
         </p>
         <p className="text-base text-zinc-300 leading-relaxed">
           <strong className="text-amber-400">得財日</strong>：
-          適合談判、簽約、投資、開發新客戶，或是進行重要財務決策。
+          可安排談判或開發客戶。投資、簽約與重要財務決策仍應依風險、契約與專業意見獨立評估。
         </p>
         <p className="text-base text-zinc-300 leading-relaxed">
           <strong className="text-emerald-400">事業機會日</strong>：
-          宜做重大決策、提案、安排會議、面試或與重要客戶/長官對接。
+          可安排提案、會議、面試或重要對接。重大決策仍應以實際資訊為準。
         </p>
         <p className="text-base text-zinc-300 leading-relaxed">
           <strong className="text-slate-400">犯小人日</strong>：
-          容易遇到口角是非、競爭對手暗中作梗，或事情橫生枝節。建議低調行事，不宜做重大決定。
+          命理規則提示人際摩擦可能增加。可多確認溝通內容，重大決定仍應依實際資訊評估。
         </p>
         <p className="text-base text-zinc-300 leading-relaxed">
           <strong className="text-red-400">健康注意日</strong>：
-          身體較易疲累或免疫力下降，請注意休息、飲食，避免過度勞累或危險活動。
+          命理規則提示可多留意休息與飲食。若有不適或健康疑慮，請諮詢醫療專業人員。
         </p>
       </div>
     </div>

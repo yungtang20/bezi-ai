@@ -14,9 +14,9 @@ export default function NavButton({ icon: Icon, label, isActive, onClick, orient
       <button
         onClick={onClick}
         aria-current={isActive ? 'page' : undefined}
-        className="flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-300 relative group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zen-gold"
+        className="flex min-w-[52px] min-h-[44px] flex-col items-center justify-center p-2 rounded-xl transition-all duration-300 relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-zen-gold focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
         style={{
-          color: isActive ? '#d4a853' : 'rgba(200, 200, 190, 0.4)',
+          color: isActive ? '#d4a853' : 'rgba(220, 220, 210, 0.78)',
         }}
       >
         <span
@@ -38,7 +38,7 @@ export default function NavButton({ icon: Icon, label, isActive, onClick, orient
           className="text-[11px] tracking-widest mt-1 transition-all duration-300"
           style={{
             fontWeight: isActive ? 700 : 500,
-            opacity: isActive ? 1 : 0.55,
+            opacity: isActive ? 1 : 0.82,
             transform: 'translateY(0)',
           }}
         >

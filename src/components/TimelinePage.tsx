@@ -262,11 +262,11 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
         {/* 返回按鈕 */}
         <div className="flex items-center mb-2">
           <button
-            onClick={() => onNavigate(4)}
+            onClick={() => onNavigate(11)}
             className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-            <span className="font-bold text-sm">返回儀表板</span>
+            <span className="font-bold text-sm">返回探索</span>
           </button>
         </div>
         
@@ -624,4 +624,3 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
     </div>
   );
 }
-

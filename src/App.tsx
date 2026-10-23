@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Compass, Moon, Sun, Github, X, Sparkles, Settings } from 'lucide-react';
 import Sidebar from './components/Sidebar';
@@ -9,7 +9,9 @@ import { SkeletonPage } from './components/Skeleton';
 import { useBirthForm } from './hooks/useBirthForm';
 
 // [AI MOD] Lazy-loaded page components
+// Dashboard 已精簡為先天命局，直接 import（非 lazy）
 const Dashboard = lazy(() => import('./components/Dashboard'));
+const ExplorePage = lazy(() => import('./components/ExplorePage'));
 const AIChatPanel = lazy(() => import('./components/AIChatPanel'));
 const SpecialtyNav = lazy(() => import('./components/SpecialtyNav'));
 const DailyForecastPage = lazy(() => import('./components/DailyForecastPage'));
@@ -17,26 +19,31 @@ const TimelinePage = lazy(() => import('./components/TimelinePage'));
 const SynastryPage = lazy(() => import('./components/SynastryPage'));
 const ReferenceTablePage = lazy(() => import('./components/ReferenceTablePage'));
 
-import { BaziDisplay } from './types';
-import { determinePattern, PatternResult, PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements } from './pattern';
-import { GAN_TO_ELEMENT, getShiChen } from './constants';
+import { calculateChart, type BaziChart, determinePattern, type PatternResult, type PatternScores, initPatternScores, getPrimaryPattern, getCheckYears, getFavorableElements, GAN_TO_ELEMENT, getShiChen, type BaziDisplay } from '@bezi/core';
 import { CLIENT_CONFIG } from './config';
-import { parseBirthHour, validateBirthInput } from './utils/validation';
-
+import { validateBirthInput } from './utils/validation';
+import { trackProductEvent } from './lib/productEvents';
+import { parseStepFromHash, stepToHash } from './lib/router';
+import { BIRTH_CITIES, cityLongitude } from './lib/trueSolarCities';
+import { PartnerChart } from './matchmaking';
 // [AI MOD] 定義有效的步驟型別（供 Sidebar 等元件匯入）
-export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
-const VALID_STEPS: Step[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-// [AI MOD] step 11 為側邊欄知識搜尋，不在主要導航中
-export const KNOWLEDGE_SEARCH_STEP = 11;
+export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+const VALID_STEPS: Step[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+// [AI MOD] 範例命盤：1984-03-25 10:00 男，engine 實排 = 甲子 丁卯 戊午 丁巳（日主戊），
+// 與 server 端 demo-001 證據（data/bezi.db）一致，AI 回答與畫面不矛盾
+const DEMO_BIRTH = { name: '範例命盤', gender: 'male' as const, birthDate: '1984-03-25', birthTime: '10' };
+const RETURN_AFTER_EDIT_KEY = 'bezi:return-after-edit';
 
 export default function App() {
   const [step, setStep] = useState<Step>(() => {
+    // [AI MOD] Hash deep-link 優先：#/slug 直接定位；無 hash 才回退 sessionStorage。
+    const fromHash = parseStepFromHash(window.location.hash);
+    if (fromHash) return fromHash;
     const saved = sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
     if (saved) {
       const parsed = parseInt(saved, 10);
-      if (parsed === 5) {
-        return 4; // Redirect deprecated steps to Dashboard
-      }
+      if (parsed === 5) return 4;
       // [AI MOD] 使用型別守衛而非 as any
       if (VALID_STEPS.includes(parsed as Step)) {
         return parsed as Step;
@@ -44,6 +51,24 @@ export default function App() {
     }
     return 1;
   });
+  const stepRef = useRef(step);
+  stepRef.current = step;
+
+  useEffect(() => {
+    trackProductEvent('app_view');
+  }, []);
+
+  // [AI MOD] back/forward 鍵：hash 變更時同步 step（忽略本端寫入引發的 event）。
+  useEffect(() => {
+    const onHashChange = () => {
+      const parsed = parseStepFromHash(window.location.hash);
+      if (parsed && parsed !== stepRef.current) {
+        setStep(parsed);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -63,6 +88,14 @@ export default function App() {
     }
   }, [step]);
 
+  // [AI MOD] step 變更 → 寫回 hash（deep-link 可分享、back 鍵可回退）。
+  useEffect(() => {
+    const target = stepToHash(step);
+    if (window.location.hash !== target) {
+      window.location.hash = target;
+    }
+  }, [step]);
+
   const {
     name, setName, gender, setGender,
     birthDate, setBirthDate, birthTime, setBirthTime, birthTimeInput, setBirthTimeInput,
@@ -74,124 +107,136 @@ export default function App() {
   const [bazi, setBazi] = useState<BaziDisplay | null>(null);
   const [pattern, setPattern] = useState<PatternResult | null>(null);
   const [scores, setScores] = useState<PatternScores | null>(null);
+  // [P2] 真太陽時：出生城市快選（empty = 不用真太陽時，行為不變）
+  const [birthCity, setBirthCity] = useState<string>(
+    () => localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE) || ''
+  );
 
   const [isInitializing, setIsInitializing] = useState(true);
+  // [P2] 親人卡片「載入重排」：填入表單並跳回 onboarding 重排
+  const loadPerson = useCallback((p: PartnerChart) => {
+    setName(p.name);
+    setGender(p.gender === '男' ? 'male' : 'female');
+    setBirthDate(p.birthDate);
+    setBirthTime(p.birthTime);
+    setBirthTimeInput(p.birthTime);
+    if (p.birthCity) {
+      setBirthCity(p.birthCity);
+      localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE, p.birthCity);
+    }
+    sessionStorage.setItem('bezi:return-after-edit', '12');
+    if (window.location.hash) window.location.hash = '';
+    setStep(1);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
   const [showAI, setShowAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
+  const openAI = () => {
+    trackProductEvent('ai_panel_opened');
+    setShowAI(true);
+  };
+
   useEffect(() => {
-    let cancelled = false;
+    // Load persisted state from localStorage
+    const savedName = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.NAME);
+    const savedGender = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER);
+    const savedDate = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+    const savedTime = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.TIME);
 
-    // Remove API keys persisted by older releases. Secrets now live only in
-    // React memory and disappear when the tab is refreshed or closed.
-    localStorage.removeItem('bazi_api_key');
-
-    const resetToLanding = () => {
-      if (cancelled) return;
-      setStep(1);
-      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
-      setIsInitializing(false);
-    };
-
-    const restorePersistedState = async () => {
-      const savedName = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.NAME);
-      const savedGender = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER);
-      const savedDate = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
-      const persistedTime = localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.TIME) ?? '';
-
-      if ((savedGender !== 'male' && savedGender !== 'female') || !savedDate) {
-        resetToLanding();
-        return;
-      }
-
-      const persistedInput = validateBirthInput({
-        name: savedName ?? undefined,
-        gender: savedGender === 'male' ? '男' : '女',
-        birthDate: savedDate,
-        birthTime: persistedTime,
-      });
-      if (!persistedInput.valid) {
-        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
-        resetToLanding();
-        return;
-      }
-
+    if (savedName && savedGender && savedDate && savedTime !== null) {
+      setName(savedName);
+      setGender(savedGender as 'male' | 'female');
+      setBirthDate(savedDate);
+      setBirthTime(savedTime);
+      setBirthTimeInput(savedTime);
+      
       try {
-        const { calculateChart } = await import('./paipan');
         const [y, m, d] = savedDate.split('-').map(Number);
-        const isHourUnknown = !persistedTime;
-        const hour = parseBirthHour(persistedTime) ?? 12;
-        const chart = calculateChart(
-          y,
-          m,
-          d,
-          hour,
-          savedGender === 'male' ? '男' : '女',
-          isHourUnknown,
-        );
+        const isHourUnknown = !savedTime;
+        const hour = isHourUnknown ? 12 : parseInt(savedTime, 10);
+        const g = savedGender === 'male' ? '男' : '女';
+        const chart = calculateChart(y, m, d, hour, g, isHourUnknown, cityLongitude(birthCity));
         const patternResult = determinePattern(chart);
-        if (cancelled) return;
-
-        setName(savedName ?? '');
-        setGender(savedGender);
-        setBirthDate(savedDate);
-        setBirthTime(persistedTime);
-        setBirthTimeInput(persistedTime);
+        
         setBazi({
           year: chart.year.gan + chart.year.zhi,
           month: chart.month.gan + chart.month.zhi,
           day: chart.day.gan + chart.day.zhi,
           time: chart.hour.gan + chart.hour.zhi,
-          chart,
+          chart: chart
         });
         setPattern(patternResult);
 
-        try {
-          const { getPatternScores } = await import('./storage');
-          const savedScores = await getPatternScores();
-          if (cancelled) return;
-          setScores(savedScores ?? initPatternScores(patternResult.score));
-          if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
-            setStep(savedScores ? 4 : 3);
-          }
-        } catch {
-          if (cancelled) return;
-          setScores(initPatternScores(patternResult.score));
-          setStep(3);
-        }
-        setIsInitializing(false);
-      } catch (error: unknown) {
-        console.error(error);
-        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
-        resetToLanding();
-      }
-    };
+        // Load scores securely from IndexedDB
+        import('./storage').then(({ getPatternScores }) => {
+          getPatternScores().then(savedScores => {
+            if (savedScores) {
+              setScores(savedScores);
+              if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
+                setStep(4); // Go to dashboard if already registered
+              }
+            } else {
+              setScores(initPatternScores(patternResult.score));
+              if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
+                setStep(3);
+              }
+            }
+            setIsInitializing(false);
+          }).catch(() => {
+             setIsInitializing(false);
+          });
+        }).catch(() => {/* [AI MOD] 靜態處理 */});
 
-    void restorePersistedState();
-    return () => {
-      cancelled = true;
-    };
+      } catch (e: unknown) {
+        console.error(e);
+        localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+        // [AI MOD] deep-link 指向需命盤的頁面但排盤失敗 → 回表單並清 hash。
+        if (window.location.hash) window.location.hash = '';
+        setStep(1);
+        sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+        setIsInitializing(false);
+      }
+    } else {
+      setStep(1);
+      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+      setIsInitializing(false);
+    }
   }, []);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleStart = async () => {
-    if (!isFormValid || isGenerating) return;
-    
-    const isHourUnknown = !birthTime;
+  const handleStart = (override?: { name: string; gender: 'male' | 'female'; birthDate: string; birthTime: string }) => {
+    if (!override && (!isFormValid || isGenerating)) return;
+
+    // [AI MOD] 範例命盤可直接帶入覆寫值（不需使用者輸入任何資料）
+    const dName = override?.name ?? name;
+    const dGender = override?.gender ?? gender;
+    const dBirthDate = override?.birthDate ?? birthDate;
+    const dBirthTime = override?.birthTime ?? birthTime;
+    if (override) {
+      trackProductEvent('example_chart_started');
+      setName(dName);
+      setGender(dGender);
+      setBirthDate(dBirthDate);
+      setBirthTime(dBirthTime);
+      setBirthTimeInput(dBirthTime);
+    }
+
+    const isHourUnknown = !dBirthTime;
     const validation = validateBirthInput({
-      name: name || '未提供',
-      gender: gender === 'male' ? '男' : '女',
-      birthDate,
-      birthTime: isHourUnknown ? '' : birthTime,
+      name: dName || '未提供',
+      gender: dGender === 'male' ? '男' : '女',
+      birthDate: dBirthDate,
+      birthTime: isHourUnknown ? '' : dBirthTime,
     });
     if (!validation.valid) {
       setErrorMsg(validation.error!);
       return;
     }
 
-    const [y, m, d] = birthDate.split('-').map(Number);
+    const [y, m, d] = dBirthDate.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     const today = new Date();
     if (dateObj > today) {
@@ -204,21 +249,17 @@ export default function App() {
     }
     setErrorMsg('');
     setIsGenerating(true);
-    
-    // Save to localStorage (keep birthTime empty if omitted, do not force or prefill)
-    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.NAME, name);
-    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER, gender ?? '');
-    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.DATE, birthDate);
-    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.TIME, birthTime);
-    
-    try {
-      // The calendar engine is only needed after submission. Keeping it out of
-      // the landing bundle materially reduces first-load JavaScript.
-      const { calculateChart } = await import('./paipan');
-      const hour = parseBirthHour(birthTime) ?? 12;
-      const chart = calculateChart(y, m, d, hour, gender === 'male' ? '男' : '女', isHourUnknown);
-      const patternResult = determinePattern(chart);
 
+    // Save to localStorage (keep birthTime empty if omitted, do not force or prefill)
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.NAME, dName);
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER, dGender ?? '');
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.DATE, dBirthDate);
+    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.TIME, dBirthTime);
+
+    try {
+      const hour = isHourUnknown ? 12 : parseInt(dBirthTime, 10);
+      const chart = calculateChart(y, m, d, hour, dGender === 'male' ? '男' : '女', isHourUnknown, cityLongitude(birthCity));
+      const patternResult = determinePattern(chart);
       setBazi({
         year: chart.year.gan + chart.year.zhi,
         month: chart.month.gan + chart.month.zhi,
@@ -228,6 +269,7 @@ export default function App() {
       });
       setPattern(patternResult);
       setScores(initPatternScores(patternResult.score));
+      trackProductEvent('chart_created');
 
       setTimeout(() => {
         setIsGenerating(false);
@@ -247,11 +289,22 @@ export default function App() {
 
   const advanceToDashboard = (calibrations: Record<string, string>) => {
     if (Object.keys(calibrations).length === 2) {
+      trackProductEvent('calibration_completed');
       setTimeout(() => {
-        setStep(4);
+        const returnStep = sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === '12' ? 12 : 4;
+        sessionStorage.removeItem(RETURN_AFTER_EDIT_KEY);
+        setStep(returnStep);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 500);
     }
+  };
+
+  const skipCalibration = () => {
+    trackProductEvent('calibration_skipped');
+    const returnStep = sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === '12' ? 12 : 4;
+    sessionStorage.removeItem(RETURN_AFTER_EDIT_KEY);
+    setStep(returnStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const CALIBRATION_DELTAS: Record<string, Record<string, Partial<PatternScores>>> = {
@@ -283,7 +336,7 @@ export default function App() {
   const handleNavigate = (targetStep: number | string) => {
     const s = typeof targetStep === 'string' ? parseInt(targetStep, 10) : targetStep;
     // [AI MOD] 加入 Number.isNaN 檢查，step 11 為知識搜尋（不導航，由側邊欄處理）
-    if (!Number.isNaN(s) && s >= 1 && s <= 10) {
+    if (!Number.isNaN(s) && s >= 1 && s <= 12) {
       setStep(s as Step);
     }
   };
@@ -312,14 +365,17 @@ export default function App() {
       </div>
 
       {/* Main Container */}
-      <div className={`w-full ${step <= 3 ? 'max-w-md flex items-center justify-center min-h-screen' : 'md:pl-44 pt-[5vh] pb-32 min-h-screen'} px-4 md:px-6 py-8 md:py-12 relative z-10 hidden-scrollbar`}>
-        {step >= 4 && <Sidebar currentStep={step} onNavigate={handleNavigate} showAI={showAI} onToggleAI={() => setShowAI(!showAI)} onOpenSettings={() => setShowSettings(true)} />}
+      <main role="main" className={`w-full ${step <= 3 ? 'max-w-md flex items-center justify-center min-h-screen' : 'md:pl-44 pt-[5vh] pb-32 min-h-screen'} px-4 md:px-6 py-8 md:py-12 relative z-10 hidden-scrollbar`}>
+        {step >= 4 && <Sidebar currentStep={step} onNavigate={handleNavigate} showAI={showAI} onToggleAI={() => showAI ? setShowAI(false) : openAI()} onOpenSettings={() => setShowSettings(true)} />}
         {step >= 4 && <div className="md:hidden"><NavigationBar currentStep={step} onNavigate={handleNavigate} /></div>}
         {/* 手機版頂部/懸浮設定按鈕 */}
         {step >= 4 && (
           <div className="md:hidden fixed top-4 right-4 z-40">
             <button
-              onClick={() => setShowSettings(true)}
+              onClick={() => {
+                setShowSettings(true);
+              }}
+              aria-label="開啟系統設定"
               className="p-2.5 rounded-full bg-zinc-950/80 border border-white/10 text-zen-gold shadow-lg backdrop-blur-md hover:bg-zinc-900 transition-all active:scale-95 flex items-center justify-center focus:outline-none"
               title="系統設定"
             >
@@ -335,7 +391,8 @@ export default function App() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => setShowAI(true)}
+              onClick={openAI}
+              aria-label="開啟 AI 問答"
               className="relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-zen-gold to-amber-600 text-zinc-950 font-bold shadow-[0_8px_24px_rgba(212,168,83,0.35)] border border-amber-400/30 transition-all duration-300 text-xs focus:outline-none"
             >
               <Sparkles size={14} className="animate-pulse" />
@@ -364,7 +421,23 @@ export default function App() {
                   birthDate={birthDate}
                   birthTime={birthTime}
                   gender={gender}
+                  view="today"
                 />
+              </Suspense>
+            </motion.div>
+          )}
+
+          {step === 11 && (
+            <motion.div
+              key="step11"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full relative"
+            >
+              <Suspense fallback={<SkeletonPage />}>
+                <ExplorePage onNavigate={handleNavigate} />
               </Suspense>
             </motion.div>
           )}
@@ -465,6 +538,31 @@ export default function App() {
             </motion.div>
           )}
 
+          {step === 12 && (
+            <motion.div
+              key="step12"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full relative"
+            >
+              <Suspense fallback={<SkeletonPage />}>
+                <Dashboard
+                  bazi={bazi}
+                  name={name}
+                  onNavigate={handleNavigate}
+                  onLoadPerson={loadPerson}
+                  scores={scores}
+                  birthDate={birthDate}
+                  birthTime={birthTime}
+                  gender={gender}
+                  view="profile"
+                />
+              </Suspense>
+            </motion.div>
+          )}
+
 
 
 
@@ -483,11 +581,16 @@ export default function App() {
                   <Compass size={20} className="text-zen-sage" />
                 </div>
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif text-zen-text tracking-tight mx-auto max-w-md leading-tight">
-                  窺探<br/>生命伏筆
+                  30 秒，看懂你的<br/>八字節奏
                 </h1>
                 <p className="text-sm md:text-base text-zen-muted max-w-sm mx-auto tracking-wide leading-relaxed">
-                  順應自然週期的個人觀測系統
+                  先看今日提醒，再決定要不要深入。
                 </p>
+                <div className="mt-3 flex flex-wrap justify-center gap-2 text-[10px] text-zen-muted/80">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">免註冊</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">時辰可稍後補充</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">資料留在目前裝置</span>
+                </div>
               </div>
 
               {/* Form Card */}
@@ -500,9 +603,9 @@ export default function App() {
                     {/* Input Group: Name */}
                     <div className="relative pl-6">
                       <div className="absolute left-[-4px] top-[12px] w-2 h-2 rounded-full bg-zen-sage border-2 border-white shadow-sm"></div>
-                      <label htmlFor="name" className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-1 font-medium">您的稱呼</label>
+                      <label htmlFor="birth-name" className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-1 font-medium">您的稱呼（選填）</label>
                       <input 
-                        id="name"
+                        id="birth-name"
                         type="text" 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -514,7 +617,8 @@ export default function App() {
                     {/* Input Group: Gender */}
                     <div className="relative pl-6">
                        <div className="absolute left-[-4px] top-[12px] w-2 h-2 rounded-full bg-zen-sage border-2 border-white shadow-sm"></div>
-                       <label className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-2 font-medium">生理性別 <span className="text-red-400">*</span></label>
+                       <fieldset>
+                       <legend className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-2 font-medium">生理性別 <span className="text-red-400">*</span></legend>
                        <div className="flex gap-3">
                          <button
                            type="button"
@@ -543,16 +647,17 @@ export default function App() {
                            <span className="font-medium text-sm">女</span>
                          </button>
                        </div>
+                       </fieldset>
                     </div>
 
                      {/* Input Group: DateTime */}
                     <div className="relative pl-6 z-10">
                        <div className="absolute left-[-4px] top-[12px] w-2 h-2 rounded-full bg-zen-sage border-2 border-white shadow-sm"></div>
-                       <label className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-2 font-medium">出生資訊 <span className="text-red-400">*</span></label>
+                       <div className="block text-xs tracking-[0.2em] uppercase text-zen-muted mb-2 font-medium">出生資訊 <span className="text-red-400">*</span></div>
 
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
                           <div>
-                            <label htmlFor="birth-date" className="block text-xs text-zen-muted mb-1 font-medium">日期 (年/月/日)</label>
+                            <label htmlFor="birth-date" className="block text-xs text-zen-muted mb-1 font-medium">生日（年/月/日）</label>
                             <div className="bg-white/5 rounded-xl border border-zen-muted/20 px-3 py-2 md:py-2.5 focus-within:border-zen-sage transition-colors">
                               <input 
                                 id="birth-date"
@@ -560,14 +665,16 @@ export default function App() {
                                 inputMode="numeric"
                                 value={birthDate}
                                 onChange={handleDateChange}
-                                placeholder="例如: 19900101"
+                                placeholder="例如：1990/01/01"
+                                aria-describedby="birth-date-help"
+                                aria-invalid={Boolean(birthDate && birthDate.length !== 10)}
                                 className="w-full bg-transparent outline-none text-base font-serif text-zen-text placeholder:text-zen-muted/30"
                               />
                             </div>
                           </div>
                           
                           <div>
-                            <label htmlFor="birth-time" className="block text-xs text-zen-muted mb-1 font-medium">時間 (選填)</label>
+                            <label htmlFor="birth-time" className="block text-xs text-zen-muted mb-1 font-medium">出生時間（選填）</label>
                             <div className="bg-white/5 rounded-xl border border-zen-muted/20 px-3 py-2 md:py-2.5 focus-within:border-zen-sage transition-colors">
                               <input 
                                 id="birth-time"
@@ -577,7 +684,9 @@ export default function App() {
                                   value={birthTimeInput}
                                   onChange={(e) => parseHourInput(e.target.value)}
                                   onKeyDown={handleTimeKeyDown}
-                                  placeholder="例如: 14 或 1430 (不填僅排前三柱)"
+                                  placeholder="例如：1430；不知道可留空"
+                                  aria-describedby="birth-time-help"
+                                  aria-invalid={Boolean(hourError)}
                                   className={`w-full bg-transparent outline-none text-base font-serif text-zen-text placeholder:text-zen-muted/30 ${hourError ? 'text-rose-400' : ''}`}
                                 />
                               </div>
@@ -589,6 +698,11 @@ export default function App() {
                             {hourError && (
                               <p className="text-rose-400 text-sm mt-2 pl-2">{hourError}</p>
                             )}
+                            {!birthTime && !hourError && (
+                              <p id="birth-time-help" className="text-zen-muted/80 text-[11px] md:text-xs mt-2 pl-2 leading-relaxed">
+                                不知道出生時辰也沒關係，可留空先看主要分析。
+                              </p>
+                            )}
                           </div>
                         </div>
                        
@@ -597,21 +711,58 @@ export default function App() {
                            ⚠️ 您的出生年份可能受到台灣日光節約時間影響，若在此時間內出生，請確認輸入的時間已扣除一小時。
                          </div>
                        )}
+
+                       {/* [P2] 真太陽時：出生城市快選（選填，預設關閉 → 行為不變） */}
+                       {birthTime && (
+                         <div className="mt-3">
+                           <label htmlFor="birth-city" className="block text-xs text-zen-muted mb-1 font-medium">出生城市（選填，用於真太陽時校正）</label>
+                           <div className="flex flex-wrap gap-1.5">
+                             {BIRTH_CITIES.map((c) => (
+                               <button
+                                 key={c.name}
+                                 type="button"
+                                 onClick={() => {
+                                   const next = birthCity === c.name ? '' : c.name;
+                                   setBirthCity(next);
+                                   if (next) localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE, next);
+                                   else localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE);
+                                 }}
+                                 className={`px-2.5 py-1 rounded-lg border text-xs transition-colors ${
+                                   birthCity === c.name
+                                     ? 'border-zen-gold/60 bg-zen-gold/20 text-zen-gold'
+                                     : 'border-white/10 bg-white/5 text-zen-muted hover:bg-white/10'
+                                 }`}
+                               >
+                                 {c.name}
+                               </button>
+                             ))}
+                           </div>
+                           {birthCity && (
+                             <p className="text-zen-accent/80 text-[11px] mt-1.5">
+                               已依「{birthCity}」的真太陽時校正時辰（經度 {cityLongitude(birthCity)}°E）。
+                             </p>
+                           )}
+                         </div>
+                       )}
                        {birthTime && (birthTime === '23' || parseInt(birthTime, 10) >= 23 || parseInt(birthTime, 10) === 0) && (
                          <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 p-3 rounded-xl text-sm md:text-xs mt-3">
                            ℹ️ 若為 23:00~00:59 出生（子時），系統將依照八字規則，自動視為隔日並排定日期的氣場。
                          </div>
                        )}
+                       <details id="birth-date-help" className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-zen-muted/80">
+                         <summary className="cursor-pointer font-medium text-zen-muted">資料如何使用？</summary>
+                         <p className="mt-2 leading-relaxed">姓名與出生資料預設只保存在這台裝置。只有開啟 AI 問答時，出生資料才會送至後端建立當次工作階段的驗證資料；不會送出姓名。</p>
+                       </details>
                     </div>
                   </div>
 
                   {/* Submit Button */}
                   <div className="pt-1 md:pt-2">
-                    {errorMsg && <p className="text-rose-400 text-sm text-center mb-2 font-medium">{errorMsg}</p>}
+                    {errorMsg && <p role="alert" className="text-rose-400 text-sm text-center mb-2 font-medium">{errorMsg}</p>}
+                    {!isFormValid && !errorMsg && <p className="text-zen-muted/70 text-xs text-center mb-2">請先選擇性別並填寫生日，時辰可以稍後補充。</p>}
                     <button
-                      type="button"
                       id="start-calculation-btn"
-                      onClick={handleStart}
+                      onClick={() => handleStart()}
                       disabled={!isFormValid || isGenerating}
                       className={`group w-full py-3 md:py-4 rounded-xl flex items-center justify-center gap-2 md:gap-3 transition-all duration-500 overflow-hidden relative ${
                         isFormValid && !isGenerating
@@ -622,8 +773,18 @@ export default function App() {
                       {isFormValid && !isGenerating && (
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                       )}
-                      <span className="font-serif tracking-[0.2em] text-sm relative z-10">{isGenerating ? '排盤中...' : '進入觀測'}</span>
+                      <span className="font-serif tracking-[0.2em] text-sm relative z-10">{isGenerating ? '建立命盤中...' : '免費建立我的命盤'}</span>
                       {!isGenerating && <ArrowRight size={16} className={`relative z-10 transition-transform duration-300 ${isFormValid ? 'group-hover:translate-x-1' : ''}`} />}
+                    </button>
+
+                    {/* [AI MOD] 範例命盤：降低首次使用門檻（激活用意願），免輸入直接體驗 */}
+                    <button
+                      onClick={() => handleStart(DEMO_BIRTH)}
+                      disabled={isGenerating}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs text-zen-muted hover:text-zen-text hover:bg-white/5 transition-colors disabled:opacity-40"
+                    >
+                      <Sparkles size={13} />
+                      先看範例命盤｜先體驗（不用輸入資料）
                     </button>
                   </div>
                 </div>
@@ -641,6 +802,10 @@ export default function App() {
               className="flex flex-col items-center w-full"
             >
               <div className="text-center mb-6">
+                <div className="flex items-center justify-between gap-3 mb-4 text-xs text-zen-muted">
+                  <span>快速校準</span>
+                  <span>第 {Object.keys(calibrations).length + 1} 題，共 2 題</span>
+                </div>
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -649,17 +814,15 @@ export default function App() {
                 >
                   初步推算完成
                 </motion.div>
-                <h2 className="font-serif text-2xl md:text-3xl mb-2 tracking-tight">您屬於<span className="text-zen-sage mx-1 md:mx-2">{scores ? getPrimaryPattern(scores) : (pattern ? pattern.pattern : '身強')}格</span></h2>
+                <h2 className="font-serif text-2xl md:text-3xl mb-2 tracking-tight">先用兩個年份，讓結果更貼近你</h2>
+                <p className="text-sm text-zen-muted mb-3">你可以回答，也可以直接查看完整結果。</p>
                 <div className="flex flex-col items-center gap-1 mb-3">
                    <p className="text-sm text-zen-muted"><span>喜用神：</span><span className="text-zen-text">{bazi && pattern ? getFavorableElements(bazi.chart.dayMaster, scores ? getPrimaryPattern(scores) : pattern.pattern).favorable.join('、') : pattern?.favorable.join('、')}</span></p>
                    <p className="text-sm text-zen-muted"><span>最弱五行：</span><span className="text-amber-500">{pattern?.weakestElement}</span></p>
                 </div>
                 <div className="text-zen-muted text-xs leading-relaxed max-w-lg mx-auto text-left bg-white/5 p-2 rounded-lg border border-white/5 space-y-0.5">
-                  <p className="font-medium text-zen-text mb-1.5">命理結構雖已成形，但真實生命經驗是不可或缺的記錄因子。回顧近代流年，將幫助系統記錄您的能量起伏。再加上該年是否有：</p>
-                  <p>💰 <span className="font-bold text-yellow-500/80">金錢財運</span>：該年是否投資失利、詐騙或意外得財。</p>
-                  <p>🚀 <span className="font-bold text-blue-400/80">工作學業</span>：該年是否壓力大、責任增但成果不佳。</p>
-                  <p>🌸 <span className="font-bold text-pink-400/80">感情家庭</span>：該年是否分手、離婚、口角。</p>
-                  <p>⚠️ <span className="font-bold text-red-400/80">身體健康</span>：該年是否開刀、住院、意外等突發狀況。</p>
+                  <p className="font-medium text-zen-text mb-1.5">回想這些年份是否出現明顯的工作、關係、財務或生活轉變，幫助系統記錄你的能量起伏。</p>
+                  <p>回答沒有標準答案，依你的真實感受選擇即可。</p>
                 </div>
               </div>
 
@@ -688,6 +851,7 @@ export default function App() {
                         <button
                           key={opt}
                           onClick={() => handleCalibration(item.year, opt)}
+                          aria-pressed={calibrations[item.year] === opt}
                           className={`py-2 md:py-2.5 px-1 rounded-lg text-sm md:text-base font-medium transition-all duration-300 border ${
                             calibrations[item.year] === opt
                               ? 'bg-zen-text text-zen-bg border-zen-text shadow-md transform scale-[1.02]'
@@ -702,25 +866,29 @@ export default function App() {
                 )}) : null}
               </div>
 
+              <button
+                onClick={skipCalibration}
+                className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-zen-muted transition-colors hover:bg-white/10 hover:text-zen-text"
+              >
+                先略過，直接查看完整結果
+              </button>
+
             </motion.div>
           )}
 
         </AnimatePresence>
         
         {step >= 4 && (
-          <footer className="w-full max-w-2xl mx-auto px-4 pb-12 pt-12 border-t border-white/5 space-y-6">
-            <button 
-              onClick={() => setStep(10)}
-              className="w-full py-5 px-6 bg-zen-card/60 hover:bg-zen-card/80 backdrop-blur-md rounded-[2rem] border border-white/10 transition-all duration-500 group text-center shadow-2xl"
-            >
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="text-zen-muted text-xs tracking-[0.3em] uppercase opacity-70">✱ 本頁面分析皆基於八字命理學說</span>
-                <span className="text-zen-accent font-serif font-medium text-lg lg:text-xl group-hover:scale-105 transition-transform flex items-center gap-2 justify-center">
-                  查看【理論速查】對照表
-                  <ArrowRight size={18} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-zen-sage" />
-                </span>
-              </div>
-            </button>
+          <footer className="w-full max-w-2xl mx-auto px-4 pb-12 pt-10 border-t border-white/5 space-y-5">
+            {step !== 10 && (
+              <button
+                type="button"
+                onClick={() => setStep(10)}
+                className="mx-auto flex min-h-11 items-center gap-2 rounded-full px-4 text-xs font-medium text-zinc-500 transition hover:bg-white/5 hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              >
+                查看本頁使用的命理講義與理論來源 <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            )}
             <div className="text-center text-[10px] md:text-xs text-zen-muted/30 leading-relaxed px-6 font-medium tracking-wide">
               <p className="mb-2 uppercase tracking-tighter opacity-50">Legal Disclaimer & Advisory</p>
               <p className="mb-1">本工具僅供娛樂與自我探索參考，所有分析結果不具醫療、法律或財務建議效力。</p>
@@ -733,12 +901,12 @@ export default function App() {
                 title="View on GitHub"
               >
                 <Github size={14} />
-                <span>https://github.com/yungtang20/bezi-ai</span>
+                <span>https://github.com/yungtang20/bezi</span>
               </a>
             </div>
           </footer>
         )}
-      </div>
+      </main>
 
       {/* Settings Modal */}
       <Modal 
@@ -747,22 +915,24 @@ export default function App() {
         title="系統設定" 
         icon={<Settings size={18} className="text-zen-gold" />}
       >
-        <p className="text-sm leading-relaxed text-zen-muted">AI 服務由後端 Agnes AI 設定提供。API 金鑰不會儲存在瀏覽器或送入前端。</p>
+        <div className="space-y-2 text-sm leading-relaxed text-zen-muted">
+          <p>AI 服務由後端 Agnes AI 設定提供。API 金鑰不會儲存在瀏覽器或送入前端。</p>
+          <p>姓名、出生資料與日誌主要保存在此裝置。開啟 AI 問答時，出生資料會送至本服務後端建立短期驗證資料，但不會送出姓名。</p>
+          <p>產品使用事件僅在本機以彙總次數保存，不記錄生日、命盤或問答內容，也不傳送至外部分析服務。</p>
+        </div>
       </Modal>
 
       {/* AI Chat Panel - Right Side Overlay */}
-      {step >= 4 && (
+      {step >= 4 && showAI && (
         <Drawer
           isOpen={showAI}
           onClose={() => setShowAI(false)}
           title="AI 智能問答"
           icon={<Sparkles size={16} className="text-zen-gold" />}
         >
-          {showAI && (
-            <Suspense fallback={<SkeletonPage />}>
-              <AIChatPanel bazi={bazi} userName={name} />
-            </Suspense>
-          )}
+          <Suspense fallback={<SkeletonPage />}>
+            <AIChatPanel bazi={bazi} />
+          </Suspense>
         </Drawer>
       )}
     </div>

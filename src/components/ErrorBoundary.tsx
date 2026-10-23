@@ -44,7 +44,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   };
 
   private handleReset = () => {
-    if (window.confirm('確定要清除快取並重設系統嗎？目前分頁中的自訂 API 金鑰也會清除。')) {
+    if (window.confirm('確定要清除快取並重設系統嗎？')) {
       localStorage.clear();
       sessionStorage.clear();
       window.location.href = window.location.origin;

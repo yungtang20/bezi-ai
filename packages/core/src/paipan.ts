@@ -5,6 +5,7 @@ import {
   YANG_GANS,
   isSameYinYang,
 } from './constants';
+import { toTrueSolarTime } from './trueSolarTime';
 import { ZHI_HIDDEN } from './pattern';
 
 // [AI MOD] 生肖對照表（移到模組頂層，避免每次呼叫 calculateChart 時重建）
@@ -56,6 +57,13 @@ export interface BaziChart {
   birthDay: number;
   birthHour: number;
   zodiac: string;
+  // [P2] 真太陽時：指定 longitude 時，柱位依調整後時刻計算；
+  // 這些欄位記錄實際用於排盤的「真太陽時日期/小時」，供大運等後續計算保持同一學派。
+  // 未指定 longitude 時為 undefined（行为與原先完全一致）。
+  trueSolarYear?: number;
+  trueSolarMonth?: number;
+  trueSolarDay?: number;
+  trueSolarHour?: number;
 }
 
 // [AI MOD] 內部型別，不 export
@@ -82,26 +90,47 @@ export function calculateChart(
   day: number,
   hour: number,
   gender: '男' | '女',
-  isHourUnknown?: boolean
+  isHourUnknown?: boolean,
+  longitude?: number
 ): BaziChart {
-  // 1. 將西元日期轉換為農曆物件 (若未知時間，以日中12時推算前三柱)
-  const solar = Solar.fromYmdHms(year, month, day, isHourUnknown ? 12 : hour, 0, 0);
+  // [P2] 真太陽時：longitude 指定出生地經度時，依「經度差 + 均時差」調整時辰，
+  // 跨午夜時同步位移出生日期（影響日柱）。預設（未傳 longitude）完全不改行為。
+  let effYear = year;
+  let effMonth = month;
+  let effDay = day;
+  let effHour = isHourUnknown ? 12 : hour;
+  if (longitude !== undefined && !isHourUnknown) {
+    const t = toTrueSolarTime({ hour, minute: 0, longitude, month, day, standardMeridian: 120 });
+    const shifted = new Date(year, month - 1, day);
+    shifted.setDate(shifted.getDate() + t.dayDelta);
+    effYear = shifted.getFullYear();
+    effMonth = shifted.getMonth() + 1;
+    effDay = shifted.getDate();
+    effHour = t.hour;
+  }
+
+  // 1. 將西元日期轉換為農曆物件（若未知時間，以日中12時推算前三柱）
+  const solar = Solar.fromYmdHms(effYear, effMonth, effDay, effHour, 0, 0);
   const lunar = solar.getLunar();
 
   // 2. 取得四柱的天干地支（lunar-javascript 返回 i18n 鍵，需翻譯為中文）
-  const yearGanZhi = translateGanZhi(lunar.getYearInGanZhi());    // 年柱
-  const monthGanZhi = translateGanZhi(lunar.getMonthInGanZhi());  // 月柱
+  // [AI MOD] 年柱/月柱改用 Exact（立春/節氣精確時刻切換），與子平法及本程式碼
+  // calculateDaYun 所採用的 getYearGanIndexExact（大運順逆判定）保持同一學派。
+  // 一般版 getYearInGanZhi() 以農曆正月初一換年、getMonthInGanZhi() 以節氣日 00:00 換月，
+  // 會在節氣切換時刻前數小時的出生者產出與大運方向矛盾的年柱（立春日~1-2 週窗口）。
+  const yearGanZhi = translateGanZhi(lunar.getYearInGanZhiExact());  // 年柱（立春時刻）
+  const monthGanZhi = translateGanZhi(lunar.getMonthInGanZhiExact());  // 月柱（節氣精確時刻）
   const dayGanZhi = translateGanZhi(lunar.getDayInGanZhi());      // 日柱
   const hourGanZhi = translateGanZhi(lunar.getTimeInGanZhi());    // 時柱
 
   // 3. 取得各柱的詳細八字物件
   const baZi = lunar.getEightChar();
-
+  
   // 取得每一柱的天干、地支、藏干列表
   const yearPillar = buildPillar(yearGanZhi);
   const monthPillar = buildPillar(monthGanZhi);
   const dayPillar = buildPillar(dayGanZhi);
-  const hourPillar = isHourUnknown
+  const hourPillar = isHourUnknown 
     ? { gan: '', zhi: '', hiddenGan: [], tenGod: '', hiddenTenGods: [] }
     : buildPillar(hourGanZhi);
 
@@ -129,16 +158,20 @@ export function calculateChart(
     birthDay: day,
     birthHour: isHourUnknown ? -1 : hour,
     zodiac,
+    // [P2] 有調整才記錄（無 longitude 時 undefined，完全不相等於原行為）
+    ...(longitude !== undefined && !isHourUnknown
+      ? { trueSolarYear: effYear, trueSolarMonth: effMonth, trueSolarDay: effDay, trueSolarHour: effHour }
+      : {}),
   };
 }
 
 // ---------- 輔助函式 ----------
 
 /** 地支藏干對照表（與 pattern.ts 的 ZHI_HIDDEN 同步） */
-export const ZHI_HIDE_GAN: Readonly<Record<string, readonly string[]>> = ZHI_HIDDEN;
+export const ZHI_HIDE_GAN: Record<string, string[]> = ZHI_HIDDEN;
 
 export function getHiddenTenGodsForZhi(zhi: string, dayMaster: string): string[] {
-  const hiddenGan = [...(ZHI_HIDE_GAN[zhi] || [])];
+  const hiddenGan = ZHI_HIDE_GAN[zhi] || [];
   return hiddenGan.map(hGan => getTenGod(dayMaster, hGan));
 }
 
@@ -150,7 +183,7 @@ function buildPillar(ganZhi: string): Pillar {
   }
   const gan = ganZhi.charAt(0);
   const zhi = ganZhi.charAt(1);
-  const hiddenGan = [...(ZHI_HIDE_GAN[zhi] || [])];
+  const hiddenGan = ZHI_HIDE_GAN[zhi] || [];
   return { gan, zhi, hiddenGan, tenGod: '', hiddenTenGods: [] };
 }
 

@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
-import { DailyEnergy, getDailyEnergy } from '../dailyAnalysis';
-import { generateCalendarICS } from '../utils/calendarExport';
-import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs } from '../storage';
+import { DailyEnergy, getDailyEnergy, getUpcomingDatesForCategory } from '../dailyAnalysis';
+import { getDailyLog, getMonthLogs } from '../storage';
+import { submitCheckIn } from '../lib/checkInSubmit';
+import { useCheckInStats } from '../hooks/useCheckInStats';
+import { CATEGORY_LABELS, DAY_TYPE_FIELDS, isBadOutcome, isGoodOutcome } from '../calibration';
 import MonthlyForecastCalendar from './MonthlyForecastCalendar';
-import { addLocalDays, addLocalMonths, formatLocalDate, parseLocalDate } from '../utils/localDate';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 
 const CATEGORY_OPTIONS = [
@@ -25,39 +26,43 @@ interface Props {
 
 export default function DailyForecastPage({ chart, scores, onNavigate }: Props) {
   const [dailyEnergy, setDailyEnergy] = useState<DailyEnergy | null>(null);
+  // [AI MOD] 連續打卡 + 準確率報告
+  const { streak, report, refresh: refreshStats } = useCheckInStats();
   const [categoryFeedback, setCategoryFeedback] = useState<Record<string, 'good' | 'bad' | null>>({
     health: null, career: null, romance: null, wealth: null, family: null, friends: null
   });
   const [overrideOutcome, setOverrideOutcome] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [canCheckIn, setCanCheckIn] = useState(false);
   const [monthAccuracy, setMonthAccuracy] = useState<number | null>(null);
   const [monthCategoryStats, setMonthCategoryStats] = useState<{name: string, score: number}[]>([]);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
-    return formatLocalDate(new Date());
+    const d = new Date();
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
   });
-  const todayDateStr = formatLocalDate(new Date());
-  const canCheckIn = selectedDateStr <= todayDateStr;
 
-  const forecastContext = useMemo(() => {
-    if (!chart || !scores) return null;
-    const primaryPattern = getPrimaryPattern(scores);
-    const patternResult = determinePattern(chart);
-    const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
-    return { primaryPattern, patternResult, favorable, unfavorable };
-  }, [chart, scores]);
+  if (!chart || !scores) return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
+
+  const primaryPattern = getPrimaryPattern(scores);
+  const patternResult = determinePattern(chart);
+  const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
+  const hasComparableDirection = dailyEnergy
+    ? isGoodOutcome(dailyEnergy.theoreticalOutcome) || isBadOutcome(dailyEnergy.theoreticalOutcome)
+    : false;
+  const evaluatedFields = dailyEnergy && hasComparableDirection ? (DAY_TYPE_FIELDS[dailyEnergy.dayTenGodType] || []) : [];
+  const evaluatedLabels = evaluatedFields.map(field => CATEGORY_LABELS[field]);
 
   useEffect(() => {
-    if (!chart || !forecastContext) return;
-    let cancelled = false;
-    const selectedDateObj = parseLocalDate(selectedDateStr);
-    const { primaryPattern, patternResult, favorable, unfavorable } = forecastContext;
+    const dTokens = selectedDateStr.split('-');
+    const selectedDateObj = new Date(Number(dTokens[0]), Number(dTokens[1]) - 1, Number(dTokens[2]), 12, 0, 0);
     
     const energy = getDailyEnergy(chart, patternResult.weakestElement, favorable, unfavorable, primaryPattern, selectedDateObj);
     setDailyEnergy(energy);
+    setCanCheckIn(true); // Allow all times for testing
+
     getDailyLog(selectedDateStr).then(log => {
-      if (cancelled) return;
       if (log) {
         setCategoryFeedback({
           health: log.health || null,
@@ -76,9 +81,8 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
       }
     }).catch(() => {/* [AI MOD] 靜默處理 DB 錯誤 */});
 
-    const [selectedYear, selectedMonth] = selectedDateStr.split('-').map(Number);
-    getMonthLogs(selectedYear, selectedMonth).then(logs => {
-        if (cancelled) return;
+    const now = new Date();
+    getMonthLogs(now.getFullYear(), now.getMonth() + 1).then(logs => {
         if (logs.length > 0) {
           const cStats = { health: 0, career: 0, romance: 0, wealth: 0, family: 0, friends: 0 };
           logs.forEach(log => {
@@ -100,103 +104,45 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
           ]);
 
           import('../calibration').then(({ calculateAccuracy }) => {
-            if (!cancelled) setMonthAccuracy(calculateAccuracy(logs));
+            setMonthAccuracy(calculateAccuracy(logs));
           }).catch(() => {/* [AI MOD] 靜態處理 */});
         } else {
           setMonthCategoryStats([]);
           setMonthAccuracy(null);
         }
     }).catch(() => {/* [AI MOD] 靜默處理 DB 錯誤 */});
+  }, [chart, scores, selectedDateStr]); // Removed isSubmitted to fix edit bug
 
-    return () => {
-      cancelled = true;
-    };
-  }, [chart, forecastContext, selectedDateStr]);
-
-  if (!chart || !scores || !forecastContext) {
-    return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
-  }
-
-  const { primaryPattern } = forecastContext;
 
   const handleCheckIn = async () => {
     const hasAny = Object.values(categoryFeedback).some(v => v !== null);
     if (!hasAny) return;
 
-    const log: DailyLog = {
-      date: selectedDateStr,
-      health: categoryFeedback.health,
-      career: categoryFeedback.career,
-      romance: categoryFeedback.romance,
-      wealth: categoryFeedback.wealth,
-      family: categoryFeedback.family,
-      friends: categoryFeedback.friends,
-      note,
-      theoreticalOutcome: overrideOutcome || dailyEnergy?.theoreticalOutcome || '平穩',
-      dayTenGodType: dailyEnergy?.dayTenGodType,
-      createdAt: new Date().toISOString(),
-    };
-
     try {
-      await saveDailyLog(log);
-
-      const { adjustScores, checkAutoSwitch } = await import('../calibration');
-      const newScores = adjustScores(scores, log, dailyEnergy?.dayTenGodType);
-      const { savePatternScores, saveNotification } = await import('../storage');
-      await savePatternScores(newScores);
-
-      const switchResult = checkAutoSwitch(newScores, primaryPattern);
-      if (switchResult) {
-        const oldPattern = getPrimaryPattern(scores);
-        await saveNotification({
-          date: new Date().toISOString(),
-          type: 'pattern_switch',
-          title: '格局自動調整通知',
-          message: `近期身心感受更接近「${switchResult}」，系統已自動切換格局。`,
-          oldPattern,
-          newPattern: switchResult,
-          createdAt: new Date().toISOString(),
-          read: false,
-        });
-        window.location.reload();
-      }
-
+      // [AI MOD] 共用 submit 邏輯（與首頁快速打卡同一套：存 log → 調格局分數 → 自動切格局通知）
+      const { autoSwitched } = await submitCheckIn(scores, {
+        date: selectedDateStr,
+        theoreticalOutcome: overrideOutcome || dailyEnergy?.theoreticalOutcome || '平穩',
+        dayTenGodType: dailyEnergy?.dayTenGodType,
+        feedback: categoryFeedback,
+        note,
+      });
+      if (autoSwitched) window.location.reload();
       setIsSubmitted(true);
+      void refreshStats();
     } catch (e) {
       console.error('[AI MOD] handleCheckIn failed:', e);
     }
-  };
-
-  const handleExportCalendar = (mode: 'month' | 'year') => {
-    if (!chart || !scores) return;
-    const year = Number(selectedDateStr.split('-')[0]);
-    const month = Number(selectedDateStr.split('-')[1]);
-    const icsContent = generateCalendarICS({
-      chart,
-      scores,
-      year,
-      month: mode === 'month' ? month : undefined
-    });
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `bazi-calendar-${year}${mode === 'month' ? '-' + month : ''}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-2xl mx-auto pb-8">
       <div className="flex justify-between items-center mb-4 md:hidden">
         <button 
-          onClick={() => onNavigate?.(4)}
+          onClick={() => onNavigate?.(11)}
           className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition-colors bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 text-sm font-bold"
         >
-          <span>←</span> 返回儀表板
+          <span>←</span> 返回探索
         </button>
       </div>
 
@@ -204,32 +150,13 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
          
          {/* 本月行事曆 */}
-         <div className="flex justify-between items-center mb-4">
-           <h2 className="text-xl font-bold text-zen-text">本月流日預報</h2>
-           <div className="relative">
-             <button 
-               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-               onBlur={() => setTimeout(() => setIsExportMenuOpen(false), 200)}
-               className="flex items-center gap-2 text-sm bg-indigo-500/20 text-indigo-300 px-3 py-1.5 rounded-lg border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors cursor-pointer"
-             >
-               📅 加入 Google 日曆
-             </button>
-             {isExportMenuOpen && (
-               <div className="absolute right-0 top-full mt-2 w-32 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-10 overflow-hidden">
-                 <button onClick={() => { setIsExportMenuOpen(false); handleExportCalendar('month'); }} className="block w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition">
-                   下載本月
-                 </button>
-                 <button onClick={() => { setIsExportMenuOpen(false); handleExportCalendar('year'); }} className="block w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition border-t border-zinc-700">
-                   下載全年
-                 </button>
-               </div>
-             )}
-           </div>
-         </div>
+         <h2 className="text-xl font-bold text-zen-text mb-4">本月流日預報</h2>
          <div className="flex items-center justify-between mb-4">
            <button 
              onClick={() => {
-               setSelectedDateStr(addLocalMonths(selectedDateStr, -1));
+               const d = new Date(selectedDateStr);
+               d.setMonth(d.getMonth() - 1);
+               setSelectedDateStr(d.toISOString().split('T')[0]);
              }}
              className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
            >
@@ -238,7 +165,9 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
            <span className="text-[14px] font-bold text-zen-text tracking-wider">{selectedDateStr.split('-')[0]} 年 {selectedDateStr.split('-')[1]} 月</span>
            <button 
              onClick={() => {
-               setSelectedDateStr(addLocalMonths(selectedDateStr, 1));
+               const d = new Date(selectedDateStr);
+               d.setMonth(d.getMonth() + 1);
+               setSelectedDateStr(d.toISOString().split('T')[0]);
              }}
              className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
            >
@@ -260,7 +189,9 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
              <div className="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1">
                <button 
                  onClick={() => {
-                   setSelectedDateStr(addLocalDays(selectedDateStr, -1));
+                   const d = new Date(selectedDateStr);
+                   d.setDate(d.getDate() - 1);
+                   setSelectedDateStr(d.toISOString().split('T')[0]);
                  }}
                  className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
                >
@@ -269,7 +200,9 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
                <span className="text-[13px] font-medium text-zen-muted min-w-[85px] text-center tracking-wider">{selectedDateStr.slice(5)}</span>
                <button 
                  onClick={() => {
-                   setSelectedDateStr(addLocalDays(selectedDateStr, 1));
+                   const d = new Date(selectedDateStr);
+                   d.setDate(d.getDate() + 1);
+                   setSelectedDateStr(d.toISOString().split('T')[0]);
                  }}
                  className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
                >
@@ -284,11 +217,21 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
            <div className="mt-2">
              <h4 className="font-bold text-zen-text mb-3">10秒心流紀錄</h4>
              {!canCheckIn && !isSubmitted && (
-               <p className="text-sm text-zen-muted">未來日期尚未開放紀錄</p>
+               <p className="text-sm text-zen-muted">紀錄將在今晚20:00開放</p>
              )}
              {canCheckIn && !isSubmitted && (
                <div className="space-y-3">
-                 <p className="text-sm text-zen-muted">回顧{selectedDateStr === todayDateStr ? '今天' : '該日'}，各領域的感受是？（可只選有感的）</p>
+                 <p className="text-sm text-zen-muted">回顧{selectedDateStr === new Date().toISOString().split('T')[0] ? '今天' : '該日'}，各領域的感受是？（可只選有感的）</p>
+                 {evaluatedLabels.length > 0 && (
+                   <p className="text-xs rounded-lg border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-indigo-200">
+                     今日「{dailyEnergy?.dayTenGodType}」日會以「{evaluatedLabels.join('、')}」計入近期紀錄吻合度；其他欄位只留在你的日誌中。
+                   </p>
+                 )}
+                 {dailyEnergy && !hasComparableDirection && (
+                   <p className="text-xs rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-zen-muted">
+                     今日理論方向為「平穩」，目前的二元感受不計入吻合度；你仍可將各領域感受保存在日誌中。
+                   </p>
+                 )}
                  <div className="grid grid-cols-2 gap-2">
                    {CATEGORY_OPTIONS.map(cat => (
                      <div key={cat.key} className="bg-white/5 rounded-xl p-3 border border-white/5">
@@ -324,14 +267,14 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
                    className="w-full py-2 text-white rounded-xl font-medium disabled:opacity-50 mt-2 hover:bg-indigo-600 transition-colors"
                    style={{ backgroundColor: '#8B5CF6' }}
                  >
-                   記錄{selectedDateStr === todayDateStr ? '今天' : '這天'}的能量
+                   記錄{selectedDateStr === new Date().toISOString().split('T')[0] ? '今天' : '這天'}的能量
                  </button>
                </div>
              )}
              {isSubmitted && (
                <div className="flex flex-col items-center justify-center p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mt-2">
                  <div className="flex items-center text-emerald-400 font-medium mb-3">
-                   <span className="text-xl mr-2">✅</span> {selectedDateStr === todayDateStr ? '今日' : '這天'}已記錄
+                   <span className="text-xl mr-2">✅</span> {selectedDateStr === new Date().toISOString().split('T')[0] ? '今日' : '這天'}已記錄
                  </div>
                  <button
                    onClick={() => setIsSubmitted(false)}
@@ -339,10 +282,74 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
                  >
                    修改記錄
                  </button>
+                 {streak.current > 0 && (
+                   <div className="text-sm text-orange-300 mt-3">🔥 已連續打卡 {streak.current} 天（最長 {streak.longest} 天）</div>
+                 )}
                </div>
              )}
            </div>
          </div>
+      </div>
+
+      {/* 近期紀錄與規則方向的比較，不宣稱 AI 學習或預測準確率。 */}
+      <div className="info-card bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-zen-text">近期紀錄吻合度</h2>
+          {streak.current > 0 && (
+            <span className="text-xs px-2 py-1 rounded-lg bg-orange-500/15 text-orange-300 border border-orange-400/30">
+              🔥 連續 {streak.current} 天
+            </span>
+          )}
+        </div>
+
+        {report.samples > 0 ? (
+          <div className="relative z-10">
+            <div className="flex items-end gap-3 mb-1">
+              {report.samples >= 3 ? (
+                <>
+                  <span className="text-5xl font-bold text-indigo-400 leading-none">{report.accuracy}</span>
+                  <span className="text-2xl text-indigo-400/70 mb-1">%</span>
+                </>
+              ) : (
+                <span className="text-3xl font-bold text-indigo-300 leading-none">{report.samples}/3 筆</span>
+              )}
+              <span className="ml-auto text-sm px-2.5 py-1 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-400/30">
+                {report.level}
+              </span>
+            </div>
+            <p className="text-sm text-zen-text font-medium mt-1">{report.headline}</p>
+            <p className="text-xs text-zen-muted mt-1.5 leading-relaxed">{report.summary}</p>
+
+            <div className="mt-4 space-y-2">
+              {report.categories.map(item => (
+                <div key={item.key} className="flex items-center gap-3">
+                  <span className="text-xs text-zen-muted w-10 shrink-0">{item.label}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${item.total >= 3 ? 'bg-gradient-to-r from-indigo-500 to-purple-400' : 'bg-indigo-400/35'}`}
+                      style={{ width: `${item.total >= 3 ? item.accuracy : Math.round((item.total / 3) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-zen-text w-20 text-right shrink-0">
+                    {item.total >= 3 ? `${item.accuracy}% ` : ''}<span className="text-zen-muted">({item.match}/{item.total})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[11px] text-zen-muted mt-4 pt-3 border-t border-white/5">
+              依據 {report.checkedDays} 次心流紀錄、{report.samples} 筆可評估回饋計算。這是命理規則與主觀紀錄的方向比較，不代表科學驗證或個人結果保證。
+            </p>
+          </div>
+        ) : (
+          <div className="text-center bg-white/5 rounded-xl p-6 border border-white/5">
+            <p className="text-sm text-zen-muted">{report.summary}</p>
+            {streak.totalDays > 0 && (
+              <p className="text-xs text-zen-muted mt-2">已累積 {streak.totalDays} 天紀錄</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 本月吻合度 (校準) */}

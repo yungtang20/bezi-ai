@@ -1,39 +1,32 @@
 # Stage 1: Build
-FROM node:22-alpine AS builder
+FROM node:24-bookworm-slim AS builder
+
+# better-sqlite3 v13 無預編譯二進位 → node-gyp 原始碼編譯需要 python3/make/g++
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY package*.json ./
 COPY packages ./packages
-RUN apk add --no-cache python3 make g++ \
-  && npm ci
+RUN npm ci
 
 COPY . .
 ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 2: Production
-FROM node:22-alpine AS runner
+FROM node:24-bookworm-slim AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-COPY package*.json ./
-COPY --from=builder /app/packages ./packages
-RUN apk add --no-cache --virtual .build-deps python3 make g++ \
-  && npm ci --omit=dev \
-  && apk del .build-deps \
-  && npm cache clean --force
+COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/data ./data
 
 EXPOSE 3000
-
-USER node
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- "http://127.0.0.1:${PORT}/health/ready" >/dev/null || exit 1
 
 CMD ["node", "dist/server.cjs"]
