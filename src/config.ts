@@ -12,6 +12,9 @@ export const CLIENT_CONFIG = {
     CURRENT_STEP: 'bazi_current_step',
     CALIBRATIONS: 'bazi_calibrations',
     CHAT_SESSION_TOKEN: 'bezi_chat_session_token',
+    LONGITUDE: 'bezi_longitude',          // [P2] 真太陽時出生地經度
+    MY_PEOPLE: 'bezi_my_people',          // [P2] 我的人 v1
+    CHART_CODEX: 'bezi_chart_codex',      // [P1] 命盤圖鑑收集格
   },
   DEFAULT_VALUES: {
     DEFAULT_GENDER: '男' as const,

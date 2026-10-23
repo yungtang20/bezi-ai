@@ -2,7 +2,7 @@ import { BaziChart } from './paipan';
 import { PatternScores, getPrimaryPattern, determinePattern, countTenGods, initPatternScores, TRIAD_MEETINGS, TRIAD_GROUPS } from './pattern';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, ELEMENT_CONTROLS } from './constants';
 
-// 伴侶資料結構
+// 伴侶/親人資料結構
 export interface PartnerChart {
   id: string;
   name: string;
@@ -11,6 +11,8 @@ export interface PartnerChart {
   birthDate: string;
   birthTime: string;
   chart: BaziChart;
+  // [P2] 選填：出生城市名（真太陽時校正）；與 useBirthForm 的 city 一致
+  birthCity?: string;
 }
 
 export function checkSanHui(zhi1: string, zhi2: string): string | null {

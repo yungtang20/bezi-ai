@@ -10,6 +10,12 @@ import TenGodsPie from './dashboard/TenGodsPie';
 import BaziPillars from './dashboard/BaziPillars';
 import TodayEnergyCard from './dashboard/TodayEnergyCard';
 import { getFiveElementData, getTenGodData } from '../lib/chartTransform';
+import LifeTimeline from './dashboard/LifeTimeline';
+import ChartCodex from './dashboard/ChartCodex';
+import WeeklyReviewCard from './dashboard/WeeklyReviewCard';
+import { useCheckInStats } from '../hooks/useCheckInStats';
+import { PartnerChart } from '../matchmaking';
+import PeopleCards from './dashboard/PeopleCards';
 
 const ELEMENT_COLORS: Record<string, string> = {
   '甲': 'text-emerald-400', '乙': 'text-emerald-400',
@@ -32,6 +38,7 @@ interface Props {
   birthTime?: string;
   gender?: 'male' | 'female' | string | null;
   onNavigate?: (view: string | number) => void;
+  onLoadPerson?: (p: PartnerChart) => void;
   view?: 'today' | 'profile';
 }
 
@@ -75,8 +82,10 @@ function AccordionSection({
   );
 }
 
-export default function Dashboard({ bazi, name, scores, birthDate, birthTime, gender, onNavigate, view = 'today' }: Props) {
+export default function Dashboard({ bazi, name, scores, birthDate, birthTime, gender, onNavigate, onLoadPerson, view = 'today' }: Props) {
   const chart = bazi?.chart;
+  // [AI MOD] 打卡 log（命盤圖鑑/週回顧用）— 须在 early return 前（hooks 規則）
+  const { logs: checkInLogs } = useCheckInStats();
 
   if (!chart || !scores) return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
 
@@ -157,6 +166,15 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
       {/* [AI MOD] 今日能量卡（每日鉤子）：首屏第一眼 */}
       {view === 'today' && <TodayEnergyCard chart={chart} scores={scores} name={name} onNavigate={onNavigate} />}
 
+      {/* [AI MOD] P1 留存組件：大運色帶 + 命盤圖鑑（每日）+ 週回顧（僅週日） */}
+      {view === 'today' && (
+        <>
+          <LifeTimeline chart={chart} daYuns={daYuns} />
+          <ChartCodex chart={chart} pattern={patternResult} scores={scores} logs={checkInLogs} />
+          {new Date().getDay() === 0 && <WeeklyReviewCard logs={checkInLogs} />}
+        </>
+      )}
+
       {view === 'profile' && <>
       {/* 命主資訊卡片（永遠顯示） */}
       <div className="glass-card p-3 md:p-4 relative overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
@@ -214,6 +232,16 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
           })()}
         </div>
       </div>
+
+      {/* [P2] 我的親人卡片：家人成員管理（增 / 刪 / 載入重排） */}
+      <AccordionSection
+        title="我的親人"
+        icon={<span>👨‍👩‍👧</span>}
+        defaultOpen={false}
+      >
+        <PeopleCards onLoad={onLoadPerson} />
+      </AccordionSection>
+
 
       <div className="grid gap-3 lg:grid-cols-3 animate-fade-in-up">
         <div className="glass-card p-3">

@@ -18,6 +18,23 @@
 - [x] **定義 domain module 介面契約** → 完成：`.opencode/memory/domain-module-contracts.md`（paipan/pattern/dayun/dailyAnalysis 經 `@bezi/core` workspace shim；matchmaking/calibration 為真實實作；含邊界審查結論）
 - [x] **補齊 Playwright E2E** → 完成：`chat-flow.spec.ts` 從 3 測試擴充至 5（新增分流端點 401 保護 + 授權後 SSE grounding 驗證）
 
+## 📝 本輪完成工作（2026-10-23，P1 真太陽時 + P2 我的親人卡片）
+
+**P1 真太陽時（出生地經度校正）**：
+1. `packages/core/src/trueSolarTime.ts` — 經度差 + 均時差（Meeus 近似）純函式 `toTrueSolarTime()`；跨午夜回傳 `dayDelta`。
+2. `packages/core/src/paipan.ts` — `calculateChart(..., longitude?)`：指定經度時四柱以真太陽時排盤；`BaziChart` 新增選填 `trueSolarYear/Month/Day/Hour`（未指定時 undefined，行為完全不變）；`birth*` 欄位仍保留民用值供顯示。
+3. `packages/core/src/dayun.ts` — `calculateDaYun` 讀 `chart.trueSolar* ?? birth*`，起運與柱位保持同一學派（跨午夜出生不再「柱位真太陽、起運民用」矛盾）。
+4. UI：`src/lib/trueSolarCities.ts`（7 城市經度快選）＋ `App.tsx` 表單「出生城市」chip（預設關閉）；兩處 `calculateChart` 呼叫點皆接 `cityLongitude(birthCity)`；選定城市存 `localStorage.bezi_longitude`。
+5. **Golden 測試** `tests/unit/trueSolarTime.test.ts`（4 項）：預設不變性、凌晨 0 時真太陽回退前一日 23 時（日柱 丙午→乙巳）、23 時低於 23:00 時辰 子→亥（1990-01-15 23:00 台中 → 丁亥）、`birth*` 民用值保留。scan 證明：hour-only 輸入在台北 24 小時內時辰跨 120 分鐘邊界 0 次，但日柱（早子/晚子）88 例差異 → 功能真實生效。
+
+**P2 我的親人卡片（profile 頁家人管理）**：
+1. `src/components/dashboard/PeopleCards.tsx` — 家人成員增/刪/載入重排；資料層**複用** SynastryPage 的 `partners` store（`relationship:'家人'`），不建第二份 convention。
+2. `PartnerChart` 新增選填 `birthCity`（真太陽時一致）。
+3. `Dashboard.tsx` profile view 新增「我的親人」accordion；「載入重排」→ `App.loadPerson` 填入表單（含城市 chip）並跳回 onboarding 重排。
+4. 實測（Playwright 驅動真實 UI）：新增 1950-01-15 23:00 男·台中 → 卡片顯示 亥時（真太陽校正生效）；載入重排 → 表單 name/date/time 回填 + 台中 chip 啟用 + `#/new`。
+
+**驗證**：`npm run lint` ✅、`npm test` 113 項全過（含 4 新 golden）、`npm run build` ✅、`chat-flow.spec.ts` 11/11 E2E ✅、P1/P2 真實 UI 驅動驗證 ✅。
+
 ## 📌 當前狀態摘要（2026-10-22 更新）
 
 | 檢查項目 | 結果 |

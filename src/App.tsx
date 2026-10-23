@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Compass, Moon, Sun, Github, X, Sparkles, Settings } from 'lucide-react';
 import Sidebar from './components/Sidebar';
@@ -23,7 +23,9 @@ import { calculateChart, type BaziChart, determinePattern, type PatternResult, t
 import { CLIENT_CONFIG } from './config';
 import { validateBirthInput } from './utils/validation';
 import { trackProductEvent } from './lib/productEvents';
-
+import { parseStepFromHash, stepToHash } from './lib/router';
+import { BIRTH_CITIES, cityLongitude } from './lib/trueSolarCities';
+import { PartnerChart } from './matchmaking';
 // [AI MOD] 定義有效的步驟型別（供 Sidebar 等元件匯入）
 export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 const VALID_STEPS: Step[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -35,6 +37,9 @@ const RETURN_AFTER_EDIT_KEY = 'bezi:return-after-edit';
 
 export default function App() {
   const [step, setStep] = useState<Step>(() => {
+    // [AI MOD] Hash deep-link 優先：#/slug 直接定位；無 hash 才回退 sessionStorage。
+    const fromHash = parseStepFromHash(window.location.hash);
+    if (fromHash) return fromHash;
     const saved = sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
     if (saved) {
       const parsed = parseInt(saved, 10);
@@ -46,9 +51,23 @@ export default function App() {
     }
     return 1;
   });
+  const stepRef = useRef(step);
+  stepRef.current = step;
 
   useEffect(() => {
     trackProductEvent('app_view');
+  }, []);
+
+  // [AI MOD] back/forward 鍵：hash 變更時同步 step（忽略本端寫入引發的 event）。
+  useEffect(() => {
+    const onHashChange = () => {
+      const parsed = parseStepFromHash(window.location.hash);
+      if (parsed && parsed !== stepRef.current) {
+        setStep(parsed);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   useEffect(() => {
@@ -69,6 +88,14 @@ export default function App() {
     }
   }, [step]);
 
+  // [AI MOD] step 變更 → 寫回 hash（deep-link 可分享、back 鍵可回退）。
+  useEffect(() => {
+    const target = stepToHash(step);
+    if (window.location.hash !== target) {
+      window.location.hash = target;
+    }
+  }, [step]);
+
   const {
     name, setName, gender, setGender,
     birthDate, setBirthDate, birthTime, setBirthTime, birthTimeInput, setBirthTimeInput,
@@ -80,8 +107,28 @@ export default function App() {
   const [bazi, setBazi] = useState<BaziDisplay | null>(null);
   const [pattern, setPattern] = useState<PatternResult | null>(null);
   const [scores, setScores] = useState<PatternScores | null>(null);
+  // [P2] 真太陽時：出生城市快選（empty = 不用真太陽時，行為不變）
+  const [birthCity, setBirthCity] = useState<string>(
+    () => localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE) || ''
+  );
 
   const [isInitializing, setIsInitializing] = useState(true);
+  // [P2] 親人卡片「載入重排」：填入表單並跳回 onboarding 重排
+  const loadPerson = useCallback((p: PartnerChart) => {
+    setName(p.name);
+    setGender(p.gender === '男' ? 'male' : 'female');
+    setBirthDate(p.birthDate);
+    setBirthTime(p.birthTime);
+    setBirthTimeInput(p.birthTime);
+    if (p.birthCity) {
+      setBirthCity(p.birthCity);
+      localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE, p.birthCity);
+    }
+    sessionStorage.setItem('bezi:return-after-edit', '12');
+    if (window.location.hash) window.location.hash = '';
+    setStep(1);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
   const [showAI, setShowAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -109,7 +156,7 @@ export default function App() {
         const isHourUnknown = !savedTime;
         const hour = isHourUnknown ? 12 : parseInt(savedTime, 10);
         const g = savedGender === 'male' ? '男' : '女';
-        const chart = calculateChart(y, m, d, hour, g, isHourUnknown);
+        const chart = calculateChart(y, m, d, hour, g, isHourUnknown, cityLongitude(birthCity));
         const patternResult = determinePattern(chart);
         
         setBazi({
@@ -144,6 +191,8 @@ export default function App() {
       } catch (e: unknown) {
         console.error(e);
         localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.DATE);
+        // [AI MOD] deep-link 指向需命盤的頁面但排盤失敗 → 回表單並清 hash。
+        if (window.location.hash) window.location.hash = '';
         setStep(1);
         sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
         setIsInitializing(false);
@@ -209,9 +258,8 @@ export default function App() {
 
     try {
       const hour = isHourUnknown ? 12 : parseInt(dBirthTime, 10);
-      const chart = calculateChart(y, m, d, hour, dGender === 'male' ? '男' : '女', isHourUnknown);
+      const chart = calculateChart(y, m, d, hour, dGender === 'male' ? '男' : '女', isHourUnknown, cityLongitude(birthCity));
       const patternResult = determinePattern(chart);
-
       setBazi({
         year: chart.year.gan + chart.year.zhi,
         month: chart.month.gan + chart.month.zhi,
@@ -504,6 +552,7 @@ export default function App() {
                   bazi={bazi}
                   name={name}
                   onNavigate={handleNavigate}
+                  onLoadPerson={loadPerson}
                   scores={scores}
                   birthDate={birthDate}
                   birthTime={birthTime}
@@ -660,6 +709,39 @@ export default function App() {
                        {birthDate && parseInt(birthDate.split('-')[0], 10) >= 1945 && parseInt(birthDate.split('-')[0], 10) <= 1979 && (
                          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 p-3 rounded-xl text-sm md:text-xs">
                            ⚠️ 您的出生年份可能受到台灣日光節約時間影響，若在此時間內出生，請確認輸入的時間已扣除一小時。
+                         </div>
+                       )}
+
+                       {/* [P2] 真太陽時：出生城市快選（選填，預設關閉 → 行為不變） */}
+                       {birthTime && (
+                         <div className="mt-3">
+                           <label htmlFor="birth-city" className="block text-xs text-zen-muted mb-1 font-medium">出生城市（選填，用於真太陽時校正）</label>
+                           <div className="flex flex-wrap gap-1.5">
+                             {BIRTH_CITIES.map((c) => (
+                               <button
+                                 key={c.name}
+                                 type="button"
+                                 onClick={() => {
+                                   const next = birthCity === c.name ? '' : c.name;
+                                   setBirthCity(next);
+                                   if (next) localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE, next);
+                                   else localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE);
+                                 }}
+                                 className={`px-2.5 py-1 rounded-lg border text-xs transition-colors ${
+                                   birthCity === c.name
+                                     ? 'border-zen-gold/60 bg-zen-gold/20 text-zen-gold'
+                                     : 'border-white/10 bg-white/5 text-zen-muted hover:bg-white/10'
+                                 }`}
+                               >
+                                 {c.name}
+                               </button>
+                             ))}
+                           </div>
+                           {birthCity && (
+                             <p className="text-zen-accent/80 text-[11px] mt-1.5">
+                               已依「{birthCity}」的真太陽時校正時辰（經度 {cityLongitude(birthCity)}°E）。
+                             </p>
+                           )}
                          </div>
                        )}
                        {birthTime && (birthTime === '23' || parseInt(birthTime, 10) >= 23 || parseInt(birthTime, 10) === 0) && (
