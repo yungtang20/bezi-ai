@@ -32,13 +32,13 @@ export interface LiuNian {
  * @returns 大運陣列
  */
 export function calculateDaYun(chart: BaziChart): DaYun[] {
-  const solar = Solar.fromYmdHms(
-    chart.birthYear, 
-    chart.birthMonth, 
-    chart.birthDay, 
-    chart.birthHour === -1 ? 12 : chart.birthHour, 
-    0, 0
-  );
+  // [P2] 若命盤以真太陽時排盤（chart.trueSolar* 存在），大運起運也須用同一時刻，
+  // 否則跨午夜的出生會造成「柱位用真太陽時、起運用民用時」的矛盾。
+  const bYear = chart.trueSolarYear ?? chart.birthYear;
+  const bMonth = chart.trueSolarMonth ?? chart.birthMonth;
+  const bDay = chart.trueSolarDay ?? chart.birthDay;
+  const bHour = chart.trueSolarHour ?? (chart.birthHour === -1 ? 12 : chart.birthHour);
+  const solar = Solar.fromYmdHms(bYear, bMonth, bDay, bHour, 0, 0);
   const lunar = solar.getLunar();
   const baZi = lunar.getEightChar();
   

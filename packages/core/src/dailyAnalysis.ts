@@ -14,6 +14,8 @@ export interface DailyEnergy {
   theoreticalOutcome: string; // 順利/平穩/不順
   theoreticalExplanation: string; // 新增：解釋原因
   dayGanZhi: string;          // 今日干支
+  dayGan: string;             // [AI MOD] 日干（每日一句/明日預告用）
+  dayZhi: string;             // [AI MOD] 日支
   lunarDate: string;          // 農曆日期
   solarDate: string;          // 國曆日期 (Added)
   dayTenGodType: string;      // 新增：財星 / 官殺 / 食傷 / 比劫 / 印星
@@ -126,6 +128,8 @@ export function getDailyEnergy(
     theoreticalOutcome,
     theoreticalExplanation: explanationParts.join('，') + '。',
     dayGanZhi: `${baZi.getYearGan()}${baZi.getYearZhi()}年 ${baZi.getMonthGan()}${baZi.getMonthZhi()}月 ${dayPillar}日`,
+    dayGan,
+    dayZhi,
     lunarDate: `${lunar.getYearInChinese()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`,
     solarDate: `${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日`,
     dayTenGodType,

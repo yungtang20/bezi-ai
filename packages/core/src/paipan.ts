@@ -5,6 +5,7 @@ import {
   YANG_GANS,
   isSameYinYang,
 } from './constants';
+import { toTrueSolarTime } from './trueSolarTime';
 import { ZHI_HIDDEN } from './pattern';
 
 // [AI MOD] 生肖對照表（移到模組頂層，避免每次呼叫 calculateChart 時重建）
@@ -56,6 +57,13 @@ export interface BaziChart {
   birthDay: number;
   birthHour: number;
   zodiac: string;
+  // [P2] 真太陽時：指定 longitude 時，柱位依調整後時刻計算；
+  // 這些欄位記錄實際用於排盤的「真太陽時日期/小時」，供大運等後續計算保持同一學派。
+  // 未指定 longitude 時為 undefined（行为與原先完全一致）。
+  trueSolarYear?: number;
+  trueSolarMonth?: number;
+  trueSolarDay?: number;
+  trueSolarHour?: number;
 }
 
 // [AI MOD] 內部型別，不 export
@@ -82,10 +90,27 @@ export function calculateChart(
   day: number,
   hour: number,
   gender: '男' | '女',
-  isHourUnknown?: boolean
+  isHourUnknown?: boolean,
+  longitude?: number
 ): BaziChart {
-  // 1. 將西元日期轉換為農曆物件 (若未知時間，以日中12時推算前三柱)
-  const solar = Solar.fromYmdHms(year, month, day, isHourUnknown ? 12 : hour, 0, 0);
+  // [P2] 真太陽時：longitude 指定出生地經度時，依「經度差 + 均時差」調整時辰，
+  // 跨午夜時同步位移出生日期（影響日柱）。預設（未傳 longitude）完全不改行為。
+  let effYear = year;
+  let effMonth = month;
+  let effDay = day;
+  let effHour = isHourUnknown ? 12 : hour;
+  if (longitude !== undefined && !isHourUnknown) {
+    const t = toTrueSolarTime({ hour, minute: 0, longitude, month, day, standardMeridian: 120 });
+    const shifted = new Date(year, month - 1, day);
+    shifted.setDate(shifted.getDate() + t.dayDelta);
+    effYear = shifted.getFullYear();
+    effMonth = shifted.getMonth() + 1;
+    effDay = shifted.getDate();
+    effHour = t.hour;
+  }
+
+  // 1. 將西元日期轉換為農曆物件（若未知時間，以日中12時推算前三柱）
+  const solar = Solar.fromYmdHms(effYear, effMonth, effDay, effHour, 0, 0);
   const lunar = solar.getLunar();
 
   // 2. 取得四柱的天干地支（lunar-javascript 返回 i18n 鍵，需翻譯為中文）
@@ -133,6 +158,10 @@ export function calculateChart(
     birthDay: day,
     birthHour: isHourUnknown ? -1 : hour,
     zodiac,
+    // [P2] 有調整才記錄（無 longitude 時 undefined，完全不相等於原行為）
+    ...(longitude !== undefined && !isHourUnknown
+      ? { trueSolarYear: effYear, trueSolarMonth: effMonth, trueSolarDay: effDay, trueSolarHour: effHour }
+      : {}),
   };
 }
 

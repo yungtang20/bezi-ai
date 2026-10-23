@@ -11,6 +11,7 @@ import { useCheckInStats } from '../../hooks/useCheckInStats';
 import { buildDailyShareText, buildLineShareUrl } from '../../lib/shareText';
 import ShareImage from '../share/ShareImage';
 import DailyShareCard from '../share/DailyShareCard';
+import { DailyVerseHero, QuickCheckIn, deriveLogOutcome } from './DailyVerse';
 import { trackProductEvent } from '../../lib/productEvents';
 
 interface TodayEnergyCardProps {
@@ -59,12 +60,18 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
   const [showSharePreview, setShowSharePreview] = useState(false);
   const [sharePrivateDetails, setSharePrivateDetails] = useState(false);
   // [AI MOD] 連續打卡 + 準確率（每日回訪的回饋）
-  const { streak, report, logs, today } = useCheckInStats();
+  const { streak, report, logs, today, refresh: refreshStats } = useCheckInStats();
 
   const patternResult = useMemo(() => determinePattern(chart), [chart]);
+  const primaryPattern = getPrimaryPattern(scores);
   const energy: DailyEnergy = useMemo(() => {
-    const primaryPattern = getPrimaryPattern(scores);
     return getDailyEnergy(chart, patternResult.weakestElement, patternResult.favorable, patternResult.unfavorable, primaryPattern, new Date());
+  }, [chart, scores, patternResult]);
+  // [AI MOD] 明日預告（每日一句 hero 用）：同一引擎算明日能量
+  const tomorrowEnergy: DailyEnergy = useMemo(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return getDailyEnergy(chart, patternResult.weakestElement, patternResult.favorable, patternResult.unfavorable, primaryPattern, tomorrow);
   }, [chart, scores, patternResult]);
 
   const meta = OUTCOME_META[energy.theoreticalOutcome] || OUTCOME_META['平穩'];
@@ -165,7 +172,22 @@ export default function TodayEnergyCard({ chart, scores, name, onNavigate }: Tod
           </div>
         </details>
 
-        <p className="text-[11px] text-zinc-500 mb-3">{streak.checkedToday ? `本週已記錄 ${weeklyCheckIns} 天` : '10 秒記錄今天，累積你的個人趨勢'}</p>
+        {/* [AI MOD] 每日一句 hero + 3-tap 快速打卡（留存鉤子） */}
+        <DailyVerseHero
+          today={energy}
+          tomorrow={tomorrowEnergy}
+          pattern={primaryPattern}
+          checkedToday={streak.checkedToday}
+          recentOutcome={deriveLogOutcome(logs.find(l => l.date === today), energy.dayTenGodType)}
+        />
+        <QuickCheckIn
+          scores={scores}
+          energy={energy}
+          logs={logs}
+          today={today}
+          checkedToday={streak.checkedToday}
+          onSubmitted={() => void refreshStats()}
+        />
 
         <div className="flex gap-2">
           <button

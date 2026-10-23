@@ -5,6 +5,7 @@ export type ProductEventName =
   | 'calibration_skipped'
   | 'calibration_completed'
   | 'daily_checkin_viewed'
+  | 'quick_checkin_saved'
   | 'share_preview_opened'
   | 'share_exported'
   | 'ai_panel_opened'

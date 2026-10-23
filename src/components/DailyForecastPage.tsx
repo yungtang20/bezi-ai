@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
 import { DailyEnergy, getDailyEnergy, getUpcomingDatesForCategory } from '../dailyAnalysis';
-import { DailyLog, saveDailyLog, getDailyLog, getMonthLogs } from '../storage';
+import { getDailyLog, getMonthLogs } from '../storage';
+import { submitCheckIn } from '../lib/checkInSubmit';
 import { useCheckInStats } from '../hooks/useCheckInStats';
 import { CATEGORY_LABELS, DAY_TYPE_FIELDS, isBadOutcome, isGoodOutcome } from '../calibration';
 import MonthlyForecastCalendar from './MonthlyForecastCalendar';
@@ -117,44 +118,16 @@ export default function DailyForecastPage({ chart, scores, onNavigate }: Props) 
     const hasAny = Object.values(categoryFeedback).some(v => v !== null);
     if (!hasAny) return;
 
-    const log: DailyLog = {
-      date: selectedDateStr,
-      health: categoryFeedback.health,
-      career: categoryFeedback.career,
-      romance: categoryFeedback.romance,
-      wealth: categoryFeedback.wealth,
-      family: categoryFeedback.family,
-      friends: categoryFeedback.friends,
-      note,
-      theoreticalOutcome: overrideOutcome || dailyEnergy?.theoreticalOutcome || '平穩',
-      dayTenGodType: dailyEnergy?.dayTenGodType,
-      createdAt: new Date().toISOString(),
-    };
-
     try {
-      await saveDailyLog(log);
-
-      const { adjustScores, checkAutoSwitch } = await import('../calibration');
-      const newScores = adjustScores(scores, log, dailyEnergy?.dayTenGodType);
-      const { savePatternScores, saveNotification } = await import('../storage');
-      await savePatternScores(newScores);
-
-      const switchResult = checkAutoSwitch(newScores);
-      if (switchResult) {
-        const oldPattern = getPrimaryPattern(scores);
-        await saveNotification({
-          date: new Date().toISOString(),
-          type: 'pattern_switch',
-          title: '格局自動調整通知',
-          message: `近期身心感受更接近「${switchResult}」，系統已自動切換格局。`,
-          oldPattern,
-          newPattern: switchResult,
-          createdAt: new Date().toISOString(),
-          read: false,
-        });
-        window.location.reload();
-      }
-
+      // [AI MOD] 共用 submit 邏輯（與首頁快速打卡同一套：存 log → 調格局分數 → 自動切格局通知）
+      const { autoSwitched } = await submitCheckIn(scores, {
+        date: selectedDateStr,
+        theoreticalOutcome: overrideOutcome || dailyEnergy?.theoreticalOutcome || '平穩',
+        dayTenGodType: dailyEnergy?.dayTenGodType,
+        feedback: categoryFeedback,
+        note,
+      });
+      if (autoSwitched) window.location.reload();
       setIsSubmitted(true);
       void refreshStats();
     } catch (e) {
