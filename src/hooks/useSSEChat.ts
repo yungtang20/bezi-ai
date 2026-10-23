@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CLIENT_CONFIG, getChatAuthHeaders } from '../config';
+import { getChatAuthHeaders, requestChatSession } from '../config';
+import type { FactCheckResult } from '../ai/factChecker';
 
 export type ChatMessageStatus = 'streaming' | 'done' | 'error' | 'stopped';
-export type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string; status: ChatMessageStatus; createdAt: number };
+export type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string; status: ChatMessageStatus; createdAt: number; factCheck?: FactCheckResult | null };
 const SAFE_ERROR = '目前無法完成分析，請稍後再試。';
 const AUTH_ERROR = '授權失敗，請重新登入後再試。';
 
-export function useSSEChat() {
+export function useSSEChat(refreshRecordId?: () => Promise<string>) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +29,18 @@ export function useSSEChat() {
     const controller = new AbortController();
     controllerRef.current = controller;
     try {
-      const response = await fetch(CLIENT_CONFIG.API.CHAT_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getChatAuthHeaders() }, body: JSON.stringify({ messages: requestMessages, customPrompt, record_id: recordId }), signal: controller.signal });
+      const doFetch = (activeRecordId: string) => fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...getChatAuthHeaders() }, body: JSON.stringify({ messages: requestMessages, customPrompt, record_id: activeRecordId }), signal: controller.signal });
+      let activeRecordId = recordId;
+      let response = await doFetch(activeRecordId);
+      if (response.status === 401) {
+        // 換發 token 後，session-owned Evidence 也必須重新建立，避免沿用舊 owner。
+        try {
+          await requestChatSession();
+          activeRecordId = refreshRecordId ? await refreshRecordId() : recordId;
+          if (!activeRecordId) throw new Error('evidence refresh failed');
+          response = await doFetch(activeRecordId);
+        } catch { /* 換發失敗 → 走原本 401 錯誤路徑 */ }
+      }
       if (response.status === 401) throw new Error('unauthorized');
       if (!response.ok || !response.body) throw new Error('request failed');
       const reader = response.body.getReader();
@@ -44,9 +56,13 @@ export function useSSEChat() {
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6).trim();
           if (!data || data === '[DONE]') continue;
-          const parsed = JSON.parse(data) as { content?: string; error?: string };
+          const parsed = JSON.parse(data) as { content?: string; error?: string; factCheck?: FactCheckResult };
           if (parsed.error) throw new Error('server error');
-          if (parsed.content) setMessages(previous => previous.map(message => message.id === assistant.id ? { ...message, content: message.content + parsed.content } : message));
+          if (parsed.factCheck) {
+            setMessages(previous => previous.map(message => message.id === assistant.id ? { ...message, factCheck: parsed.factCheck } : message));
+          } else if (parsed.content) {
+            setMessages(previous => previous.map(message => message.id === assistant.id ? { ...message, content: message.content + parsed.content } : message));
+          }
         }
       }
       setMessages(previous => previous.map(message => message.id === assistant.id ? { ...message, status: 'done' } : message));
@@ -62,7 +78,7 @@ export function useSSEChat() {
       controllerRef.current = null;
       setIsStreaming(false);
     }
-  }, []);
+  }, [refreshRecordId]);
 
   const stop = useCallback(() => controllerRef.current?.abort(), []);
   const retry = useCallback(() => {

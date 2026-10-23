@@ -5,18 +5,7 @@ export interface BirthInput {
   name?: string;
   gender: '男' | '女';
   birthDate: string; // YYYY-MM-DD
-  birthTime?: string; // HH:mm or empty string
-}
-
-/**
- * Convert the accepted birth-time formats (H, HH, H:mm, HH:mm) to an hour.
- * An empty value means the hour is unknown and is represented by null.
- * Call validateBirthInput before using this for persisted or user input.
- */
-export function parseBirthHour(input?: string): number | null {
-  const trimmed = input?.trim() ?? '';
-  if (!trimmed) return null;
-  return Number(trimmed.split(':', 1)[0]);
+  birthTime?: string; // HH / HH:mm / HHmm / 空字串（時辰未知時為空）
 }
 
 export function validateBirthInput(input: BirthInput): { valid: boolean; error?: string } {
@@ -36,28 +25,32 @@ export function validateBirthInput(input: BirthInput): { valid: boolean; error?:
   if (month < 1 || month > 12 || day < 1 || day > 31) {
     return { valid: false, error: '出生月日數值無效' };
   }
-  const calendarDate = new Date(year, month - 1, day, 12, 0, 0);
-  if (
-    calendarDate.getFullYear() !== year ||
-    calendarDate.getMonth() !== month - 1 ||
-    calendarDate.getDate() !== day
-  ) {
-    return { valid: false, error: '出生日期不存在' };
-  }
-  if (input.birthTime && input.birthTime.trim() !== '') {
-    const trimmed = input.birthTime.trim();
-    if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
-      const [h, m] = trimmed.split(':').map(Number);
-      if (h < 0 || h > 23 || m < 0 || m > 59) {
-        return { valid: false, error: '時分超出範圍（時：0-23，分：0-59）' };
-      }
-    } else if (/^\d{1,2}$/.test(trimmed)) {
-      const h = Number(trimmed);
-      if (h < 0 || h > 23) {
-        return { valid: false, error: '小時超出範圍（0-23）' };
-      }
+
+  // [AI MOD] 時辰格式：主表單以「HH（小時）」為 canonical（localStorage 亦存小時），
+  // 合盤頁則可能傳 HH:mm。兩者皆需通過驗證，否則填了時辰的使用者無法送出表單。
+  const time = (input.birthTime || '').trim();
+  if (time) {
+    const isHourOnly = /^\d{1,2}$/.test(time);
+    const isWithMinutes = /^\d{1,2}:\d{2}$/.test(time);
+    const isCompact = /^\d{3,4}$/.test(time);
+    if (!isHourOnly && !isWithMinutes && !isCompact) {
+      return { valid: false, error: '出生時間格式無效（應為 HH 或 HH:mm）' };
+    }
+    let hour = 0;
+    let minute = 0;
+    if (isWithMinutes) {
+      [hour, minute] = time.split(':').map(Number);
+    } else if (isCompact) {
+      hour = Number(time.slice(0, time.length - 2));
+      minute = Number(time.slice(-2));
     } else {
-      return { valid: false, error: '出生時間格式無效（應為 HH:mm 或小時 0-23）' };
+      hour = Number(time);
+    }
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+      return { valid: false, error: '出生時間超出範圍（時：0-23）' };
+    }
+    if (!Number.isInteger(minute) || minute < 0 || minute > 59) {
+      return { valid: false, error: '出生時間超出範圍（分：0-59）' };
     }
   }
   return { valid: true };

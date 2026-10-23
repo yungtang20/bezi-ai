@@ -37,12 +37,13 @@ const TABS = [
 ] as const;
 
 export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props) {
-  const [activeTab, setActiveTab] = useState('health');
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('currentSpecialtyTab') || 'health');
   // [AI MOD] 使用 Partner 型別取代 any[]
   const [partners, setPartners] = useState<Partner[]>([]);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    sessionStorage.removeItem('currentSpecialtyTab');
     getPartners().then(list => {
       setPartners(list);
     }).catch(() => {});
@@ -95,11 +96,11 @@ export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props)
       {/* 返回按鈕 */}
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => onNavigate(4)}
+          onClick={() => onNavigate(11)}
           className="flex items-center gap-2 text-zen-muted hover:text-zen-text transition-colors group"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-          <span className="font-bold text-sm">返回八字排盤</span>
+          <span className="font-bold text-sm">返回探索</span>
         </button>
 
         {/* 左右切換箭頭（桌面版） */}

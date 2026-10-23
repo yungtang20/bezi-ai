@@ -7,6 +7,7 @@ export { getTenGod as getTenGodForDaYun } from './constants';
 
 export interface DaYun {
   startAge: number;      // 起運歲數
+  endAge: number;        // 交運歲數（含）
   startYear: number;     // 起運西元年
   endYear: number;       // 結束西元年
   ganZhi: string;        // 大運干支
@@ -31,42 +32,44 @@ export interface LiuNian {
  * @returns 大運陣列
  */
 export function calculateDaYun(chart: BaziChart): DaYun[] {
-  const solar = Solar.fromYmdHms(
-    chart.birthYear,
-    chart.birthMonth,
-    chart.birthDay,
-    chart.birthHour === -1 ? 12 : chart.birthHour,
-    0, 0
-  );
+  // [P2] 若命盤以真太陽時排盤（chart.trueSolar* 存在），大運起運也須用同一時刻，
+  // 否則跨午夜的出生會造成「柱位用真太陽時、起運用民用時」的矛盾。
+  const bYear = chart.trueSolarYear ?? chart.birthYear;
+  const bMonth = chart.trueSolarMonth ?? chart.birthMonth;
+  const bDay = chart.trueSolarDay ?? chart.birthDay;
+  const bHour = chart.trueSolarHour ?? (chart.birthHour === -1 ? 12 : chart.birthHour);
+  const solar = Solar.fromYmdHms(bYear, bMonth, bDay, bHour, 0, 0);
   const lunar = solar.getLunar();
   const baZi = lunar.getEightChar();
-
+  
   // 使用 lunar-javascript 的大運功能
   // 設定性別（1=男, 0=女）
   const sex = chart.gender === '男' ? 1 : 0;
   const yun = baZi.getYun(sex);
-
+  
   const daYunList: DaYun[] = [];
   const daYunArr = yun.getDaYun();
-
+  
   for (let i = 0; i < daYunArr.length; i++) {
     const dy = daYunArr[i];
     const ganZhi = translateGanZhi(dy.getGanZhi());
     if (!ganZhi) continue;
-
+    
     // 某些版本的 lunar-javascript，大運預設可能有空白或其它東西
     const startAge = dy.getStartAge();
+    const endAge = dy.getEndAge();
     const startYear = dy.getStartYear();
     const endYear = startYear + 9; // 每十年換一次大運
-
+    
     const gan = ganZhi.charAt(0);
     const zhi = ganZhi.charAt(1);
     // 計算十神
     const tenGod = getTenGod(chart.dayMaster, gan);
     const element = ZHI_TO_ELEMENT[zhi] || GAN_TO_ELEMENT[gan] || '未知';
-
+    
     daYunList.push({
       startAge,
+      endAge,
       startYear,
       endYear,
       ganZhi,
@@ -76,7 +79,7 @@ export function calculateDaYun(chart: BaziChart): DaYun[] {
       element,
     });
   }
-
+  
   return daYunList;
 }
 
@@ -99,7 +102,7 @@ export function getDaYunQuality(
 ): '好運' | '壞運' | '平運' {
   const ganElement = GAN_TO_ELEMENT[gan];
   const zhiElement = ZHI_TO_ELEMENT[zhi] || GAN_TO_ELEMENT[zhi];
-
+  
   if (!ganElement || !zhiElement) return '平運';
 
   let ganScore = 0;
@@ -114,11 +117,11 @@ export function getDaYunQuality(
   // 地支的影響力遠大於天干
   if (zhiScore > 0) return '好運';
   if (zhiScore < 0) return '壞運';
-
+  
   // 地支平局時，看天干
   if (ganScore > 0) return '好運';
   if (ganScore < 0) return '壞運';
-
+  
   return '平運';
 }
 
@@ -131,7 +134,7 @@ export function getLiuNian(year: number, dayMaster?: string): LiuNian {
   // [AI MOD] EightChar.getYear() 回傳年份數字而非干支；getYearInGanZhi() 定義在 Lunar 上。
   const ganZhi = translateGanZhi(lunar.getYearInGanZhi());
   const gan = ganZhi.charAt(0);
-
+  
   return {
     year,
     ganZhi,

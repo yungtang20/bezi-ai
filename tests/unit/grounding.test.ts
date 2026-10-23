@@ -20,4 +20,12 @@ describe('grounding validators', () => {
   it('produces an explicit missing-data refusal', () => {
     expect(missingEvidenceOutput(['出生時間']).status).toBe('needs_data');
   });
+  it('accepts server-computed session evidence', () => {
+    const computed: EvidenceBundle = {
+      ...bundle,
+      items: [{ ...bundle.items[0], sourceId: 'computed:current-1', sourceType: 'computed' }],
+      source: { type: 'computed', id: 'current-1' },
+    };
+    expect(validateEvidenceBundle(computed).valid).toBe(true);
+  });
 });

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Home, LineChart, Cpu, Calendar, Users, BookOpen } from 'lucide-react';
+import { BookOpen, Compass, Home, UserRound } from 'lucide-react';
 import NavButton from './NavButton';
+import { getTopArea, type TopArea } from '../lib/navigation';
 
 interface NavigationBarProps {
   currentStep: number;
@@ -8,17 +9,17 @@ interface NavigationBarProps {
 }
 
 const tabs = [
-  { id: 4, label: '命局', icon: Home },
-  { id: 6, label: '歲運', icon: LineChart },
-  { id: 7, label: '專項', icon: Cpu },
-  { id: 8, label: '流日', icon: Calendar },
-  { id: 9, label: '合盤', icon: Users },
-  { id: 10, label: '理論', icon: BookOpen },
-];
+  { id: 4, area: 'today', label: '今日', icon: Home },
+  { id: 11, area: 'explore', label: '探索', icon: Compass },
+  { id: 10, area: 'learn', label: '學習', icon: BookOpen },
+  { id: 12, area: 'profile', label: '我的', icon: UserRound },
+] satisfies { id: number; area: TopArea; label: string; icon: typeof Home }[];
 
 export default function NavigationBar({ currentStep, onNavigate }: NavigationBarProps) {
+  const activeArea = getTopArea(currentStep);
   return (
-    <div
+    <nav
+      aria-label="主要導覽"
       className="fixed bottom-0 left-0 right-0 z-50 pb-4 pt-2"
       style={{
         background: 'rgba(8, 12, 10, 0.9)',
@@ -41,12 +42,12 @@ export default function NavigationBar({ currentStep, onNavigate }: NavigationBar
             key={tab.id}
             icon={tab.icon}
             label={tab.label}
-            isActive={currentStep === tab.id}
+            isActive={activeArea === tab.area}
             onClick={() => onNavigate(tab.id)}
             orientation="horizontal"
           />
         ))}
       </div>
-    </div>
+    </nav>
   );
 }

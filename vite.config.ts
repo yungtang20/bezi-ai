@@ -5,13 +5,7 @@ import {defineConfig} from 'vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig(() => {
-  const base = process.env.VITE_BASE_PATH?.trim() || '/';
-  if (!base.startsWith('/') || !base.endsWith('/')) {
-    throw new Error('VITE_BASE_PATH must start and end with /');
-  }
-
   return {
-    base,
     plugins: [
       react(),
       tailwindcss(),
@@ -30,14 +24,13 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
     build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vendor-recharts': ['recharts'],
-            'vendor-core': ['@bezi/core'],
-          },
-        },
-      },
+      // [AI MOD] 不使用自訂 manualChunks。
+      // 本專案的模組圖（react ↔ react-dom ↔ motion ↔ @bezi/core barrel ↔ src/data）存在循環依賴，
+      // Rollup 手工分包會產生跨 chunk 循環 → 正式版 runtime 直接崩潰
+      // （症狀：Cannot read properties of undefined (reading 'exports') / w is not a function），
+      // 且 dev 模式不會觸發、只有 production bundle 會壞（E2E 抓不到）。
+      // 改採 Vite 預設分包（route 層已由 React.lazy 自動切分），並以 chunkSizeWarningLimit 反映實際最大 chunk。
+      chunkSizeWarningLimit: 900,
     },
   };
 });

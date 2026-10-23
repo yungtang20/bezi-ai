@@ -2,13 +2,13 @@ import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../../constants';
 import { LECTURE_DATA } from '../lecture';
 
 export function checkDayType(
-  dayGan: string,
-  dayZhi: string,
-  dayMaster: string,
+  dayGan: string, 
+  dayZhi: string, 
+  dayMaster: string, 
   gender: string
 ): string[] {
   const types: string[] = [];
-
+  
   const dmElement = GAN_TO_ELEMENT[dayMaster];
   if (!dmElement) return types;
 
@@ -55,3 +55,4 @@ export function checkDayType(
 
   return Array.from(new Set(types));
 }
+

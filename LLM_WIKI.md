@@ -1,8 +1,7 @@
 # 八字命理 LLM Wiki
 
-> 最後更新：2026-08-14
+> 最後更新：2026-06-05
 > 目的：建立「來源講義 → Wiki 知識頁 → 程式碼」的完整知識圖譜，供 LLM 問答與系統開發使用
-> 核心計算規則的來源雜湊、驗證狀態與未決歧義以 `docs/domain-sources.md` 為準；本 Wiki 不等同於已驗證規格。
 
 ---
 
@@ -234,24 +233,51 @@
 
 ## 3. 程式碼映射 (Code Mapping)
 
+### 3.0 排盤方法 Domain Rule（引擎計算口徑，唯一權威來源）
+
+> 排盤引擎 `packages/core/src/paipan.ts` 採**子平法／立春學派**，以下口徑為系統唯一標準；
+> AI 問答解釋年柱、月柱、生肖、大運方向時必須使用本節口徑，不得改用農曆正月初一學派。
+
+| 概念 | 口徑 | 實作 |
+|------|------|------|
+| 年柱 | **立春精確時刻**換年（非農曆正月初一） | `lunar.getYearInGanZhiExact()` |
+| 月柱 | **節氣精確時刻**換月（非節氣日 00:00 日界） | `lunar.getMonthInGanZhiExact()` |
+| 日柱 | 六十甲子週期，無學派差異 | `lunar.getDayInGanZhi()` |
+| 時柱 | 早子時（23:00–23:59）：日柱維持當日、時柱為次日日干之子時 | `lunar.getTimeInGanZhi()`（EightChar 標準行為，`tests/unit/paipan.test.ts` 釘住） |
+| 生肖 | 隨年柱（立春學派） | `paipan.ts` `ZODIAC_MAP` |
+| 大運順逆 | 年干陰陽 × 性別（陽男陰女順、陰男陽女逆），與年柱同學派 | `dayun.ts` `calculateDaYun()` |
+| 起運年齡 | 出生日至順/逆方向最近節氣日數 ÷ 3（3 天 = 1 年） | lunar-javascript `getYun()` |
+
+**學派差異說明**：立春學派與農曆正月初一學派在每年約 1 月中～2 月中（立春前後）出生的
+命盤年柱不同。系統與市售標準八字排盤軟體一致採立春學派。向使用者解釋時，若其命盤落在
+該窗口，可主動說明兩種學派的年柱差異。
+
+**正確性證據鏈**（2026-10-22 建立，不依賴引擎自我宣告）：
+
+1. 節氣時刻以 Meeus 低精度太陽黃經獨立計算交叉驗證
+   （立春 1995 = 02-04 07:19 UTC、立春 2000 = 02-04 12:36 UTC、清明 1984 = 04-04 14:28 UTC）。
+2. 日柱以 JDN 六十週期公式（錨點 1949-10-01 = 甲子）獨立驗證。
+3. Golden 回歸測試：`tests/unit/paipan.test.ts`（四柱/邊界/早子時）、
+   `tests/unit/dayun.test.ts`（起運/順逆/流年十神）皆硬編碼獨立驗證值。
+
 ### 3.1 核心計算模組
 
 | 概念 | 來源檔案 | 實現檔案 | 函式/變數 |
 |------|----------|----------|-----------|
-| 十天干 | 1-6、2-0 五行關係十神表 | `src/constants.ts` | `GAN_TO_ELEMENT`, `YANG_GANS` |
-| 十二地支 | 1-1 地支藏干表 | `src/constants.ts` | `ZHI_TO_ELEMENT` |
-| 地支藏干 | 1-1 地支藏干表 | `src/domain/baziRules.ts` | `HIDDEN_STEMS`, `getHiddenStemNames()` |
-| 天干五合 | 天干地支合化條件.docx | `src/domain/harmony.ts` | `evaluateHarmonies()` |
-| 地支六合 | 天干地支合化條件.docx | `src/domain/harmony.ts` | `evaluateHarmonies()` |
+| 十天干 | 1-6、2-0 五行關係十神表 | `packages/core/src/constants.ts` | `GAN_TO_ELEMENT`, `YANG_GANS` |
+| 十二地支 | 1-1 地支藏干表 | `packages/core/src/constants.ts` | `ZHI_TO_ELEMENT` |
+| 地支藏干 | 1-1 地支藏干表 | `packages/core/src/pattern.ts` | `ZHI_HIDDEN`, `ZHI_HIDDEN_DETAIL` |
+| 天干五合 | 天干地支合化條件.docx | `packages/core/src/pattern.ts` | `STEM_HARMONIES`, `findStemHarmony()` |
+| 地支六合 | 天干地支合化條件.docx | `packages/core/src/pattern.ts` | `BRANCH_HARMONIES`, `findBranchHarmony()` |
 | 地支六沖 | 1-2 地支互動表講義 | `src/matchmaking.ts` | `PAIR_RELATIONS`, `checkLiuChong()` |
 | 地支三刑 | 1-2 地支互動表講義 | `src/data/core/earthlyBranchTraits.ts` | `BRANCH_INTERACTIONS` |
 | 地支相害 | 天干地支含刑沖破害 | `src/matchmaking.ts` | `checkLiuHai()` |
 | 地支相破 | 天干地支含刑沖破害 | `src/matchmaking.ts` | `checkLiuPo()` |
-| 十神計算 | 十神.docx | `src/constants.ts` | `getTenGod()`, `getTenGodCategory()` |
-| 命盤計算 | 1-1, 1-2 | `src/paipan.ts` | `calculateChart()`, `buildPillar()` |
-| 格局判定 | 定格局.docx | `src/pattern.ts`, `src/domain/patternScoring.ts` | `determinePattern()`, `calculatePatternSupportScore()` |
-| 大運計算 | 大運流年補運架構 | `src/dayun.ts` | `calculateDaYun()`, `getDaYunQuality()` |
-| 流年計算 | 2000-2030 流年五行對照表 | `src/dayun.ts` | `getLiuNian()`, `getFutureLiuNian()` |
+| 十神計算 | 十神.docx | `packages/core/src/constants.ts` | `getTenGod()`, `getTenGodCategory()` |
+| 命盤計算 | 1-1, 1-2 | `packages/core/src/paipan.ts` | `calculateChart()`, `buildPillar()` |
+| 格局判定 | 定格局.docx | `packages/core/src/pattern.ts` | `determinePattern()`, `getPrimaryPattern()` |
+| 大運計算 | 大運流年補運架構 | `packages/core/src/dayun.ts` | `calculateDaYun()`, `getDaYunQuality()` |
+| 流年計算 | 2000-2030 流年五行對照表 | `packages/core/src/dayun.ts` | `getLiuNian()`, `getFutureLiuNian()` |
 | 合盤判斷 | 姻緣篇.docx | `src/matchmaking.ts` | `checkSpouseStar()`, `checkMutualComplement()` |
 
 ### 3.2 分類知識模組
@@ -374,7 +400,7 @@
 | 地支互動 | 1-2 地支互動表講義 | `src/data/core/earthlyBranchTraits.ts` | `BRANCH_INTERACTIONS` |
 | 命盤計算 | 1-1, 1-2 | `src/paipan.ts` | `calculateChart()` |
 | 格局判定 | 定格局.docx | `src/pattern.ts` | `determinePattern()` |
-| 合化條件 | 天干地支合化條件.docx | `src/domain/harmony.ts` | `evaluateHarmonies()` |
+| 合化條件 | 天干地支合化條件.docx | `src/pattern.ts` | `STEM_HARMONIES`, `BRANCH_HARMONIES` |
 
 ---
 

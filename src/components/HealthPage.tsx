@@ -191,11 +191,11 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
 
       if (dmExtremeDays.includes(ganZhi) && extremeDaysList.length < 5) {
         let extremeDesc = '';
-        if (dmEl === '木') extremeDesc = '木氣極旺，小心腸胃不適。';
-        if (dmEl === '火') extremeDesc = '火爆發炎，防上火與呼吸道受損。';
-        if (dmEl === '土') extremeDesc = '土滯水弱，防代謝、水腫負擔。';
-        if (dmEl === '金') extremeDesc = '金剛過燥，防神經焦慮、關節緊繃。';
-        if (dmEl === '水') extremeDesc = '水勢奔騰，注意血壓與眼部疲倦。';
+        if (dmEl === '木') extremeDesc = '命理觀察：可留意腸胃感受。';
+        if (dmEl === '火') extremeDesc = '命理觀察：可留意燥熱與呼吸感受。';
+        if (dmEl === '土') extremeDesc = '命理觀察：可留意代謝與水腫感受。';
+        if (dmEl === '金') extremeDesc = '命理觀察：可留意焦慮與關節緊繃感受。';
+        if (dmEl === '水') extremeDesc = '命理觀察：可留意血壓與眼部疲勞。';
 
         extremeDaysList.push({
           date: formattedLabel,
@@ -271,11 +271,11 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
             <div className="bg-zen-surface/30 p-3 rounded-xl border border-zen-border space-y-2 text-xs text-zen-muted leading-relaxed">
               <div className="flex gap-2">
                 <span className="text-amber-400 font-mono">規則一：</span>
-                <p><strong>五行為 0 個</strong>：極容易成為終身的健康死角，缺乏天生抵禦與修補機制，必須永久高度防範與主動保養。</p>
+                <p><strong>五行為 0 個</strong>：依命理規則列為長期觀察重點，可留意相關生活習慣與身體感受。</p>
               </div>
               <div className="flex gap-2">
                 <span className="text-amber-400 font-mono">規則二：</span>
-                <p><strong>五行各 1 個</strong>：此為薄弱點。若原局同時有某一強旺五行（個數 ≥ 3），便會形成被剋五行受極端摧殘，是易爆發慢性痼疾的重災區。</p>
+                <p><strong>五行各 1 個</strong>：依命理規則列為較弱觀察點。若原局同時有某一強旺五行（個數 ≥ 3），可特別留意被剋五行所對應的生活與身體狀態。</p>
               </div>
             </div>
           </div>
@@ -289,7 +289,7 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
             <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl mb-4">
               <div className="flex items-center gap-2 text-red-400 font-bold text-sm mb-2">
                 <ShieldAlert size={18} />
-                <span>病原弱項：最需注意的五行</span>
+                <span>命理觀察：較需留意的五行</span>
               </div>
               <div className="flex gap-2 flex-wrap mb-3">
                 {targetWeakest.map(el => (
@@ -299,7 +299,7 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
                 ))}
               </div>
               <p className="text-xs text-zen-text leading-relaxed">
-                經由個數盤點，您本命中最少、或被重金強木克洩之先天最危險器官。
+                經由五行個數盤點，以下是命理規則建議優先觀察的部位與生活面向，不代表醫療診斷或疾病預測。
               </p>
             </div>
 
@@ -312,7 +312,7 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
                   <div key={el} className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-black font-serif" style={{ color: wxColors[el] }}>{el}</span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-white/5 text-zen-muted font-mono">先天缺陷靶點</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-white/5 text-zen-muted font-mono">先天較弱觀察點</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -323,7 +323,7 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
                         </strong>
                       </div>
                       <div className="space-y-1">
-                        <span className="text-zen-muted block">對應健康警訊症狀：</span>
+                        <span className="text-zen-muted block">命理資料列出的可能感受：</span>
                         <p className="text-zen-text leading-relaxed font-semibold">
                           {weakDetails?.symptoms || remedy?.weakSymptoms}
                         </p>
@@ -529,23 +529,23 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
               {/* Space Feng Shui section */}
               <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
                 <h4 className="font-bold text-amber-500 flex items-center gap-2">
-                  <Compass size={14} /> 空間地利煞氣化解 (2026年飛星與疾病防範)
+                  <Compass size={14} /> 空間民俗觀察（2026 年飛星）
                 </h4>
                 <p className="text-xs text-zen-muted leading-relaxed">
-                  除個人生辰八字天命外，空間地理煞方位（二黑巨門星、五黃廉貞星皆屬土星，五黃凶災最烈）對健康具有絕大影響。
+                  以下為傳統飛星民俗說法，沒有醫療證據，僅供文化與自我觀察參考。
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
                   <div className="p-3 rounded-lg bg-yellow-950/10 border border-yellow-900/20 space-y-1.5">
                     <strong className="text-yellow-400 text-xs block">二黑巨門星 (西北方位) — 病符星</strong>
                     <p className="text-[11px] text-zen-muted leading-relaxed">
-                      2026年病符星飛臨<strong>西北方</strong>，極易主導精神不濟、腸胃痼疾加重與突發性傷寒。
+                      傳統說法將 2026 年<strong>西北方</strong>列為宜保持安定的方位；不代表會造成疾病。
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-red-950/15 border border-red-900/20 space-y-1.5">
                     <strong className="text-red-400 text-xs block">五黃廉貞星 (正南方位) — 凶煞星</strong>
                     <p className="text-[11px] text-zen-muted leading-relaxed">
-                      2026年五黃大煞星飛臨<strong>正南方</strong>，主是非、重大血光、開刀、意外惡疾。
+                      傳統說法將 2026 年<strong>正南方</strong>列為宜減少擾動的方位；不代表會造成意外或疾病。
                     </p>
                   </div>
                 </div>
@@ -565,10 +565,10 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
           {/* Section 7: 極端能量流日 */}
           <div id="extreme" className="scroll-mt-20 glass-card relative overflow-hidden">
             <h2 className="text-lg font-bold text-zen-text border-b border-zen-border pb-3 mb-4 flex items-center gap-2">
-              <span className="text-emerald-400 font-mono">07.</span> 極端能量流日
+              <span className="text-emerald-400 font-mono">07.</span> 能量波動流日
             </h2>
             <p className="text-xs text-zen-muted mb-4 leading-relaxed">
-              當流日出現與您的<strong>「日主五行相同且能量最強的日辰」</strong>時，會造成日主五行本氣極度亢盛，進而強烈剋制對應臟器，引發突發病患：
+              當流日出現與您的<strong>「日主五行相同且能量較強的日辰」</strong>時，命理規則會列為觀察日。這不是疾病預測；身體不適請以醫療專業判斷為準。
             </p>
 
             {/* Extreme Warning rules table */}
@@ -615,7 +615,7 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
               <span className="text-emerald-400 font-mono">08.</span> 最弱五行被剋流日
             </h2>
             <p className="text-xs text-zen-muted mb-4 leading-relaxed">
-              分析原局最缺乏之五行（怕大旺之神前來強行剋洩）。當流日的天干和地支重疊形成強勢克星時，先天缺陷處會面臨重度剋傷：
+              依命理規則觀察原局較少的五行。當流日天干與地支形成相剋組合時，以下項目可作為生活記錄提醒，不代表器官受損或疾病預測。
             </p>
 
             {/* Meticulous rendering of weak control combinations from lecture notes */}
