@@ -13,6 +13,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "eval:ai-factual": "node scripts/eval-ai-factual.mjs",
     "test:e2e": "playwright test",
     "prepare": "husky install"
   },

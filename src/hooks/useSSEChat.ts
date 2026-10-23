@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getChatAuthHeaders, requestChatSession } from '../config';
+import type { FactCheckResult } from '../ai/factChecker';
 
 export type ChatMessageStatus = 'streaming' | 'done' | 'error' | 'stopped';
-export type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string; status: ChatMessageStatus; createdAt: number };
+export type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string; status: ChatMessageStatus; createdAt: number; factCheck?: FactCheckResult | null };
 const SAFE_ERROR = '目前無法完成分析，請稍後再試。';
 const AUTH_ERROR = '授權失敗，請重新登入後再試。';
 
@@ -55,9 +56,13 @@ export function useSSEChat(refreshRecordId?: () => Promise<string>) {
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6).trim();
           if (!data || data === '[DONE]') continue;
-          const parsed = JSON.parse(data) as { content?: string; error?: string };
+          const parsed = JSON.parse(data) as { content?: string; error?: string; factCheck?: FactCheckResult };
           if (parsed.error) throw new Error('server error');
-          if (parsed.content) setMessages(previous => previous.map(message => message.id === assistant.id ? { ...message, content: message.content + parsed.content } : message));
+          if (parsed.factCheck) {
+            setMessages(previous => previous.map(message => message.id === assistant.id ? { ...message, factCheck: parsed.factCheck } : message));
+          } else if (parsed.content) {
+            setMessages(previous => previous.map(message => message.id === assistant.id ? { ...message, content: message.content + parsed.content } : message));
+          }
         }
       }
       setMessages(previous => previous.map(message => message.id === assistant.id ? { ...message, status: 'done' } : message));

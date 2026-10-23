@@ -10,6 +10,7 @@ import { missingEvidenceOutput, validateAIOutput, type EvidenceBundle } from "./
 import { BAZI_SYSTEM_PROMPT, SYNASTRY_SYSTEM_PROMPT, DAYUN_SYSTEM_PROMPT } from "./src/ai/prompts";
 import { parseAgnesResponse } from "./src/lib/parseAgnesResponse";
 import { SqliteEvidenceSource, type EvidenceData } from "./src/lib/evidence/provider";
+import { checkFactualClaims, type FactCheckResult } from "./src/ai/factChecker";
 import { calculateChart, calculateDaYun, getFutureLiuNian, getFiveElementData, getTenGodData } from "./packages/core/src/index";
 
 // [AI MOD] CORS 中介程式：僅允許相同 origin 或明確允許的來源。
@@ -297,10 +298,13 @@ function createEvidenceBundle(data: EvidenceData, query: string, sourceType: 'sq
   };
 }
 
-function writeSseContent(res: express.Response, content: string): void {
+function writeSseContent(res: express.Response, content: string, factCheck?: FactCheckResult): void {
   // Validate the complete structured response before emitting answer chunks.
   for (let offset = 0; offset < content.length; offset += 32) {
     res.write(`data: ${JSON.stringify({ content: content.slice(offset, offset + 32) })}\n\n`);
+  }
+  if (factCheck) {
+    res.write(`data: ${JSON.stringify({ factCheck })}\n\n`);
   }
   res.write('data: [DONE]\n\n');
 }
@@ -455,7 +459,13 @@ function createChatHandler(systemPrompt: string) {
           const refusal = missingEvidenceOutput(['模型輸出未通過結構化引用驗證']);
           writeSseContent(res, refusal.answer);
         } else {
-          writeSseContent(res, (parsedOutput as { answer: string }).answer);
+          const output = parsedOutput as { answer?: unknown };
+          const answerText = typeof output?.answer === 'string' ? output.answer : '';
+          const bazi = evidenceData && typeof evidenceData.bazi === 'object' && evidenceData.bazi !== null && 'dayMaster' in (evidenceData.bazi as Record<string, unknown>) ? evidenceData : null;
+          // [Q4] 決定性事實檢查：AI 回答中的命理事實對照引擎排盤（不依賴 AI 自述）。
+          const factCheck = bazi ? checkFactualClaims(answerText, bazi) : null;
+          if (factCheck) console.log(`[SERVER] factCheck verdict=${factCheck.verdict} checked=${factCheck.checked} failed=${factCheck.failed}`);
+          writeSseContent(res, answerText, factCheck ?? undefined);
         }
       } catch (aiErr: unknown) {
         console.error("[SERVER] Agnes AI request failed");

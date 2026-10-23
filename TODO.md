@@ -18,6 +18,18 @@
 - [x] **定義 domain module 介面契約** → 完成：`.opencode/memory/domain-module-contracts.md`（paipan/pattern/dayun/dailyAnalysis 經 `@bezi/core` workspace shim；matchmaking/calibration 為真實實作；含邊界審查結論）
 - [x] **補齊 Playwright E2E** → 完成：`chat-flow.spec.ts` 從 3 測試擴充至 5（新增分流端點 401 保護 + 授權後 SSE grounding 驗證）
 
+
+## 📝 本輪完成工作（2026-10-23，AI 事實正確性證據層 Q4）
+
+**AI 回答「說得對不對」的決定性驗證**（不依賴 AI 自述、不用 LLM-as-judge）：
+1. `src/ai/factChecker.ts` — 純函式 `checkFactualClaims(answer, record)`：從 AI 回答抽取緊鄰句式命理事實（日主、四柱、生肖、五行最旺/最弱、大運干支），對照 Evidence 命盤（引擎排盤、經 golden 驗證）逐項判 correct/wrong/unverifiable；時辰未知 → 時柱 unverifiable 不計分；抽不到事實 → no_facts 不惩罚。
+2. `server.ts` — `createChatHandler` 在 `validateAIOutput` 通過後跑事實檢查，SSE 於內容 chunks 之後、`[DONE]` 之前回傳 `{ factCheck }` 幀；非命盤 Evidence（合盤）以型別守衛跳過。
+3. 前端 — `useSSEChat` 解析 `factCheck` 幀存到 `ChatMessage`；`AIChatPanel` 在 assistant 訊息下顯示「事實核對 N/M」徽章（綠＝全對、紅＝有誤＋hover 明細）。
+4. **金值測試** `tests/unit/factChecker.test.ts`（10 項）：全對、錯日主、捏造大運、Evidence 內大運通過、沒說的事不罰、時辰未知 unverifiable、term 標籤/JSON footer 清洗、錯生肖、錯五行、混合 0.5 分。
+5. **端到端評測** `scripts/eval-ai-factual.mjs`（`npm run eval:ai-factual`）：mock Agnes 注入含錯答案 → 完整 `/api/chat` 管線 → 斷言 6 項錯誤全被抓（日主甲≠戊、年柱乙丑≠甲子、生肖牛≠鼠、五行木≠火、水≠金、大運壬寅捏造）；正確答案 accuracy=1；無事實回答 no_facts。
+
+**驗證**：`npm run lint` ✅、`npm test` 123/123 ✅（21 檔）、`npm run build` ✅、`npx playwright test` 13/13 ✅、`npm run eval:ai-factual` 21/21 PASS ✅。
+
 ## 📝 本輪完成工作（2026-10-23，P1 真太陽時 + P2 我的親人卡片）
 
 **P1 真太陽時（出生地經度校正）**：

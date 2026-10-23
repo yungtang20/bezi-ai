@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Bot, Loader2, RotateCcw, Send, Sparkles, User } from 'lucide-react';
+import { AlertTriangle, Bot, CheckCircle2, Loader2, RotateCcw, Send, Sparkles, User } from 'lucide-react';
 import { BaziDisplay } from '../types';
 import AIMessage from './chat/AIMessage';
 import { useSSEChat } from '../hooks/useSSEChat';
@@ -180,7 +180,7 @@ export default function AIChatPanel({ bazi }: AIChatPanelProps) {
     <div ref={scrollRef} className="mb-3 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1" role="log" aria-live="polite">
       {messages.map(message => <div key={message.id} className={`flex gap-2.5 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
         {message.role === 'assistant' && <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10"><Bot className="h-3 w-3 text-amber-400" /></div>}
-        <div className="max-w-[85%] space-y-1"><div className={`rounded-xl border px-3 py-2 text-xs leading-relaxed ${message.role === 'user' ? 'border-amber-500/20 bg-amber-500/10 text-amber-300' : 'border-white/5 bg-black/30 text-zen-text'}`}><AIMessage content={message.content} /></div><span className="block pr-1 text-right text-[9px] text-zen-muted/30">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+        <div className="max-w-[85%] space-y-1"><div className={`rounded-xl border px-3 py-2 text-xs leading-relaxed ${message.role === 'user' ? 'border-amber-500/20 bg-amber-500/10 text-amber-300' : 'border-white/5 bg-black/30 text-zen-text'}`}><AIMessage content={message.content} /></div>{message.role === 'assistant' && message.factCheck && message.factCheck.checked > 0 && <div className={`flex items-center gap-1 text-[10px] ${message.factCheck.failed > 0 ? 'text-red-400' : 'text-emerald-400'}`} title={message.factCheck.facts.filter(f => f.verdict !== 'correct').map(f => `${f.type}: ${f.claimed}（實際 ${f.actual ?? '未知'}）`).join('；') || '全部事實與命盤一致'}><CheckCircle2 className="h-3 w-3" />事實核對 {message.factCheck.passed}/{message.factCheck.checked}{message.factCheck.failed > 0 && `，${message.factCheck.failed} 項待確認`}</div>}<span className="block pr-1 text-right text-[9px] text-zen-muted/30">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
         {message.role === 'user' && <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-pink-500/20 bg-pink-500/10"><User className="h-3 w-3 text-pink-400" /></div>}
       </div>)}
     </div>
