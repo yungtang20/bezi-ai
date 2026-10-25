@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 
+// [port 隔離] 各 API 測試檔獨立 server port，避免多檔併跑搶 3000。
+const PORT = 3102;
+const BASE = `http://127.0.0.1:${PORT}`;
 let serverProcess;
 let mockServer;
 let providerCalls = 0;
-
 async function waitForServer(url) {
-  const deadline = Date.now() + 15_000;
+  const deadline = Date.now() + 90_000;
   while (Date.now() < deadline) {
     try { await fetch(url); return; } catch { await new Promise(resolve => setTimeout(resolve, 250)); }
   }
@@ -33,6 +35,7 @@ before(async () => {
     cwd: process.cwd(),
     env: {
       ...process.env,
+      PORT: String(PORT),
       NODE_ENV: 'production',
       ENABLE_DEV_FIXTURE: 'false',
       AGNES_API_KEY: 'test-key',
@@ -45,7 +48,8 @@ before(async () => {
   });
   serverProcess.stdout.on('data', () => {});
   serverProcess.stderr.on('data', () => {});
-  await waitForServer('http://127.0.0.1:3000/');
+
+  await waitForServer(`${BASE}/`);
 });
 
 after(() => {
@@ -54,7 +58,7 @@ after(() => {
 });
 
 async function post(body) {
-  const response = await fetch('http://127.0.0.1:3000/api/chat', {
+  const response = await fetch(`${BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
     body: JSON.stringify(body),
@@ -63,7 +67,7 @@ async function post(body) {
 }
 
 test('rejects missing authorization before querying evidence', async () => {
-  const response = await fetch('http://127.0.0.1:3000/api/chat', {
+  const response = await fetch(`${BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages: [{ role: 'user', content: '請分析五行' }], record_id: 'demo-001' }),
@@ -73,16 +77,16 @@ test('rejects missing authorization before querying evidence', async () => {
 });
 
 test('records endpoint requires authorization and returns summaries', async () => {
-  const unauthorized = await fetch('http://127.0.0.1:3000/api/records');
+  const unauthorized = await fetch(`${BASE}/api/records`,);
   assert.equal(unauthorized.status, 401);
-  const authorized = await fetch('http://127.0.0.1:3000/api/records', { headers: { Authorization: 'Bearer test-chat-key' } });
+  const authorized = await fetch(`${BASE}/api/records`, { headers: { Authorization: 'Bearer test-chat-key' } });
   assert.equal(authorized.status, 200);
   const records = await authorized.json();
   assert.deepEqual(records.map(record => record.record_id), ['demo-001', 'demo-002']);
 });
 
 test('rejects an invalid client secret', async () => {
-  const response = await fetch('http://127.0.0.1:3000/api/auth/token', {
+  const response = await fetch(`${BASE}/api/auth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ client_secret: 'wrong-secret' }),
@@ -91,7 +95,7 @@ test('rejects an invalid client secret', async () => {
 });
 
 test('issues a session token that authorizes chat', async () => {
-  const tokenResponse = await fetch('http://127.0.0.1:3000/api/auth/token', {
+  const tokenResponse = await fetch(`${BASE}/api/auth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ client_secret: 'test-client-secret' }),
@@ -99,7 +103,7 @@ test('issues a session token that authorizes chat', async () => {
   assert.equal(tokenResponse.status, 200);
   const { token } = await tokenResponse.json();
   assert.equal(typeof token, 'string');
-  const response = await fetch('http://127.0.0.1:3000/api/chat', {
+  const response = await fetch(`${BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ messages: [{ role: 'user', content: '請分析五行' }], record_id: 'demo-001' }),

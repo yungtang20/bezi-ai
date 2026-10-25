@@ -8,7 +8,14 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import FiveElementsRadar from './dashboard/FiveElementsRadar';
 import TenGodsPie from './dashboard/TenGodsPie';
 import BaziPillars from './dashboard/BaziPillars';
+import TodayEnergyCard from './dashboard/TodayEnergyCard';
 import { getFiveElementData, getTenGodData } from '../lib/chartTransform';
+import LifeTimeline from './dashboard/LifeTimeline';
+import ChartCodex from './dashboard/ChartCodex';
+import WeeklyReviewCard from './dashboard/WeeklyReviewCard';
+import { useCheckInStats } from '../hooks/useCheckInStats';
+import { PartnerChart } from '../matchmaking';
+import PeopleCards from './dashboard/PeopleCards';
 
 const ELEMENT_COLORS: Record<string, string> = {
   '甲': 'text-emerald-400', '乙': 'text-emerald-400',
@@ -31,6 +38,8 @@ interface Props {
   birthTime?: string;
   gender?: 'male' | 'female' | string | null;
   onNavigate?: (view: string | number) => void;
+  onLoadPerson?: (p: PartnerChart) => void;
+  view?: 'today' | 'profile';
 }
 
 // [AI MOD] Accordion section component with glass card style
@@ -73,8 +82,10 @@ function AccordionSection({
   );
 }
 
-export default function Dashboard({ bazi, name, scores, birthDate, birthTime, gender, onNavigate }: Props) {
+export default function Dashboard({ bazi, name, scores, birthDate, birthTime, gender, onNavigate, onLoadPerson, view = 'today' }: Props) {
   const chart = bazi?.chart;
+  // [AI MOD] 打卡 log（命盤圖鑑/週回顧用）— 须在 early return 前（hooks 規則）
+  const { logs: checkInLogs } = useCheckInStats();
 
   if (!chart || !scores) return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
 
@@ -144,14 +155,27 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
       {/* 頂部區域：大字標題 + 副標題 */}
       <div className="text-center py-2 md:py-3 animate-fade-in-up">
         <h1 className="display-title text-2xl md:text-3xl lg:text-4xl mb-1">
-          {name ? `${name} 的命盤` : '先天命局'}
+          {view === 'today' ? (name ? `${name}，今天好` : '今天好') : (name ? `${name} 的命盤` : '我的命盤')}
         </h1>
         <p className="text-zen-muted text-[11px] md:text-xs tracking-widest">
-          八字格局 · 五行能量 · 人生藍圖
+          {view === 'today' ? '先看一個重點，再決定要不要深入' : '四柱命盤 · 五行強弱 · 十神特質'}
         </p>
         <div className="gold-divider mt-2 mx-auto max-w-[200px]" />
       </div>
 
+      {/* [AI MOD] 今日能量卡（每日鉤子）：首屏第一眼 */}
+      {view === 'today' && <TodayEnergyCard chart={chart} scores={scores} name={name} onNavigate={onNavigate} />}
+
+      {/* [AI MOD] P1 留存組件：大運色帶 + 命盤圖鑑（每日）+ 週回顧（僅週日） */}
+      {view === 'today' && (
+        <>
+          <LifeTimeline chart={chart} daYuns={daYuns} />
+          <ChartCodex chart={chart} pattern={patternResult} scores={scores} logs={checkInLogs} />
+          {new Date().getDay() === 0 && <WeeklyReviewCard logs={checkInLogs} />}
+        </>
+      )}
+
+      {view === 'profile' && <>
       {/* 命主資訊卡片（永遠顯示） */}
       <div className="glass-card p-3 md:p-4 relative overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
         <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
@@ -164,7 +188,10 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
                 {name ? `${name} 的命理根基` : '命理根基'}
               </h2>
               <button
-                onClick={() => onNavigate?.(1)}
+                onClick={() => {
+                  sessionStorage.setItem('bezi:return-after-edit', '12');
+                  onNavigate?.(1);
+                }}
                 className="text-[10px] bg-white/10 hover:bg-white/20 text-white/60 hover:text-white px-2 py-0.5 rounded transition-colors"
               >
                 重新編輯
@@ -205,6 +232,16 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
           })()}
         </div>
       </div>
+
+      {/* [P2] 我的親人卡片：家人成員管理（增 / 刪 / 載入重排） */}
+      <AccordionSection
+        title="我的親人"
+        icon={<span>👨‍👩‍👧</span>}
+        defaultOpen={false}
+      >
+        <PeopleCards onLoad={onLoadPerson} />
+      </AccordionSection>
+
 
       <div className="grid gap-3 lg:grid-cols-3 animate-fade-in-up">
         <div className="glass-card p-3">
@@ -463,6 +500,7 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
           <div className="absolute bottom-0 left-0 w-full h-[1px] bg-amber-500/30 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
         </button>
       </div>
+      </>}
     </div>
   );
 }

@@ -14,6 +14,8 @@ export interface DailyEnergy {
   theoreticalOutcome: string; // 順利/平穩/不順
   theoreticalExplanation: string; // 新增：解釋原因
   dayGanZhi: string;          // 今日干支
+  dayGan: string;             // [AI MOD] 日干（每日一句/明日預告用）
+  dayZhi: string;             // [AI MOD] 日支
   lunarDate: string;          // 農曆日期
   solarDate: string;          // 國曆日期 (Added)
   dayTenGodType: string;      // 新增：財星 / 官殺 / 食傷 / 比劫 / 印星
@@ -59,7 +61,7 @@ export function getDailyEnergy(
   const dayGanElement = GAN_TO_ELEMENT[dayGan];
   const dayZhiElement = ZHI_TO_ELEMENT[dayZhi] || GAN_TO_ELEMENT[dayZhi];
   const dayGod = getTenGodForDaYun(chart.dayMaster, dayGan);
-
+  
   let theoreticalOutcome = '平穩';
   let totalScore = 0;
   const explanationParts: string[] = [];
@@ -92,7 +94,7 @@ export function getDailyEnergy(
     { threshold: -1.5, outcome: '較差' },
     { threshold: -Infinity, outcome: '不順' }
   ];
-
+  
   theoreticalOutcome = scoreThresholds.find(t => totalScore >= t.threshold)?.outcome || '平穩';
 
   // 如果今天是極端能量日，且日主五行與喜用神相關，可升級為大好/大壞
@@ -126,6 +128,8 @@ export function getDailyEnergy(
     theoreticalOutcome,
     theoreticalExplanation: explanationParts.join('，') + '。',
     dayGanZhi: `${baZi.getYearGan()}${baZi.getYearZhi()}年 ${baZi.getMonthGan()}${baZi.getMonthZhi()}月 ${dayPillar}日`,
+    dayGan,
+    dayZhi,
     lunarDate: `${lunar.getYearInChinese()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`,
     solarDate: `${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日`,
     dayTenGodType,
@@ -155,7 +159,7 @@ function getDailyEvents(dayGan: string, dayZhi: string, chart: BaziChart, isMale
   const el = GAN_TO_ELEMENT[dayGan];
   const zhiEl = ZHI_TO_ELEMENT[dayZhi];
   const dayMaster = chart.dayMaster;
-
+  
   // 官殺（事業旺日）
   const careerMap: Record<string, string> = {
     '木': '金', '火': '水', '土': '木', '金': '火', '水': '土'
@@ -164,12 +168,12 @@ function getDailyEvents(dayGan: string, dayZhi: string, chart: BaziChart, isMale
   const wealthMap: Record<string, string> = {
     '木': '土', '火': '金', '土': '水', '金': '木', '水': '火'
   };
-
+  
   const myEl = GAN_TO_ELEMENT[dayMaster];
-
+  
   if (el === careerMap[myEl]) events.push({ type: '事業旺日', desc: '適合安排重要會議、提案或決策' });
   if (el === wealthMap[myEl]) events.push({ type: '財運日', desc: '適合理財、談判、收帳' });
-
+  
   // 桃花日（男看財星，女看官殺）
   const romanceEl = isMale ? wealthMap[myEl] : careerMap[myEl];
   if (el === romanceEl) events.push({ type: '桃花日', desc: '利於感情互動、結識新氣象' });
@@ -342,7 +346,7 @@ function checkHarmAndBreak(chart: BaziChart, zhi: string): { type: string; warni
       });
     }
   }
-
+  
   return results;
 }
 
@@ -351,7 +355,7 @@ function checkSelfPunishment(chart: BaziChart): string[] {
   const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
   const counts: Record<string, number> = {};
   for (const z of zhis) counts[z] = (counts[z] || 0) + 1;
-
+  
   const selfZhis = ['辰', '午', '酉', '亥'];
   const warnings = [];
   for (const sz of selfZhis) {
@@ -373,14 +377,14 @@ function checkTriplePunishment(
     chart.hour.zhi,
     liuNian.zhi,
   ];
-
+  
   const rules = [
     { zhis: ['寅', '巳', '申'], type: '寅巳申三刑', warning: '注意車關、外傷、跌倒、突發性心血管問題' },
     { zhis: ['丑', '戌', '未'], type: '丑戌未三刑', warning: '注意腫瘤、結石、婦科問題、精神壓力' }
   ];
 
   const matchedRule = rules.find(rule => rule.zhis.every(z => allZhi.includes(z)));
-
+  
   if (matchedRule) {
     return {
       hasTriple: true,
@@ -389,6 +393,6 @@ function checkTriplePunishment(
       affected: getAffectedPillars(chart, matchedRule.zhis),
     };
   }
-
+  
   return { hasTriple: false, type: '', warning: '', affected: [] };
 }

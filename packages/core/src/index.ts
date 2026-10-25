@@ -5,3 +5,4 @@ export * from './pattern';
 export * from './dayun';
 export * from './dailyAnalysis';
 export * from './chartTransform';
+export * from './trueSolarTime';

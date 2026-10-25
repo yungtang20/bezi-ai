@@ -5,26 +5,41 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
 import dotenv from "dotenv";
-import { formatPublicErrorResponse } from "./src/errors";
+import { formatErrorResponse } from "./src/errors";
 import { missingEvidenceOutput, validateAIOutput, type EvidenceBundle } from "./src/ai/grounding";
+import { BAZI_SYSTEM_PROMPT, SYNASTRY_SYSTEM_PROMPT, DAYUN_SYSTEM_PROMPT } from "./src/ai/prompts";
 import { parseAgnesResponse } from "./src/lib/parseAgnesResponse";
 import { SqliteEvidenceSource, type EvidenceData } from "./src/lib/evidence/provider";
+import { checkFactualClaims, type FactCheckResult } from "./src/ai/factChecker";
+import { calculateChart, calculateDaYun, getFutureLiuNian, getFiveElementData, getTenGodData } from "./packages/core/src/index";
+import { classifyQuery } from "./src/ai/knowledge/classifier";
+import { retrieveKnowledge, formatKnowledgeForPrompt } from "./src/ai/knowledge/retriever";
+import type { KnowledgeItem } from "./src/ai/knowledge/types";
 
 // [AI MOD] CORS 中介程式：僅允許相同 origin 或明確允許的來源。
 // 預設開放（向後相容），但可透過 ALLOWED_ORIGINS 環境變數限制。
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 function corsMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
   const origin = req.headers.origin;
-  res.vary("Origin");
-  if (origin && allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+  // [AI MOD] 同源請求永不阻擋：Vite 產出的 module script 帶 crossorigin 屬性，
+  // 瀏覽器連同源請求也會附帶 Origin header，若用 ALLOWED_ORIGINS 過濾會誤殺前端資源。
+  let sameOrigin = false;
+  if (origin && req.headers.host) {
+    try {
+      sameOrigin = new URL(origin).host === req.headers.host;
+    } catch {
+      sameOrigin = false;
+    }
+  }
+  if (origin && !sameOrigin && ALLOWED_ORIGINS.length > 0 && !ALLOWED_ORIGINS.includes(origin)) {
     res.status(403).json({ error: "Origin not allowed" });
     return;
   }
   res.setHeader("Access-Control-Allow-Origin", origin || "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key");
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -45,6 +60,7 @@ function securityHeaders(_req: express.Request, res: express.Response, next: exp
 
 // Load local environment variables first; explicit process environment wins for production checks.
 const explicitNodeEnv = process.env.NODE_ENV;
+const explicitPort = process.env.PORT;
 const explicitFixtureFlag = process.env.ENABLE_DEV_FIXTURE;
 const explicitAgnesApiKey = process.env.AGNES_API_KEY;
 const explicitAgnesBaseUrl = process.env.AGNES_BASE_URL;
@@ -55,6 +71,7 @@ const explicitDevAuthBypass = process.env.ENABLE_DEV_AUTH_BYPASS;
 dotenv.config({ path: '.env.local', override: true });
 dotenv.config();
 if (explicitNodeEnv !== undefined) process.env.NODE_ENV = explicitNodeEnv;
+if (explicitPort !== undefined) process.env.PORT = explicitPort;
 if (explicitFixtureFlag !== undefined) process.env.ENABLE_DEV_FIXTURE = explicitFixtureFlag;
 if (explicitAgnesApiKey !== undefined) process.env.AGNES_API_KEY = explicitAgnesApiKey;
 if (explicitAgnesBaseUrl !== undefined) process.env.AGNES_BASE_URL = explicitAgnesBaseUrl;
@@ -78,8 +95,17 @@ const sqlEvidenceSource = new SqliteEvidenceSource();
 const chatAuthToken = process.env.BEZI_CHAT_API_KEY || "";
 const authClientSecret = process.env.BEZI_AUTH_CLIENT_SECRET || "";
 const DEV_AUTH_BYPASS = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEV_AUTH_BYPASS === 'true';
+// [AI MOD] 匿名模式：開啟後 /api/auth/token 無需 client_secret 即可發放 session token（仍受 per-IP 限流約束），
+// 讓終端使用者零授權摩擦。生產環境的成本保護主要依賴 rateLimit，而非 client_secret。
+const ANONYMOUS_CHAT_ENABLED = process.env.ENABLE_ANONYMOUS_CHAT === 'true';
 const SESSION_TTL_MS = 60 * 60_000;
 const sessions = new Map<string, number>();
+const computedEvidence = new Map<string, { owner: string; expiresAt: number; data: EvidenceData }>();
+
+function getSuppliedCredential(req: express.Request): string {
+  const authorization = req.header('authorization');
+  return (authorization?.startsWith('Bearer ') ? authorization.slice(7) : req.header('x-api-key')) || '';
+}
 
 function constantTimeEqual(receivedValue: string, expectedValue: string): boolean {
   const received = Buffer.from(receivedValue);
@@ -88,9 +114,7 @@ function constantTimeEqual(receivedValue: string, expectedValue: string): boolea
 }
 
 function requireChatAuthorization(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const authorization = req.header('authorization');
-  const apiKey = req.header('x-api-key');
-  const supplied = authorization?.startsWith('Bearer ') ? authorization.slice(7) : apiKey;
+  const supplied = getSuppliedCredential(req);
   const expiresAt = supplied ? sessions.get(supplied) : undefined;
   const sessionValid = Boolean(expiresAt && expiresAt > Date.now());
   if (supplied && expiresAt && !sessionValid) sessions.delete(supplied);
@@ -102,12 +126,14 @@ function requireChatAuthorization(req: express.Request, res: express.Response, n
   next();
 }
 
+// [AI MOD] dev fixture 四柱與 server-side demo-001（1984-03-25 10:00 男）一致，
+// 由 packages/core calculateChart 實排產生（見 data/bazi_records.json）。
 const DEV_FIXTURE_BAZI = {
   chart: {
-    year: '甲子', month: '丙寅', day: '戊午', time: '壬戌', dayMaster: '戊', gender: '男',
+    year: '甲子', month: '丁卯', day: '戊午', time: '丁巳', dayMaster: '戊', gender: '男',
   },
-  fiveElements: { wood: 22, fire: 28, earth: 31, metal: 8, water: 11 },
-  tenGods: { '比肩': 2, '劫財': 1, '食神': 1, '傷官': 1, '偏財': 1, '正財': 1, '七殺': 1, '正官': 1, '偏印': 1, '正印': 1 },
+  fiveElements: { wood: 50, fire: 100, earth: 25, metal: 0, water: 25 },
+  tenGods: { '比肩': 2, '劫財': 1, '食神': 1, '傷官': 1, '偏財': 1, '正財': 1, '七殺': 1, '正官': 1, '偏印': 1, '正印': 3 },
 };
 
 function createDevFixtureEvidence(query: string): EvidenceBundle {
@@ -131,26 +157,30 @@ function createDevFixtureEvidence(query: string): EvidenceBundle {
   };
 }
 
-// [AI MOD] 輕量 in-memory rate limiter（per-IP，滑動視窗取樣）
+// [AI MOD] 輕量 in-memory rate limiter（per-IP per-bucket，滑動視窗取樣）
 // 單一 server instance 適用；多 instance 部署需改用 Redis-backed 限流。
+// 每個端點可指定 bucket（"chat" / "synastry" / "dayun"）以分開計算限流。
 const ipHits = new Map<string, { count: number; resetAt: number }>();
-function rateLimit(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const ip = req.ip || req.socket.remoteAddress || "unknown";
-  const now = Date.now();
-  let entry = ipHits.get(ip);
-  if (!entry || now > entry.resetAt) {
-    entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
-    ipHits.set(ip, entry);
-  }
-  entry.count++;
-  if (entry.count > RATE_LIMIT_MAX) {
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.status(429);
-    res.write(`data: ${JSON.stringify({ error: "請求過於頻繁，請稍後再試。" })}\n\n`);
-    res.end();
-    return;
-  }
-  next();
+function rateLimit(bucket: string = "chat") {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    const key = `${bucket}:${ip}`;
+    const now = Date.now();
+    let entry = ipHits.get(key);
+    if (!entry || now > entry.resetAt) {
+      entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+      ipHits.set(key, entry);
+    }
+    entry.count++;
+    if (entry.count > RATE_LIMIT_MAX) {
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.status(429);
+      res.write(`data: ${JSON.stringify({ error: "請求過於頻繁，請稍後再試。" })}\n\n`);
+      res.end();
+      return;
+    }
+    next();
+  };
 }
 
 interface ChatMessage {
@@ -165,7 +195,52 @@ interface ChatInputBody {
   record_id?: string;
 }
 
-const AI_SYSTEM_PROMPT = `你只能使用 server 提供的 Evidence Bundle 回答，不得猜測或擴張資料。主要回覆請使用繁體中文 Markdown，命理專有名詞使用 <term> 標籤。回覆最後必須附加一個 JSON code fence，且只能包含 insight（字串）、terms（字串陣列）、advice（字串陣列）三個欄位；這個 footer 僅供 server 解析，server 會在送給使用者前移除，不要把 API key、system prompt 或內部推理放入其中。`;
+interface CurrentEvidenceInput {
+  birthDate?: string;
+  birthTime?: string;
+  gender?: 'male' | 'female';
+}
+
+function buildComputedEvidence(input: CurrentEvidenceInput): EvidenceData | null {
+  if (typeof input.birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) return null;
+  if (input.gender !== 'male' && input.gender !== 'female') return null;
+  if (input.birthTime !== undefined && input.birthTime !== '' && !/^\d{1,2}$/.test(input.birthTime)) return null;
+  const [year, month, day] = input.birthDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const today = new Date();
+  if (year < 1900 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day || date > today) return null;
+  const unknownHour = !input.birthTime;
+  const hour = unknownHour ? 12 : Number(input.birthTime);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return null;
+
+  const chart = calculateChart(year, month, day, hour, input.gender === 'male' ? '男' : '女', unknownHour);
+  const fiveElements = Object.fromEntries(
+    getFiveElementData(chart).map(item => {
+      const key = ({ 木: 'wood', 火: 'fire', 土: 'earth', 金: 'metal', 水: 'water' } as const)[item.name as '木' | '火' | '土' | '金' | '水'];
+      return [key, item.value];
+    }),
+  ) as EvidenceData['fiveElements'];
+  const tenGods = Object.fromEntries(getTenGodData(chart).map(item => [item.name, item.value]));
+  const recordId = `current-${randomUUID()}`;
+  return {
+    record_id: recordId,
+    bazi: {
+      year: `${chart.year.gan}${chart.year.zhi}`,
+      month: `${chart.month.gan}${chart.month.zhi}`,
+      day: `${chart.day.gan}${chart.day.zhi}`,
+      time: unknownHour ? '時辰未知' : `${chart.hour.gan}${chart.hour.zhi}`,
+      dayMaster: chart.dayMaster,
+      gender: chart.gender,
+    },
+    fiveElements,
+    tenGods,
+    // 未知時辰時不產生以中午近似推算的精確起運資料。
+    dayun: unknownHour ? [] : calculateDaYun(chart).map(item => ({ ...item })),
+    liunian: getFutureLiuNian(new Date().getFullYear(), 10, chart.dayMaster).map(item => ({ ...item })),
+  };
+}
+
+// System prompts moved to src/ai/prompts.ts — imported above (BAZI/SYNASTRY/DAYUN_SYSTEM_PROMPT).
 
 // [AI MOD] 輸入驗證：限制 messages 數量、單則長度、customPrompt/apiKey 長度
 function validateChatInput(body: ChatInputBody): string | null {
@@ -194,83 +269,53 @@ function validateChatInput(body: ChatInputBody): string | null {
   return null;
 }
 
-function createEvidenceBundle(data: EvidenceData, query: string): EvidenceBundle {
+function createEvidenceBundle(data: EvidenceData, query: string, sourceType: 'sql' | 'computed' = 'sql'): EvidenceBundle {
   const now = new Date();
+  const timeUnknown = data.bazi.time === '時辰未知';
   return {
-    requestId: `sql-${data.record_id}-${now.getTime()}`,
+    requestId: `${sourceType}-${data.record_id}-${now.getTime()}`,
     userId: 'anonymous',
     query,
     items: [{
-      sourceId: `sql:${data.record_id}`,
-      sourceType: 'sql',
+      sourceId: `${sourceType}:${data.record_id}`,
+      sourceType,
       title: `Bazi record ${data.record_id}`,
       content: JSON.stringify(data),
       retrievedAt: now.toISOString(),
       schemaVersion: 'bazi-record-v1',
-      supports: ['命盤資料', '五行分數', '十神比例', '大運流年'],
+      supports: timeUnknown
+        ? ['前三柱命盤資料', '五行分數', '十神比例', '流年']
+        : ['命盤資料', '五行分數', '十神比例', '大運流年'],
     }],
-    limitations: ['資料來自 server-side SQL evidence source。'],
-    allowedClaims: ['僅可根據此 Evidence Bundle 回答。'],
+    limitations: [
+      sourceType === 'computed'
+        ? '資料由伺服器依本次工作階段提供的出生資訊重新排盤，工作階段到期後即失效。'
+        : '資料來自 server-side SQL evidence source。',
+      ...(timeUnknown ? ['出生時辰未知；時柱與精確起運資料未納入，不得推論相關結果。'] : []),
+    ],
+    allowedClaims: [timeUnknown
+      ? '僅可根據前三柱、五行、十神與流年 Evidence 回答；不得聲稱精確時柱或起運。'
+      : '僅可根據此 Evidence Bundle 回答。'],
     expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
-    source: { type: 'sql', id: data.record_id },
+    source: { type: sourceType, id: data.record_id },
   };
 }
 
-function writeSseContent(res: express.Response, content: string): void {
+function writeSseContent(res: express.Response, content: string, factCheck?: FactCheckResult): void {
   // Validate the complete structured response before emitting answer chunks.
   for (let offset = 0; offset < content.length; offset += 32) {
     res.write(`data: ${JSON.stringify({ content: content.slice(offset, offset + 32) })}\n\n`);
   }
+  if (factCheck) {
+    res.write(`data: ${JSON.stringify({ factCheck })}\n\n`);
+  }
   res.write('data: [DONE]\n\n');
 }
 
-
-async function startServer() {
-  const app = express();
-  const port = Number.parseInt(process.env.PORT || '3000', 10);
-  app.disable('x-powered-by');
-  const trustProxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || '0', 10);
-  if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) app.set('trust proxy', trustProxyHops);
-
-  app.use(securityHeaders);
-  app.use(corsMiddleware);
-  app.use(express.json({ limit: "1mb" }));
-
-  app.get('/health/live', (_req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
-    res.status(200).json({ status: 'ok' });
-  });
-
-  app.get('/health/ready', (_req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
-    res.status(200).json({ status: 'ready' });
-  });
-
-  app.post("/api/auth/token", rateLimit, (req, res) => {
-    const clientSecret = req.body?.client_secret;
-    const devBypass = DEV_AUTH_BYPASS;
-    const secretValid = typeof clientSecret === 'string' && constantTimeEqual(clientSecret, authClientSecret);
-    if (!devBypass && !secretValid) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-    const token = randomUUID();
-    sessions.set(token, Date.now() + SESSION_TTL_MS);
-    res.setHeader('Cache-Control', 'no-store');
-    res.json({ token, expiresIn: SESSION_TTL_MS / 1000 });
-  });
-
-  app.get("/api/records", requireChatAuthorization, rateLimit, async (_req, res) => {
-    try {
-      res.json(await sqlEvidenceSource.listRecords());
-    } catch {
-      res.status(500).json({ error: '目前無法取得命盤清單。' });
-    }
-  });
-
-  // Secure Server-side API Route with Streaming (SSE) using Agnes OpenAI-compatible API
-  app.options("/api/chat", corsMiddleware, (req, res) => res.status(204).end());
-  app.post("/api/chat", requireChatAuthorization, rateLimit, async (req, res) => {
+// [AI MOD] Chat handler factory：依用途（八字/合盤/大運）產生共用管線的 SSE handler，
+// 各端點僅差異在 systemPrompt 與 rate-limit bucket。
+function createChatHandler(systemPrompt: string) {
+  return async (req: express.Request, res: express.Response) => {
     // Set headers for SSE Server-Sent Events
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
@@ -293,19 +338,32 @@ async function startServer() {
       let evidenceBundle: EvidenceBundle | null = null;
       let evidenceData: EvidenceData | null = null;
       if (record_id) {
-        try {
-          evidenceData = await sqlEvidenceSource.getData(record_id);
-          evidenceBundle = createEvidenceBundle(evidenceData, query);
-          console.log(`[SERVER] Using SQL evidence source ${record_id}`);
-        } catch {
-          evidenceBundle = null;
+        const current = computedEvidence.get(record_id);
+        const credential = getSuppliedCredential(req);
+        if (record_id.startsWith('current-')) {
+          if (current && current.expiresAt > Date.now() && current.owner === credential) {
+            evidenceData = current.data;
+            evidenceBundle = createEvidenceBundle(evidenceData, query, 'computed');
+            console.log(`[SERVER] Using computed session evidence ${record_id}`);
+          } else {
+            if (current && current.expiresAt <= Date.now()) computedEvidence.delete(record_id);
+            evidenceBundle = null;
+          }
+        } else {
+          try {
+            evidenceData = await sqlEvidenceSource.getData(record_id);
+            evidenceBundle = createEvidenceBundle(evidenceData, query);
+            console.log(`[SERVER] Using SQL evidence source ${record_id}`);
+          } catch {
+            evidenceBundle = null;
+          }
         }
       } else if (DEV_FIXTURE_ENABLED) {
         evidenceBundle = createDevFixtureEvidence(query);
         evidenceData = DEV_FIXTURE_BAZI as unknown as EvidenceData;
       }
       if (!evidenceBundle) {
-        const output = missingEvidenceOutput(['已驗證的 SQL 或 MCP Evidence Bundle']);
+        const output = missingEvidenceOutput(['伺服器已驗證的 Evidence Bundle']);
         res.write(`data: ${JSON.stringify({ content: output.answer, result: output })}\n\n`);
         return res.end();
       }
@@ -321,9 +379,40 @@ async function startServer() {
       }
 
       const openAiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
-      openAiMessages.push({ role: "system", content: AI_SYSTEM_PROMPT });
+      openAiMessages.push({ role: "system", content: systemPrompt });
       openAiMessages.push({ role: "system", content: `[命盤資訊]\n${JSON.stringify(evidenceData)}` });
       openAiMessages.push({ role: "system", content: JSON.stringify(evidenceBundle) });
+
+      // [知識管線] 分類 → 檢索 → 附加知識條目。管線任何失敗都降級為「無知識條目」，不中斷聊天。
+      let knowledgeItems: KnowledgeItem[] = [];
+      if (evidenceData) {
+        try {
+          const classification = classifyQuery(query);
+          const { items } = retrieveKnowledge(classification, evidenceData);
+          knowledgeItems = items;
+          console.log(`[SERVER] knowledge pipeline: category=${classification.category} confidence=${classification.confidence} topics=${classification.topics.length} retrieved=${items.length}`);
+        } catch (pipelineErr: unknown) {
+          console.error("[SERVER] knowledge pipeline failed, degrading to chart-only evidence");
+        }
+      }
+      openAiMessages.push({ role: "system", content: `[檢索到的命理知識]\n${formatKnowledgeForPrompt(knowledgeItems)}` });
+      // 驗證用 bundle = Evidence 來源 + 檢索到的知識條目；claims 的 sourceIds 必須落在此集合內。
+      const validationBundle: EvidenceBundle = {
+        ...evidenceBundle,
+        items: [
+          ...evidenceBundle.items,
+          ...knowledgeItems.map(item => ({
+            sourceId: item.sourceId,
+            sourceType: 'computed' as const,
+            title: item.title,
+            content: item.content,
+            retrievedAt: new Date().toISOString(),
+            schemaVersion: 'kb-entry-v1',
+            supports: [item.matchedWhy],
+          })),
+        ],
+      };
+
       for (const m of messages) {
         if (!m || !m.content) continue;
         openAiMessages.push({
@@ -388,7 +477,9 @@ async function startServer() {
             nextQuestions: [],
           };
         }
-        let result = validateAIOutput(parsedOutput, evidenceBundle);
+        // [知識管線] claims 的 sourceIds 必須 ⊆ 驗證 bundle（Evidence 來源 + 檢索到的知識條目）；
+        // 虛構引用（kb: 編號未實際提供）一律由 validateAIOutput 拒答，不得放行。
+        let result = validateAIOutput(parsedOutput, validationBundle);
         if (!result.valid && DEV_FIXTURE_ENABLED && rawOutput.trim()) {
           // Dev-only adapter for providers that return a non-conforming smoke-test shape.
           parsedOutput = {
@@ -404,7 +495,13 @@ async function startServer() {
           const refusal = missingEvidenceOutput(['模型輸出未通過結構化引用驗證']);
           writeSseContent(res, refusal.answer);
         } else {
-          writeSseContent(res, (parsedOutput as { answer: string }).answer);
+          const output = parsedOutput as { answer?: unknown };
+          const answerText = typeof output?.answer === 'string' ? output.answer : '';
+          const bazi = evidenceData && typeof evidenceData.bazi === 'object' && evidenceData.bazi !== null && 'dayMaster' in (evidenceData.bazi as Record<string, unknown>) ? evidenceData : null;
+          // [Q4] 決定性事實檢查：AI 回答中的命理事實對照引擎排盤（不依賴 AI 自述）。
+          const factCheck = bazi ? checkFactualClaims(answerText, bazi) : null;
+          if (factCheck) console.log(`[SERVER] factCheck verdict=${factCheck.verdict} checked=${factCheck.checked} failed=${factCheck.failed}`);
+          writeSseContent(res, answerText, factCheck ?? undefined);
         }
       } catch (aiErr: unknown) {
         console.error("[SERVER] Agnes AI request failed");
@@ -415,10 +512,83 @@ async function startServer() {
       res.end();
     } catch (err: unknown) {
       console.error("[SERVER ERROR]:", err);
-      res.write(`data: ${JSON.stringify(formatPublicErrorResponse(err))}\n\n`);
+      res.write(`data: ${JSON.stringify(formatErrorResponse(err))}\n\n`);
       res.end();
     }
+  };
+}
+
+
+async function startServer() {
+  const app = express();
+  // [AI MOD] Render Docker runtime 會注入 PORT（預設 10000）；本機開發走 3000
+  const PORT = Number(process.env.PORT) || 3000;
+
+  // Enable JSON request body parser（限制 1mb，避免灌爆）
+  app.use(express.json({ limit: "1mb" }));
+
+  // [AI MOD] CORS 套用
+  app.use(securityHeaders);
+  app.use(corsMiddleware);
+
+  app.post("/api/auth/token", rateLimit(), (req, res) => {
+    const clientSecret = req.body?.client_secret;
+    const devBypass = DEV_AUTH_BYPASS;
+    const secretValid = typeof clientSecret === 'string' && clientSecret.length > 0 && constantTimeEqual(clientSecret, authClientSecret);
+    // 匿名模式（ENABLE_ANONYMOUS_CHAT=true）允許無 secret 發放 token；secret 仍可提供（向後相容）。
+    if (!devBypass && !secretValid && !ANONYMOUS_CHAT_ENABLED) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    const token = randomUUID();
+    sessions.set(token, Date.now() + SESSION_TTL_MS);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ token, expiresIn: SESSION_TTL_MS / 1000 });
   });
+
+  app.get("/api/records", requireChatAuthorization, rateLimit(), async (_req, res) => {
+    try {
+      res.json(await sqlEvidenceSource.listRecords());
+    } catch {
+      res.status(500).json({ error: '目前無法取得命盤清單。' });
+    }
+  });
+
+  app.post("/api/evidence/current", requireChatAuthorization, rateLimit("evidence"), (req, res) => {
+    try {
+      const now = Date.now();
+      for (const [recordId, record] of computedEvidence) {
+        if (record.expiresAt <= now) computedEvidence.delete(recordId);
+      }
+      const data = buildComputedEvidence(req.body || {});
+      if (!data) {
+        res.status(400).json({ error: '出生資料格式無效。' });
+        return;
+      }
+      const owner = getSuppliedCredential(req);
+      computedEvidence.set(data.record_id, { owner, expiresAt: now + SESSION_TTL_MS, data });
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(201).json({
+        record_id: data.record_id,
+        birth: `${data.bazi.year}-${data.bazi.month}-${data.bazi.day}`,
+        gender: data.bazi.gender,
+        source: 'current',
+        time_known: data.bazi.time !== '時辰未知',
+      });
+    } catch {
+      res.status(400).json({ error: '無法建立目前命盤的驗證資料。' });
+    }
+  });
+
+  // Secure Server-side API Routes with Streaming (SSE) using Agnes OpenAI-compatible API
+  // [AI MOD] 三條端點分流：/api/chat（八字解讀）、/api/chat/synastry（合盤配對）、/api/chat/dayun（大運流年）。
+  // 各端點共用 evidence pipeline 與 SSE 輸出，僅差異在 systemPrompt 與限流 bucket。
+  app.options("/api/chat", corsMiddleware, (req, res) => res.status(204).end());
+  app.options("/api/chat/synastry", corsMiddleware, (req, res) => res.status(204).end());
+  app.options("/api/chat/dayun", corsMiddleware, (req, res) => res.status(204).end());
+  app.post("/api/chat", requireChatAuthorization, rateLimit("chat"), createChatHandler(BAZI_SYSTEM_PROMPT));
+  app.post("/api/chat/synastry", requireChatAuthorization, rateLimit("synastry"), createChatHandler(SYNASTRY_SYSTEM_PROMPT));
+  app.post("/api/chat/dayun", requireChatAuthorization, rateLimit("dayun"), createChatHandler(DAYUN_SYSTEM_PROMPT));
 
   // Vite middleware for development index fallback
   if (process.env.NODE_ENV !== "production") {
@@ -435,8 +605,8 @@ async function startServer() {
     });
   }
 
-  app.listen(port, "0.0.0.0", () => {
-    console.log(`[FULLSTACK ENGINE] Server is actively listening on http://0.0.0.0:${port}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[FULLSTACK ENGINE] Server is actively listening on http://0.0.0.0:${PORT}`);
   });
 }
 

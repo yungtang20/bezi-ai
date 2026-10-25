@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FiveElement } from "../types";
 import { Solar } from "lunar-javascript";
 import { GAN_TO_ELEMENT, getYinYang } from "../constants";
-import { Search, X, ArrowLeft } from "lucide-react";
+import { Search, X } from "lucide-react";
 import {
   LECTURE_DATA, WORKPLACE_STRATEGIES, wealthCareers, careerRoles,
   DAY_MASTER_RELATIONS, ELEMENT_BALANCE_RULES, getLiunianAndRemedy,
@@ -85,14 +85,14 @@ export default function ReferenceTablePage({ onNavigate }: { onNavigate?: (step:
   }, []);
 
   const REF_TABS = [
-    { key: 'basic', label: '基礎理論' },
-    { key: 'timeline', label: '流年大運' },
-    { key: 'health', label: '健康' },
-    { key: 'wealth', label: '財富' },
-    { key: 'family', label: '家人' },
-    { key: 'friends', label: '人際' },
-    { key: 'romance', label: '感情' },
-    { key: 'career', label: '事業' },
+    { key: 'basic', number: '01', label: '八字基礎', description: '天干、地支、五行與十神' },
+    { key: 'wealth', number: '02', label: '財富', description: '財星、求財方式與財位' },
+    { key: 'career', number: '03', label: '事業', description: '職業適配、轉職與職場互動' },
+    { key: 'romance', number: '04', label: '感情', description: '夫妻星、桃花與關係模式' },
+    { key: 'health', number: '05', label: '健康', description: '五行體質與生活照顧方向' },
+    { key: 'family', number: '06', label: '家庭', description: '六親、子女與家庭互動' },
+    { key: 'friends', number: '07', label: '人際', description: '朋友、合作與相處策略' },
+    { key: 'timeline', number: '08', label: '大運流年', description: '時間節奏、喜忌與補運' },
   ];
 
   const TEN_GOD_INFO = [
@@ -165,24 +165,14 @@ export default function ReferenceTablePage({ onNavigate }: { onNavigate?: (step:
   const searchResults = doSearch(searchQuery);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="mx-auto max-w-6xl space-y-8 animate-in fade-in duration-500 pb-20">
       {/* 頁面標題 */}
       <div className="text-center mb-4">
-        <h1 className="text-3xl font-serif font-bold display-title mb-3">理論說明</h1>
+        <span className="text-xs font-bold tracking-[0.24em] text-amber-300/80">LEARN</span>
+        <h1 className="mt-3 text-3xl font-bold display-title mb-3 md:text-4xl">學習</h1>
+        <p className="mx-auto max-w-2xl text-sm leading-7 text-zinc-400">從基礎概念開始，也可以直接選擇目前最想理解的生活主題。每一章都保留原始講義對照與理論資料。</p>
         <div className="gold-divider mt-4 mx-auto max-w-[200px]"></div>
       </div>
-
-      {onNavigate && (
-        <div className="flex items-center">
-          <button
-            onClick={() => onNavigate(4)}
-            className="flex items-center gap-2 text-zen-muted hover:text-zen-text transition-colors group font-sans"
-          >
-            <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-            <span className="font-bold text-sm">返回儀表板</span>
-          </button>
-        </div>
-      )}
       <div className="glass-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <h2 className="text-xl font-serif font-bold text-zen-text flex items-center gap-2">
@@ -234,19 +224,23 @@ export default function ReferenceTablePage({ onNavigate }: { onNavigate?: (step:
           </div>
         ) : (
           <>
-            {/* 標籤導航 */}
-            <div className="flex flex-wrap gap-2 mb-8 border-b border-zen-border pb-4">
+            {/* 課程章節導航 */}
+            <div className="mb-8 grid gap-2 border-b border-zen-border pb-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="課程章節">
           {REF_TABS.map(tab => (
             <button
               key={tab.key}
+              type="button"
+              aria-pressed={activeRefTab === tab.key}
               onClick={() => setActiveRefTab(tab.key)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all font-sans ${
+              className={`min-h-24 rounded-xl border px-4 py-3 text-left transition-all font-sans focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
                 activeRefTab === tab.key
-                  ? 'bg-zen-gold/20 text-zen-gold border border-zen-gold/30'
-                  : 'text-zen-muted border border-transparent hover:text-zen-text hover:bg-zen-surface/60'
+                  ? 'bg-zen-gold/15 text-zen-gold border-zen-gold/35'
+                  : 'text-zen-muted border-white/10 hover:text-zen-text hover:bg-zen-surface/60'
               }`}
             >
-              {tab.label}
+              <span className="block text-[10px] font-bold tracking-widest opacity-60">CHAPTER {tab.number}</span>
+              <span className="mt-1 block text-sm font-bold">{tab.label}</span>
+              <span className="mt-1 block text-[11px] font-normal leading-5 opacity-70">{tab.description}</span>
             </button>
           ))}
         </div>

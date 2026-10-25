@@ -1,0 +1,17 @@
+{
+  "name": "八字能量日誌 Bezi",
+  "short_name": "Bezi",
+  "description": "傳統八字排盤，整理成每天都看得懂、用得上的個人能量日誌。",
+  "lang": "zh-Hant",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1C211F",
+  "theme_color": "#1C211F",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

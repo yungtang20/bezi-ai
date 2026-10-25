@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 interface DrawerProps {
@@ -10,27 +10,25 @@ interface DrawerProps {
 }
 
 export default function Drawer({ isOpen, onClose, title, icon, children }: DrawerProps) {
-  const titleId = useId();
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    closeButtonRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCloseRef.current();
+    const previous = document.activeElement as HTMLElement | null;
+    panelRef.current?.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Tab' || !panelRef.current) return;
+      const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(item => !item.hasAttribute('disabled'));
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      previouslyFocused?.focus();
-    };
-  }, [isOpen]);
+    document.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('keydown', onKeyDown); previous?.focus(); };
+  }, [isOpen, onClose]);
 
   return (
     <>
@@ -44,11 +42,10 @@ export default function Drawer({ isOpen, onClose, title, icon, children }: Drawe
 
       {/* Panel */}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
-        aria-hidden={!isOpen}
-        {...(!isOpen ? { inert: true } : {})}
+        aria-labelledby="drawer-title"
         className={`fixed right-0 top-0 h-screen w-96 max-w-[90vw] z-50 transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
@@ -71,7 +68,7 @@ export default function Drawer({ isOpen, onClose, title, icon, children }: Drawe
               {icon}
             </div>
             <h2
-              id={titleId}
+              id="drawer-title"
               className="text-sm font-bold tracking-widest text-zen-gold"
               style={{ fontFamily: '"Noto Serif TC", serif' }}
             >
@@ -79,7 +76,6 @@ export default function Drawer({ isOpen, onClose, title, icon, children }: Drawe
             </h2>
           </div>
           <button
-            ref={closeButtonRef}
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-zen-gold/10 transition-colors text-zen-muted hover:text-zen-gold"
             aria-label="關閉"

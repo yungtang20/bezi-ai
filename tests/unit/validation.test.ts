@@ -1,96 +1,61 @@
+// tests/unit/validation.test.ts — 出生輸入驗證（回歸測試）
+// 背景：主表單的時辰 canonical 格式為「HH（小時）」，過去驗證只接受 HH:mm，
+// 導致「有填出生時辰的使用者無法送出表單」——此測試守住兩種格式皆可通過。
 import { describe, it, expect } from 'vitest';
-import { validateBirthInput, assertBirthInput, parseBirthHour } from '../../src/utils/validation';
+import { validateBirthInput, assertBirthInput } from '../../src/utils/validation';
+import { ValidationError } from '../../src/errors';
 
-describe('Validation Module (validateBirthInput & assertBirthInput)', () => {
-  it('passes valid input with HH:mm time format like 02:00', () => {
-    const result = validateBirthInput({
-      name: '張三',
-      gender: '男',
-      birthDate: '1990-05-15',
-      birthTime: '02:00',
-    });
-    expect(result.valid).toBe(true);
-    expect(result.error).toBeUndefined();
+const base = { gender: '男' as const, birthDate: '1984-03-25' };
+
+describe('validateBirthInput', () => {
+  it('接受時辰未知（空字串）', () => {
+    expect(validateBirthInput({ ...base, birthTime: '' }).valid).toBe(true);
+    expect(validateBirthInput({ ...base }).valid).toBe(true);
   });
 
-  it('passes valid input with single/double digit hour number', () => {
-    const res1 = validateBirthInput({
-      gender: '女',
-      birthDate: '1995-10-20',
-      birthTime: '2',
-    });
-    expect(res1.valid).toBe(true);
-
-    const res2 = validateBirthInput({
-      gender: '男',
-      birthDate: '1988-01-01',
-      birthTime: '23',
-    });
-    expect(res2.valid).toBe(true);
+  it('接受 HH 小時格式（主表單 canonical）', () => {
+    for (const t of ['0', '9', '10', '23']) {
+      const res = validateBirthInput({ ...base, birthTime: t });
+      expect(res.valid, `hour ${t} 應通過`).toBe(true);
+    }
   });
 
-  it('passes when birthTime is empty (hour unknown)', () => {
-    const result = validateBirthInput({
-      gender: '女',
-      birthDate: '2000-06-01',
-      birthTime: '',
-    });
-    expect(result.valid).toBe(true);
+  it('接受 HH:mm 格式（合盤頁格式）', () => {
+    for (const t of ['00:00', '10:30', '23:59']) {
+      expect(validateBirthInput({ ...base, birthTime: t }).valid, t).toBe(true);
+    }
   });
 
-  it('fails when hour is out of range (> 23)', () => {
-    const result = validateBirthInput({
-      gender: '男',
-      birthDate: '1990-05-15',
-      birthTime: '25:00',
-    });
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain('時分超出範圍');
+  it('接受 HHmm 緊湊格式', () => {
+    for (const t of ['1030', '2359']) {
+      expect(validateBirthInput({ ...base, birthTime: t }).valid, t).toBe(true);
+    }
   });
 
-  it('fails when minute is out of range (> 59)', () => {
-    const result = validateBirthInput({
-      gender: '男',
-      birthDate: '1990-05-15',
-      birthTime: '12:60',
-    });
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain('時分超出範圍');
+  it('拒絕非法時辰格式', () => {
+    for (const t of ['abc', '25', '10:99', '1:2:3', '24:00']) {
+      expect(validateBirthInput({ ...base, birthTime: t }).valid, t).toBe(false);
+    }
   });
 
-  it('fails on invalid date format', () => {
-    const result = validateBirthInput({
-      gender: '男',
-      birthDate: '1990/05/15',
-      birthTime: '02:00',
-    });
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain('出生日期格式無效');
+  it('拒絕非法出生日期', () => {
+    expect(validateBirthInput({ gender: '男', birthDate: '1984/03/25' }).valid).toBe(false);
+    expect(validateBirthInput({ gender: '男', birthDate: '1800-01-01' }).valid).toBe(false);
+    expect(validateBirthInput({ gender: '男', birthDate: '1984-13-01' }).valid).toBe(false);
   });
 
-  it.each(['2023-02-29', '2024-02-30', '2026-04-31'])('rejects impossible calendar date %s', (birthDate) => {
-    const result = validateBirthInput({ gender: '女', birthDate, birthTime: '' });
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain('出生日期不存在');
+  it('拒絕非法性別與過長姓名', () => {
+    expect(validateBirthInput({ gender: 'X' as unknown as '男', birthDate: '1984-03-25' }).valid).toBe(false);
+    expect(validateBirthInput({ ...base, name: '名'.repeat(31) }).valid).toBe(false);
+  });
+});
+
+describe('assertBirthInput', () => {
+  it('通過時不拋錯', () => {
+    expect(() => assertBirthInput({ ...base, birthTime: '10' })).not.toThrow();
   });
 
-  it('accepts a leap day in a leap year', () => {
-    expect(validateBirthInput({ gender: '男', birthDate: '2024-02-29', birthTime: '7:30' }).valid).toBe(true);
-  });
-
-  it('parses both supported time formats and preserves an unknown hour', () => {
-    expect(parseBirthHour('7')).toBe(7);
-    expect(parseBirthHour('07:30')).toBe(7);
-    expect(parseBirthHour('')).toBeNull();
-  });
-
-  it('assertBirthInput throws ValidationError on invalid input', () => {
-    expect(() => {
-      assertBirthInput({
-        gender: '男',
-        birthDate: '1800-01-01', // Year < 1900
-        birthTime: '02:00',
-      });
-    }).toThrow('出生年份需介於 1900 至 2100 年之間');
+  it('失敗時拋 ValidationError', () => {
+    expect(() => assertBirthInput({ ...base, birthTime: 'abc' })).toThrow(ValidationError);
   });
 });

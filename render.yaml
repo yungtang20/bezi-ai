@@ -1,12 +1,11 @@
 services:
   - type: web
-    name: bezi-ai-api-yungtang20
+    name: bezi-ai-api
     runtime: docker
     plan: free
     branch: main
-    dockerfilePath: ./Dockerfile
-    healthCheckPath: /health/ready
-    autoDeployTrigger: checksPass
+    autoDeploy: true
+    healthCheckPath: /
     envVars:
       - key: AGNES_API_KEY
         sync: false
@@ -16,9 +15,9 @@ services:
         value: agnes-3.0-flash
       - key: BEZI_AUTH_CLIENT_SECRET
         sync: false
+      - key: ENABLE_ANONYMOUS_CHAT
+        value: 'true'
       - key: NODE_ENV
         value: production
       - key: ALLOWED_ORIGINS
-        value: https://yungtang20.github.io
-      - key: TRUST_PROXY_HOPS
-        value: "1"
+        value: https://yungtang20.github.io,https://bezi-ai-api.onrender.com

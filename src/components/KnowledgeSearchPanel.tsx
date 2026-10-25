@@ -1,9 +1,8 @@
 // src/components/KnowledgeSearchPanel.tsx
-// [AI MOD] 知識搜尋面板 — 整合 LongCat API 白話解釋與追問功能
+// [AI MOD] 知識搜尋面板 — 透過後端 Agnes AI 取得白話解釋與追問
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { readChatHttpError } from '../api/chatError';
-import { CLIENT_CONFIG } from '../config';
+import { getChatAuthHeaders, getChatRecordId } from '../config';
 
 // 知識索引項目介面
 interface KnowledgeItem {
@@ -363,25 +362,23 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // 從後端 API 取得串流並合併為單一字串
-async function fetchFromBackend(
-  messages: Array<{ role: string; content: string }>,
-  systemPrompt: string,
-  apiKey?: string,
-): Promise<string> {
-  const response = await fetch(CLIENT_CONFIG.API.CHAT_ENDPOINT, {
+async function fetchFromBackend(messages: Array<{ role: string; content: string }>, systemPrompt: string): Promise<string> {
+  const response = await fetch('/api/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getChatAuthHeaders(),
     },
     body: JSON.stringify({
       messages,
       customPrompt: systemPrompt,
-      apiKey: apiKey?.trim() || undefined,
+      record_id: getChatRecordId(),
     })
   });
 
   if (!response.ok) {
-    throw new Error(await readChatHttpError(response));
+    if (response.status === 401) throw new Error('授權失敗，請重新登入後再試。');
+    throw new Error(`API 請求失敗: ${response.status}`);
   }
 
   if (!response.body) {
@@ -429,7 +426,7 @@ async function fetchFromBackend(
 }
 
 // 用於「AI 白話解釋」
-async function fetchAIExplanation(title: string, snippet: string, ref: string, apiKey?: string): Promise<string> {
+async function fetchAIExplanation(title: string, snippet: string, ref: string): Promise<string> {
   const systemPrompt = '你是一位八字命理專家，請用簡單白話的方式解釋下列八字命理概念。解釋要：1) 簡單易懂 2) 舉例說明 3) 提供實際應用建議。請用繁體中文回答。';
   const messages = [
     {
@@ -438,15 +435,14 @@ async function fetchAIExplanation(title: string, snippet: string, ref: string, a
     },
   ];
 
-  return fetchFromBackend(messages, systemPrompt, apiKey);
+  return fetchFromBackend(messages, systemPrompt);
 }
 
 // 用於「追問」
 async function fetchAIFollowUp(
   title: string,
   previousExplanation: string,
-  question: string,
-  apiKey?: string,
+  question: string
 ): Promise<string> {
   const systemPrompt = '你是一位八字命理專家，請用簡單白話的方式回答問題。請用繁體中文回答。';
   const messages = [
@@ -460,17 +456,13 @@ async function fetchAIFollowUp(
     },
   ];
 
-  return fetchFromBackend(messages, systemPrompt, apiKey);
+  return fetchFromBackend(messages, systemPrompt);
 }
 
 // 標籤捷徑
 const TAG_SHORTCUTS = ['財運', '桃花', '健康', '事業', '太歲', '貴人', '小人', '化解'];
 
-interface KnowledgeSearchPanelProps {
-  apiKey?: string;
-}
-
-export default function KnowledgeSearchPanel({ apiKey }: KnowledgeSearchPanelProps) {
+export default function KnowledgeSearchPanel() {
   // 搜尋狀態
   const [query, setQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -541,7 +533,7 @@ export default function KnowledgeSearchPanel({ apiKey }: KnowledgeSearchPanelPro
     }));
 
     try {
-      const explanation = await fetchAIExplanation(item.title, item.snippet, item.ref, apiKey);
+      const explanation = await fetchAIExplanation(item.title, item.snippet, item.ref);
       setAiResponses((prev) => ({
         ...prev,
         [key]: { content: explanation, isLoading: false, error: null },
@@ -553,7 +545,7 @@ export default function KnowledgeSearchPanel({ apiKey }: KnowledgeSearchPanelPro
         [key]: { content: '', isLoading: false, error: errorMessage },
       }));
     }
-  }, [apiKey]);
+  }, []);
 
   // 追問
   const handleFollowUp = useCallback(
@@ -569,7 +561,7 @@ export default function KnowledgeSearchPanel({ apiKey }: KnowledgeSearchPanelPro
       }));
 
       try {
-        const answer = await fetchAIFollowUp(item.title, prevExplanation, question, apiKey);
+        const answer = await fetchAIFollowUp(item.title, prevExplanation, question);
         setFollowUpResponses((prev) => ({
           ...prev,
           [key]: { content: answer, isLoading: false, error: null },
@@ -583,7 +575,7 @@ export default function KnowledgeSearchPanel({ apiKey }: KnowledgeSearchPanelPro
         }));
       }
     },
-    [followUpQuestions, aiResponses, apiKey]
+    [followUpQuestions, aiResponses]
   );
 
   // 高亮搜尋關鍵字

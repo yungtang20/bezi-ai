@@ -1,0 +1,32 @@
+{
+  "agent_os_version": "0.1.0",
+  "project_name": "bezi (Bezi 八字命理分析與大運流年推算系統)",
+  "project_root": "D:\\徐玉蘭\\bezi",
+  "project_type": "TypeScript full-stack (React/Vite + Express) 八字命理 Web 應用",
+  "mapping_file": "D:\\徐玉蘭\\bezi\\AGENTS.md",
+  "allowed_roles": ["ceo", "architect", "developer", "reviewer", "librarian"],
+  "disabled_roles": [],
+  "knowledge_root": "D:\\徐玉蘭\\bezi\\LLM_WIKI.md",
+  "memory_root": "D:\\徐玉蘭\\bezi\\.opencode\\memory",
+  "validation_commands": [
+    { "command": "npm run lint", "description": "tsc --noEmit" },
+    { "command": "npm test", "description": "vitest run" },
+    { "command": "npm run build", "description": "vite build + esbuild server" },
+    { "command": "playwright", "description": "E2E (playwright.config.ts)" }
+  ],
+  "human_approval_overrides": {
+    "domain_source_LLM_WIKI_change": true,
+    "src_data_knowledge_change": true,
+    "schema_AI_model_config_change": true,
+    "api_key_credential_change": true,
+    "delete_file": true,
+    "new_dependency": true
+  },
+  "project_specific_permissions": {
+    "xss_sanitize_required": "DOMPurify for AI-rendered content",
+    "api_key_hardcode": false
+  },
+  "git_root": "none",
+  "opencode_project_boundary": "D:\\徐玉蘭\\bezi (非 git repo)",
+  "status": "mapped-not-enforced"
+}
