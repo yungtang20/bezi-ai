@@ -128,6 +128,48 @@ test('fabricated kb sourceIds are rejected with refusal', async () => {
   assert.doesNotMatch(body, /虛構引用的回答/);
 });
 
+test('first attempt invalid triggers one honest retry with correction, second attempt passes', async () => {
+  let calls = 0;
+  mockOutputFactory = () => {
+    calls++;
+    if (calls === 1) {
+      // 第一次：模型吐不合規輸出（sourceIds 虛構）→ 應觸發重試
+      return {
+        status: 'answered',
+        answer: '第一次不合规的回答',
+        claims: [{ text: '第一次', sourceIds: ['kb:不存在:xx'], confidence: 'high' }],
+        limitations: [], nextQuestions: [],
+      };
+    }
+    // 第二次（重試）：合規輸出 → 應放行
+    return {
+      status: 'answered',
+      answer: '重試後正確的回答',
+      claims: [{ text: '正確主張', sourceIds: ['kb:wealthGuidelines:wealth-土'], confidence: 'high' }],
+      limitations: [], nextQuestions: [],
+    };
+  };
+  const body = await post({ messages: [{ role: 'user', content: '我今年的財運如何' }], record_id: 'demo-001' });
+  assert.equal(calls, 2, '模型被呼叫兩次（一次重試）');
+  assert.match(body, /重試後正確的回答/);
+  assert.doesNotMatch(body, /目前資料不足/);
+  // 重試請求必須帶追加的修正指令
+  const hasCorrection = lastMessages.some(m => m.role === 'user' && /未通過結構化驗證/.test(m.content));
+  assert.ok(hasCorrection, '第二次請求含誠實重試修正指令');
+});
+
+test('two consecutive invalid attempts end in honest refusal', async () => {
+  mockOutputFactory = () => ({
+    status: 'answered',
+    answer: '始終不合規的回答',
+    claims: [{ text: '主張', sourceIds: ['kb:永遠不存在:yy'], confidence: 'high' }],
+    limitations: [], nextQuestions: [],
+  });
+  const body = await post({ messages: [{ role: 'user', content: '我今年的財運如何' }], record_id: 'demo-001' });
+  assert.match(body, /模型輸出未通過結構化引用驗證|目前資料不足/);
+  assert.doesNotMatch(body, /始終不合規的回答/);
+});
+
 test('unclassifiable query degrades to general_bazi knowledge, chat still works', async () => {
   mockOutputFactory = () => ({
     status: 'answered',

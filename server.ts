@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
 import dotenv from "dotenv";
 import { formatErrorResponse } from "./src/errors";
-import { missingEvidenceOutput, validateAIOutput, type EvidenceBundle } from "./src/ai/grounding";
+import { missingEvidenceOutput, validateAIOutput, type EvidenceBundle, type ValidationResult } from "./src/ai/grounding";
 import { BAZI_SYSTEM_PROMPT, SYNASTRY_SYSTEM_PROMPT, DAYUN_SYSTEM_PROMPT } from "./src/ai/prompts";
 import { parseAgnesResponse } from "./src/lib/parseAgnesResponse";
 import { SqliteEvidenceSource, type EvidenceData } from "./src/lib/evidence/provider";
@@ -434,24 +434,36 @@ function createChatHandler(systemPrompt: string) {
         baseURL: agnesBaseUrl,
       });
 
-      try {
+      // [誠實重試] 模型偶發輸出未通過結構化驗證（缺 JSON footer、sourceId 不合規定）時，
+      // 追加重試指令再給模型一次機會；重試仍失敗才誠實拒答。dev fixture 模式不重試（mock 測試須保持單次呼叫）。
+      const callModelOnce = async (withCorrection: boolean) => {
+        const modelMessages = withCorrection
+          ? [
+              ...openAiMessages,
+              {
+                role: "user" as const,
+                content: "你上一則回覆未通過結構化驗證（缺少 JSON code fence，或 claims 的 sourceIds 引用了未提供的來源）。請依系統提示的引用規則重新回覆一次，格式與 footer 欄位不得更動，且 sourceIds 只能使用實際提供給你的編號。",
+              },
+            ]
+          : openAiMessages;
         const completion = await openai.chat.completions.create({
           model: agnesModel,
-          messages: openAiMessages,
+          messages: modelMessages,
           temperature: 1,
           top_p: 1,
           max_tokens: 16384,
-          seed: 42,
+          seed: withCorrection ? undefined : 42,
           stream: true
         });
-
-        let rawOutput = '';
+        let raw = '';
         for await (const chunk of completion) {
           const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            rawOutput += content;
-          }
+          if (content) raw += content;
         }
+        return raw;
+      };
+
+      const validateAttempt = (rawOutput: string): { output: unknown; result: ValidationResult } => {
         const parsedResponse = parseAgnesResponse(rawOutput);
         let parsedOutput: unknown;
         try { parsedOutput = JSON.parse(parsedResponse.content); } catch { parsedOutput = null; }
@@ -478,7 +490,7 @@ function createChatHandler(systemPrompt: string) {
           };
         }
         // [知識管線] claims 的 sourceIds 必須 ⊆ 驗證 bundle（Evidence 來源 + 檢索到的知識條目）；
-        // 虛構引用（kb: 編號未實際提供）一律由 validateAIOutput 拒答，不得放行。
+        // 虛構引用一律拒答，不得放行。
         let result = validateAIOutput(parsedOutput, validationBundle);
         if (!result.valid && DEV_FIXTURE_ENABLED && rawOutput.trim()) {
           // Dev-only adapter for providers that return a non-conforming smoke-test shape.
@@ -491,22 +503,27 @@ function createChatHandler(systemPrompt: string) {
           };
           result = validateAIOutput(parsedOutput, evidenceBundle);
         }
-        if (!result.valid) {
-          const refusal = missingEvidenceOutput(['模型輸出未通過結構化引用驗證']);
-          writeSseContent(res, refusal.answer);
-        } else {
-          const output = parsedOutput as { answer?: unknown };
-          const answerText = typeof output?.answer === 'string' ? output.answer : '';
-          const bazi = evidenceData && typeof evidenceData.bazi === 'object' && evidenceData.bazi !== null && 'dayMaster' in (evidenceData.bazi as Record<string, unknown>) ? evidenceData : null;
-          // [Q4] 決定性事實檢查：AI 回答中的命理事實對照引擎排盤（不依賴 AI 自述）。
-          const factCheck = bazi ? checkFactualClaims(answerText, bazi) : null;
-          if (factCheck) console.log(`[SERVER] factCheck verdict=${factCheck.verdict} checked=${factCheck.checked} failed=${factCheck.failed}`);
-          writeSseContent(res, answerText, factCheck ?? undefined);
-        }
-      } catch (aiErr: unknown) {
-        console.error("[SERVER] Agnes AI request failed");
-        res.write(`data: ${JSON.stringify({ error: "目前無法完成分析，請稍後再試。" })}\n\n`);
-        res.write('data: [DONE]\n\n');
+        return { output: parsedOutput, result };
+      };
+
+      let rawOutput = await callModelOnce(false);
+      let { output: parsedOutput, result } = validateAttempt(rawOutput);
+      if (!result.valid && !DEV_FIXTURE_ENABLED) {
+        console.log("[SERVER] AI output failed structured validation, honest retry once");
+        rawOutput = await callModelOnce(true);
+        ({ output: parsedOutput, result } = validateAttempt(rawOutput));
+      }
+      if (!result.valid) {
+        const refusal = missingEvidenceOutput(['模型輸出未通過結構化引用驗證']);
+        writeSseContent(res, refusal.answer);
+      } else {
+        const output = parsedOutput as { answer?: unknown };
+        const answerText = typeof output?.answer === 'string' ? output.answer : '';
+        const bazi = evidenceData && typeof evidenceData.bazi === 'object' && evidenceData.bazi !== null && 'dayMaster' in (evidenceData.bazi as Record<string, unknown>) ? evidenceData : null;
+        // [Q4] 決定性事實檢查：AI 回答中的命理事實對照引擎排盤（不依賴 AI 自述）。
+        const factCheck = bazi ? checkFactualClaims(answerText, bazi) : null;
+        if (factCheck) console.log(`[SERVER] factCheck verdict=${factCheck.verdict} checked=${factCheck.checked} failed=${factCheck.failed}`);
+        writeSseContent(res, answerText, factCheck ?? undefined);
       }
 
       res.end();
