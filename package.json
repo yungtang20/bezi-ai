@@ -13,6 +13,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "test:api": "node --test --test-concurrency=1 tests/api-chat-validation.test.mjs tests/api-cors.test.mjs tests/api-dev-auth-bypass.test.mjs tests/api-evidence-pipeline.test.mjs tests/api-knowledge-pipeline.test.mjs",
     "eval:ai-factual": "node scripts/eval-ai-factual.mjs",
     "test:e2e": "playwright test",
     "prepare": "husky install"

@@ -2,10 +2,14 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 
+// [port 隔離] 各 API 測試檔獨立 server port，避免多檔併跑搶 3000。
+const PORT = 3101;
+const BASE = `http://127.0.0.1:${PORT}`;
+
 let serverProcess;
 
 async function waitForServer(url) {
-  const deadline = Date.now() + 15_000;
+  const deadline = Date.now() + 90_000;
 
   while (Date.now() < deadline) {
     try {
@@ -24,6 +28,7 @@ before(async () => {
     cwd: process.cwd(),
     env: {
       ...process.env,
+      PORT: String(PORT),
       AGNES_API_KEY: '',
       NODE_ENV: 'production',
       ENABLE_DEV_FIXTURE: 'false',
@@ -35,7 +40,7 @@ before(async () => {
   serverProcess.stdout.on('data', () => {});
   serverProcess.stderr.on('data', () => {});
 
-  await waitForServer('http://127.0.0.1:3000/');
+  await waitForServer(`${BASE}/`);
 });
 
 after(() => {
@@ -43,7 +48,7 @@ after(() => {
 });
 
 test('rejects non-string apiKey before provider selection', async () => {
-  const response = await fetch('http://127.0.0.1:3000/api/chat', {
+  const response = await fetch(`${BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
     body: JSON.stringify({
@@ -60,7 +65,7 @@ test('rejects non-string apiKey before provider selection', async () => {
 });
 
 test('rejects non-string customPrompt before provider selection', async () => {
-  const response = await fetch('http://127.0.0.1:3000/api/chat', {
+  const response = await fetch(`${BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
     body: JSON.stringify({
@@ -77,7 +82,7 @@ test('rejects non-string customPrompt before provider selection', async () => {
 });
 
 test('sets CORS headers on /api/chat OPTIONS preflight', async () => {
-  const response = await fetch('http://127.0.0.1:3000/api/chat', {
+  const response = await fetch(`${BASE}/api/chat`, {
     method: 'OPTIONS',
     headers: {
       Origin: 'http://localhost:3000',
@@ -92,7 +97,7 @@ test('sets CORS headers on /api/chat OPTIONS preflight', async () => {
 });
 
 test('creates session-scoped current-chart evidence from validated birth input', async () => {
-  const response = await fetch('http://127.0.0.1:3000/api/evidence/current', {
+  const response = await fetch(`${BASE}/api/evidence/current`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
     body: JSON.stringify({ birthDate: '1990-01-15', birthTime: '14', gender: 'female' }),
@@ -104,7 +109,7 @@ test('creates session-scoped current-chart evidence from validated birth input',
   assert.equal(body.gender, '女');
   assert.equal(body.time_known, true);
 
-  const chatResponse = await fetch('http://127.0.0.1:3000/api/chat', {
+  const chatResponse = await fetch(`${BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
     body: JSON.stringify({ messages: [{ role: 'user', content: '請分析目前命盤' }], record_id: body.record_id }),
@@ -116,7 +121,7 @@ test('creates session-scoped current-chart evidence from validated birth input',
 });
 
 test('marks unknown birth hour and still creates bounded three-pillar evidence', async () => {
-  const response = await fetch('http://127.0.0.1:3000/api/evidence/current', {
+  const response = await fetch(`${BASE}/api/evidence/current`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
     body: JSON.stringify({ birthDate: '1990-01-15', birthTime: '', gender: 'male' }),
@@ -127,7 +132,7 @@ test('marks unknown birth hour and still creates bounded three-pillar evidence',
 });
 
 test('rejects invalid birth input before creating current-chart evidence', async () => {
-  const response = await fetch('http://127.0.0.1:3000/api/evidence/current', {
+  const response = await fetch(`${BASE}/api/evidence/current`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
     body: JSON.stringify({ birthDate: '2035-02-30', birthTime: '99', gender: 'female' }),
@@ -138,15 +143,12 @@ test('rejects invalid birth input before creating current-chart evidence', async
 
 test('rejects oversized request body', async () => {
   const bigContent = 'x'.repeat(2_000_000);
-  const response = await fetch('http://127.0.0.1:3000/api/chat', {
+  const response = await fetch(`${BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
-    body: JSON.stringify({
-      messages: [{ role: 'user', content: bigContent }],
-    }),
+    body: JSON.stringify({ messages: [{ role: 'user', content: bigContent }] }),
   });
 
-  // 超過 1mb 應被拒絕（413 或 400），而非 200
-  assert.ok(response.status === 413 || response.status === 400 || response.status === 500,
-    `Expected 413/400/500 for oversized body, got ${response.status}`);
+  assert.equal(response.status, 413);
+  assert.match(await response.text(), /Payload Too Large|訊息過長/);
 });

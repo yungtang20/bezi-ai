@@ -12,6 +12,9 @@ import { parseAgnesResponse } from "./src/lib/parseAgnesResponse";
 import { SqliteEvidenceSource, type EvidenceData } from "./src/lib/evidence/provider";
 import { checkFactualClaims, type FactCheckResult } from "./src/ai/factChecker";
 import { calculateChart, calculateDaYun, getFutureLiuNian, getFiveElementData, getTenGodData } from "./packages/core/src/index";
+import { classifyQuery } from "./src/ai/knowledge/classifier";
+import { retrieveKnowledge, formatKnowledgeForPrompt } from "./src/ai/knowledge/retriever";
+import type { KnowledgeItem } from "./src/ai/knowledge/types";
 
 // [AI MOD] CORS 中介程式：僅允許相同 origin 或明確允許的來源。
 // 預設開放（向後相容），但可透過 ALLOWED_ORIGINS 環境變數限制。
@@ -379,6 +382,37 @@ function createChatHandler(systemPrompt: string) {
       openAiMessages.push({ role: "system", content: systemPrompt });
       openAiMessages.push({ role: "system", content: `[命盤資訊]\n${JSON.stringify(evidenceData)}` });
       openAiMessages.push({ role: "system", content: JSON.stringify(evidenceBundle) });
+
+      // [知識管線] 分類 → 檢索 → 附加知識條目。管線任何失敗都降級為「無知識條目」，不中斷聊天。
+      let knowledgeItems: KnowledgeItem[] = [];
+      if (evidenceData) {
+        try {
+          const classification = classifyQuery(query);
+          const { items } = retrieveKnowledge(classification, evidenceData);
+          knowledgeItems = items;
+          console.log(`[SERVER] knowledge pipeline: category=${classification.category} confidence=${classification.confidence} topics=${classification.topics.length} retrieved=${items.length}`);
+        } catch (pipelineErr: unknown) {
+          console.error("[SERVER] knowledge pipeline failed, degrading to chart-only evidence");
+        }
+      }
+      openAiMessages.push({ role: "system", content: `[檢索到的命理知識]\n${formatKnowledgeForPrompt(knowledgeItems)}` });
+      // 驗證用 bundle = Evidence 來源 + 檢索到的知識條目；claims 的 sourceIds 必須落在此集合內。
+      const validationBundle: EvidenceBundle = {
+        ...evidenceBundle,
+        items: [
+          ...evidenceBundle.items,
+          ...knowledgeItems.map(item => ({
+            sourceId: item.sourceId,
+            sourceType: 'computed' as const,
+            title: item.title,
+            content: item.content,
+            retrievedAt: new Date().toISOString(),
+            schemaVersion: 'kb-entry-v1',
+            supports: [item.matchedWhy],
+          })),
+        ],
+      };
+
       for (const m of messages) {
         if (!m || !m.content) continue;
         openAiMessages.push({
@@ -443,7 +477,9 @@ function createChatHandler(systemPrompt: string) {
             nextQuestions: [],
           };
         }
-        let result = validateAIOutput(parsedOutput, evidenceBundle);
+        // [知識管線] claims 的 sourceIds 必須 ⊆ 驗證 bundle（Evidence 來源 + 檢索到的知識條目）；
+        // 虛構引用（kb: 編號未實際提供）一律由 validateAIOutput 拒答，不得放行。
+        let result = validateAIOutput(parsedOutput, validationBundle);
         if (!result.valid && DEV_FIXTURE_ENABLED && rawOutput.trim()) {
           // Dev-only adapter for providers that return a non-conforming smoke-test shape.
           parsedOutput = {
