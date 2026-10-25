@@ -24,6 +24,10 @@
 - 管線任何例外 → 降級為「無知識條目」，聊天不中斷
 
 ## 上線檢查表
+- [x] 提交 git commit：`541e9e1`（知識管線）+ `95b7135`（CI runner 修復），已推 origin/pr-base
+- [x] CI 通過：run 40234308590 全綠（含新 test:api step）
+- [x] PR #17 合併（merge commit `6a6dabc`，fast-forward 路徑可清）
+- [x] Render `bezi-ai-api` 重新部署：正式站驗證通過（匿名 token → records → chat SSE 全鏈 OK）
 - [x] `npm run lint`（tsc --noEmit）0 錯
 - [x] `npm test` vitest 123/123
 - [x] API 整合測試 24/24（5 檔 node:test）

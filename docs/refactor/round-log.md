@@ -52,3 +52,26 @@
 ### 結果
 - 24/24 通過；prod smoke 2/2 通過（React 正常掛載、同源資源無 CORS 403）。
 - 零缺陷。與 Round 2 連續兩輪全量測試零缺陷，達成交付條件。
+
+## Round 4 — 2026-10-26
+
+### 測試項目
+- port 隔離改造後 5 檔 API 整合測試（各檔獨立 server port：3100-3104）
+- CI 新增 `test:api` step 全量
+- 真實模型量測：`scripts/eval-ai-factual.mjs`（15 斷言）+ 新增 `scripts/eval-knowledge-real.mjs`（真實 Agnes key × 知識管線，3 查詢 × 4 斷言）
+
+### 發現的問題
+1. **port 共搶根因確認**：`.env.local` 含 `PORT=3000`；server.ts `dotenv.config({ path: '.env.local', override: true })` 會覆蓋未明確傳 PORT 的子程序 → 5 檔併跑共搶 3000。修復：各測試檔 spawn env 明確傳 `PORT`（明確環境變數勝於 dotenv override）。
+2. **evidence 測試檔 spawn 區塊被先前 sed 事故弄壞**（`env:` 行遺漏，child 未收到 PORT）→ 重建 spawn 區塊；加 ENV-PROBE 診斷定位後清除腳手架。
+3. **CI ubuntu-latest → 26.04，Playwright 1.60 不支援**（10-25 既有失敗）→ 固定 `ubuntu-24.04`。
+4. `npm run test:api` 初跑 1 支 flake，重試 + 連跑 3 次 24/24（冷啟動暫態，port 隔離後未再現）。
+
+### 修改內容
+- 5 支 API 測試檔：port 隔離（3100-3104）+ 等待期限 90s
+- `package.json`：新增 `test:api` script；`ci.yml`：新增 Run API Integration Tests step、runner 固定 ubuntu-24.04
+- 新增 `scripts/eval-knowledge-real.mjs`（真實模型量測）
+
+### 結果
+- lint 0 錯；vitest 123/123；API 24/24（連續 2 輪 + 3 次重試）；prod smoke 2/2。
+- 真實模型量測：eval-ai-factual 15/15 PASS；eval-knowledge-real 14/14 PASS（分類 wealth/spouse/general_bazi 全對、檢索 3/3/2 條、factCheck 無錯誤事實）。
+- 提交 `541e9e1` + `95b7135` 推送 origin；PR #17 合併（`6a6dabc`）；Render 正式站全鏈驗證通過。
