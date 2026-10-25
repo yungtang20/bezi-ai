@@ -75,3 +75,21 @@
 - lint 0 錯；vitest 123/123；API 24/24（連續 2 輪 + 3 次重試）；prod smoke 2/2。
 - 真實模型量測：eval-ai-factual 15/15 PASS；eval-knowledge-real 14/14 PASS（分類 wealth/spouse/general_bazi 全對、檢索 3/3/2 條、factCheck 無錯誤事實）。
 - 提交 `541e9e1` + `95b7135` 推送 origin；PR #17 合併（`6a6dabc`）；Render 正式站全鏈驗證通過。
+
+## Round 5 — 2026-10-26（使用者回饋除錯）
+
+### 測試項目（模擬人類操作）
+- 使用者實測 1985-02-03 02:00 男，回報「2020/2021 選順應出從強，實際都顯示身強」
+- 端到端模擬：引擎排盤 → initPatternScores → applyCalibrationDelta（兩順利／一順一不順／兩不順三條路徑）
+
+### 發現的問題
+1. `App.tsx` 內嵌 CALIBRATION_DELTAS 身強行「順利」寫成 strong+10（方向接反），從強初值 30 永久追不上身強 80 → 卡死。
+2. 講義（定格局.docx）45% 區間順利應推身弱；使用者筆記期望從強 → 灰色地帶，依使用者決策改「從強/身弱並推」。
+
+### 修改內容
+- delta 表抽成 `calibration.applyCalibrationDelta` 純函數；身強+順利 → 身強−20/身弱+10/從強+10
+- 7 支新單測；vitest 130/130、lint 0 錯、API 24/24
+
+### 部署
+- commit `7f0c30e` → PR #19 合併（`d421c0c`）→ Render autoDeploy → 正式站 200、chat 正常
+- 正式站初測遇到一次「模型輸出未通過結構化引用驗證」拒答：模型端偶發輸出不合 schema，閘門正確攔截（誠實行為，非 bug）；重試即正常回答。
