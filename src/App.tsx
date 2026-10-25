@@ -23,6 +23,7 @@ import { calculateChart, type BaziChart, determinePattern, type PatternResult, t
 import { CLIENT_CONFIG } from './config';
 import { validateBirthInput } from './utils/validation';
 import { trackProductEvent } from './lib/productEvents';
+import { applyCalibrationDelta } from './calibration';
 import { parseStepFromHash, stepToHash } from './lib/router';
 import { BIRTH_CITIES, cityLongitude } from './lib/trueSolarCities';
 import { PartnerChart } from './matchmaking';
@@ -307,23 +308,11 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const CALIBRATION_DELTAS: Record<string, Record<string, Partial<PatternScores>>> = {
-    '順利': { '從強': { followStrong: 10, strong: -5 }, '從弱': { followWeak: 10, weak: -5 }, '身強': { strong: 10, weak: -5 }, '身弱': { weak: 10, strong: -5 } },
-    '不順': { '從強': { followStrong: -15, strong: 15 }, '從弱': { followWeak: -15, weak: 15 }, '身強': { strong: -10, weak: 10 }, '身弱': { weak: -10, strong: 10 } },
-  };
-
   const handleCalibration = (year: string, value: string) => {
     if (!scores || !pattern) return;
 
     if (value === '順利' || value === '不順') {
-      const nextScores = { ...scores };
-      const delta = CALIBRATION_DELTAS[value]?.[pattern.pattern];
-      if (delta) {
-        for (const [k, v] of Object.entries(delta)) {
-          nextScores[k as keyof PatternScores] = Math.max(0, Math.min(100, nextScores[k as keyof PatternScores] + v));
-        }
-      }
-      setScores(nextScores);
+      setScores(applyCalibrationDelta(scores, value, pattern.pattern));
     }
 
     setCalibrations(prev => {

@@ -122,6 +122,42 @@ function getScoreByPattern(scores: PatternScores, pattern: string): number {
   return key ? scores[key] : 0;
 }
 
+// [domain rule: 定格局.docx 流年定盤表] 快速校準 delta 表（單一真實來源）
+// 背景：日主強的一側在「支持年」（金水/木水/火土等依日主）過得順利 = 日主其實偏弱（支持用神有效），
+// 應推往弱方；過得不順 = 支持年照實辛苦，確認強方。
+// 身強 45% 區間「順利」時，從強（>80% 成勢）與身弱（45% 以下）並推，不預設答案，由打卡證據累積決勝負。
+// 舊表 bug：「身強+順利」原為 strong+10/weak-5，使格局卡死身強、從強（初值30）永遠追不上。
+const CALIBRATION_DELTAS: Record<string, Record<string, Partial<PatternScores>>> = {
+  '順利': {
+    '身強': { strong: -20, weak: 10, followStrong: 10 },
+    '從強': { followStrong: 10, strong: -5 },
+    '從弱': { followWeak: 10, weak: -5 },
+    '身弱': { weak: 10, strong: -5 },
+  },
+  '不順': {
+    '身強': { strong: 10 },
+    '從強': { followStrong: -15, strong: 15 },
+    '從弱': { followWeak: -15, weak: 15 },
+    '身弱': { weak: -10, strong: 10 },
+  },
+};
+
+/** 依「順利／不順／平穩」對應格局套用分數 delta（純函數，不改變輸入）。 */
+export function applyCalibrationDelta(
+  scores: PatternScores,
+  outcome: '順利' | '不順' | '平穩',
+  pattern: string,
+): PatternScores {
+  if (outcome === '平穩') return scores;
+  const delta = CALIBRATION_DELTAS[outcome]?.[pattern];
+  if (!delta) return scores;
+  const next = { ...scores };
+  for (const [k, v] of Object.entries(delta)) {
+    next[k as keyof PatternScores] = Math.max(0, Math.min(100, (next[k as keyof PatternScores] || 0) + v));
+  }
+  return next;
+}
+
 // [AI MOD] 十神日型 → 可評估領域（單一真實來源，供整體與分領域準確率共用）
 export const DAY_TYPE_FIELDS: Record<string, CategoryKey[]> = {
   '財星': ['wealth'],
