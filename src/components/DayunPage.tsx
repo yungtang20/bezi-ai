@@ -102,9 +102,10 @@ const LIUNIAN_EFFECTS = [
 
 // 流年定盤
 const LIUNIAN_PANDING = [
-  { relation: '與日主同五行', strong: '不錯、順遂', weak: '辛苦、疲勞' },
+  // 徐玉蘭口徑（2-1-1～2-1-3）：身強喜耗洩（財、官殺、食傷）、忌印比劫；身弱反之
+  { relation: '與日主同五行', strong: '辛苦、疲勞', weak: '不錯、順遂' },
   { relation: '生日主五行', strong: '辛苦、疲勞', weak: '不錯、順遂' },
-  { relation: '剋日主五行', strong: '辛苦、疲勞', weak: '不錯、順遂' },
+  { relation: '剋日主五行', strong: '不錯、順遂', weak: '辛苦、疲勞' },
   { relation: '日主剋五行', strong: '不錯、順遂', weak: '辛苦、疲勞' },
   { relation: '日主生五行', strong: '不錯、順遂', weak: '辛苦、疲勞' },
 ];
