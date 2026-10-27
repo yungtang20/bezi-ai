@@ -375,6 +375,7 @@
 | 文昌位 | 5-2 講義 | `src/data/charts/fengShui2026.ts` | `starDetails[4]` (四綠文曲星) |
 | 風水系統知識庫 | skill hsu-yulan-bazi v2.1 風水章節（風水磁場順心術：課程 113 全 45 節逐字稿＋`D:\徐玉蘭\風水\` 9 份 PDF） | `src/data/charts/fengShuiSystemGuide.ts` | `FENG_SHUI_SYSTEM_GUIDE`（六大節 boundary / feixing-rules / waiju / neiju / shangye / ritual） |
 | 風水 AI 檢索 | 同上 | `src/ai/knowledge/registry.ts` | `fengshuiBuilder`（關鍵詞 gated，掛 wealth / career / health / family / general_bazi / other）＋ `src/components/FengShuiSystemGuide.tsx` |
+| AI 斷法紀律與人格 | skill v2.1 §0（使用協議／輸出格式／四類分流）、§3（表達 DNA）、skill 免責聲明 | `src/ai/prompts.ts` | `DISCIPLINE_RULE`（讀盤序／連續體／時辰未知／用神方向／輸出結構／四類分流／界線／語氣）＋ `PERSONA_RULE`（AI 以「徐老師」身分回答；被問是否本人須如實回答「係依其教學框架建立之助手」，禁承諾線下服務） |
 
 **風水 Domain Rule（最高鐵律）**：「風水的系統跟八字理論系統是不一樣」（skill v2.1 qa-0106 [61:21]）。
 風水佈局不看身強身弱、不看八字忌神；八字用神色只用在穿著、手機殼等貼身物；兩系統絕不互相推導。
