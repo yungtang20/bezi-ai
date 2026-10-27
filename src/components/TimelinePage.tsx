@@ -195,9 +195,13 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
   const activeDaYun = daYunList[activeDyIdx];
 
   // Prepare chart data
+  // 徐玉蘭口徑（2-1-1）：大運前五年走天干、後五年走地支——傳入分段參數
   const chartData = useMemo(() => {
     return daYunList.map((dy, idx) => {
-      let quality = getDaYunQuality(dy.gan, dy.zhi, favorableElements.favorable, favorableElements.unfavorable);
+      let quality = getDaYunQuality(dy.gan, dy.zhi, favorableElements.favorable, favorableElements.unfavorable, {
+        daYunStartYear: dy.startYear,
+        year: dy.startYear, // 圖表用大運整體傾向：以起運年（前五年）為基準，展開流年時再逐一分段
+      });
       if (chart.dayMaster === '癸' && chart.gender === '男' && dy.ganZhi === '壬午') {
         quality = '好運';
       }
