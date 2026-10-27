@@ -10,6 +10,7 @@ import { getFlyingStarsForYear } from '../../src/data/charts/fengShui2026';
 import { getRemedyStrategy } from '../../src/data/elementRemedyHelper';
 import { GENDER_PALACE_DECOR } from '../../src/data/charts/homeDecorGuide';
 import { getWealthCareer } from '../../src/data/charts/wealthCareers';
+import { DAY_MASTER_TRAITS } from '../../src/data/core/dayMasterTraits';
 
 const EL = ['木', '火', '土', '金', '水'] as const;
 
@@ -152,5 +153,44 @@ describe('3-3 官殺×印：長官緣佳（不是長輩緣佳）', () => {
     expect(r!.suitableCareers).toContain('長官緣佳');
     expect(r!.suitableCareers).toContain('身殺兩停');
     expect(r!.suitableCareers).not.toContain('長輩緣佳');
+  });
+});
+
+// 講義 1-1 [44:49]–[50:56] 講的是「五行偏旺／偏弱」，不是逐干各一套。
+// 曾經把「金偏旺」寫給辛、把庚的身弱寫成「剛硬」（那其實是金偏旺），
+// 丙、戊、庚、壬 也都各有一半是憑印象補的。
+describe('日主身強／身弱 = 講義的五行偏旺／偏弱（1-1）', () => {
+  const PAIRS: Array<[string, string]> = [['甲', '乙'], ['丙', '丁'], ['戊', '己'], ['庚', '辛'], ['壬', '癸']];
+
+  for (const [yang, yin] of PAIRS) {
+    it(`${yang}與${yin}同屬一行，身強／身弱敘述必須逐字相同`, () => {
+      const a = DAY_MASTER_TRAITS[yang as keyof typeof DAY_MASTER_TRAITS];
+      const b = DAY_MASTER_TRAITS[yin as keyof typeof DAY_MASTER_TRAITS];
+      expect(a.strong).toBe(b.strong);
+      expect(a.weak).toBe(b.weak);
+    });
+  }
+
+  it('五行偏旺的關鍵語句與講義一致', () => {
+    expect(DAY_MASTER_TRAITS['甲'].strong).toContain('很希望成長突破');
+    expect(DAY_MASTER_TRAITS['丙'].strong).toContain('太情緒化');
+    expect(DAY_MASTER_TRAITS['戊'].strong).toContain('原則性太強');
+    expect(DAY_MASTER_TRAITS['庚'].strong).toContain('敢衝敢拼');
+    expect(DAY_MASTER_TRAITS['辛'].strong).toContain('嫉惡如仇');
+    expect(DAY_MASTER_TRAITS['壬'].strong).toContain('想太多');
+  });
+
+  it('五行偏弱的關鍵語句與講義一致（不得混入偏旺的性格）', () => {
+    expect(DAY_MASTER_TRAITS['甲'].weak).toContain('缺乏自信');
+    expect(DAY_MASTER_TRAITS['丙'].weak).toContain('很怕衝突');
+    expect(DAY_MASTER_TRAITS['戊'].weak).toContain('比較沒有責任感');
+    expect(DAY_MASTER_TRAITS['庚'].weak).toContain('該斷不斷');
+    expect(DAY_MASTER_TRAITS['癸'].weak).toContain('容易被表面的假象騙');
+
+    // 「固執」「剛硬」「敢衝敢拼」都是偏旺，不該出現在偏弱
+    for (const stem of ['甲', '丙', '戊', '庚', '壬'] as const) {
+      const w = DAY_MASTER_TRAITS[stem].weak;
+      expect(w, `${stem} 身弱不應含偏旺性格`).not.toMatch(/固執|剛硬|敢衝敢拼|嫉惡如仇/);
+    }
   });
 });
