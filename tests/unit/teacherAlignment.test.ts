@@ -11,6 +11,8 @@ import { getRemedyStrategy } from '../../src/data/elementRemedyHelper';
 import { GENDER_PALACE_DECOR } from '../../src/data/charts/homeDecorGuide';
 import { getWealthCareer } from '../../src/data/charts/wealthCareers';
 import { DAY_MASTER_TRAITS } from '../../src/data/core/dayMasterTraits';
+import { determinePattern, isWetEarth } from '../../src/pattern';
+import { calculateChart } from '../../src/paipan';
 
 const EL = ['木', '火', '土', '金', '水'] as const;
 
@@ -144,6 +146,23 @@ describe('軟裝添運對照表：子息宮／桃花宮 20 格（老師原表）
       expect(d.zodiac).toBe(exp.zodiac);
     });
   }
+});
+
+// 講義 1-4 [07:14]：「濕土能生金，燥土比較無法生金」。
+// 地支層面老師點名辰、丑；天干層面依同一定義，己（田園濕土）算、戊（燥土）不算。
+describe('濕土生金：辰、丑、己算印；未、戌、戊不算（1-4 [07:14]）', () => {
+  it('濕土判定：辰、丑、己為濕土；未、戌、戊為燥土', () => {
+    for (const s of ['辰', '丑', '己']) expect(isWetEarth(s), `${s} 應為濕土`).toBe(true);
+    for (const s of ['未', '戌', '戊']) expect(isWetEarth(s), `${s} 應為燥土`).toBe(false);
+  });
+
+  it('天干確實接進計分：同盤換月干，己（濕土）高於戊（燥土）', () => {
+    // 用真實命盤（1990-05-15 14:00 男，庚金日主）只換月干，地支不動，排除其他變因
+    const base = calculateChart(1990, 5, 15, 14, '男');
+    const withMonthGan = (gan: string) => ({ ...base, month: { ...base.month, gan } });
+    expect(determinePattern(withMonthGan('己')).score)
+      .toBeGreaterThan(determinePattern(withMonthGan('戊')).score);
+  });
 });
 
 describe('3-3 官殺×印：長官緣佳（不是長輩緣佳）', () => {

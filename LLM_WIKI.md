@@ -1,6 +1,6 @@
 # 八字命理 LLM Wiki
 
-> 最後更新：2026-06-05
+> 最後更新：2026-10-27（格局判定對齊徐玉蘭口徑：權重 年支 20%/時支 10%、貪生忘剋限日柱旁、庫整筆轉列、40–55% 連續體、濕土燥土、定盤年 2013/14/15、大運前 5 天干後 5 地支）
 > 目的：建立「來源講義 → Wiki 知識頁 → 程式碼」的完整知識圖譜，供 LLM 問答與系統開發使用
 
 ---
@@ -252,6 +252,21 @@
 命盤年柱不同。系統與市售標準八字排盤軟體一致採立春學派。向使用者解釋時，若其命盤落在
 該窗口，可主動說明兩種學派的年柱差異。
 
+**格局判定 Domain Rule（2026-10-27 對齊徐玉蘭口徑，課程 156 逐字稿 1-3/1-4/2-1-1）**：
+以下口徑已落版於 `packages/core/src/pattern.ts` 與 `dayun.ts`，AI 解釋格局時必須使用，
+舊口徑（年支 10%、時支 20%、燥土生金、定盤年 2018/2025）已廢止。
+
+| 概念 | 口徑 | 實作 |
+|------|------|------|
+| 格局加權 | 年干 5%、年支 **20%**、月干 5%、月支 35%、日支 20%、時干 5%、時支 **10%**（1-3 [10:06]） | `pattern.ts` `ganWeights/zhiWeights` |
+| 貪生忘剋 | 僅日柱旁兩柱（月柱、時柱）成立；非鄰柱的剋鏈不算化解（1-3 [31:41]） | `checkShengWangKe()` 位置限制 |
+| 庫 | 必須透干才算庫；啟動後該柱地支權重整筆以庫五行計（如「未的木庫力量 35%」），非固定 +5（1-3 [12:32]、[14:22]） | `pattern.ts` 庫差額制 |
+| 連續體地帶 | 分數 40–55% 不硬貼標籤，標 `isContinuum`，UI 顯示「偏平衡」＋定盤註記；分數只是工具，定盤（流年體感回測）才是裁判（1-3 [39:48]、[54:52]） | `pattern.ts` `isContinuum`、`getPatternLabel()`、`PATTERN_CONTINUUM_NOTE` |
+| 濕土燥土 | 金日主只認辰、丑（濕土）為印；未、戌（燥土）不生金、不作根（1-4 [07:14]） | `pattern.ts` `isWetSoil` 分支（計分／庫／hasRoot） |
+| 定盤流年 | 五行旺年：金水→2020/2021、木→2023/2024、火土→**2013/2014/2015/2018/2025**；從格與一般格用同一批年份分辨（1-3 [38:44]、[56:32]） | `pattern.ts` `YEAR_CHECK_MAP`、`getCheckYears()` |
+| 從格口徑 | 從強＝日主極旺順勢、從弱＝日主極弱順勢；求順勢非求平衡；從強喜忌＝身弱、從弱喜忌＝身強（5-1 [20:09]） | `pattern.ts`、`FoundationPage.tsx` PATTERNS |
+| 大運分段 | 前五年走天干、後五年走地支；地支力量大於天干；起運歲數不採計（僅顯示為大致區間、非判定因素）（2-1-1 [00:23]、[00:37]） | `dayun.ts` `getDaYunQuality(opts)`、UI 區間顯示 |
+
 **正確性證據鏈**（2026-10-22 建立，不依賴引擎自我宣告）：
 
 1. 節氣時刻以 Meeus 低精度太陽黃經獨立計算交叉驗證
@@ -275,8 +290,8 @@
 | 地支相破 | 天干地支含刑沖破害 | `src/matchmaking.ts` | `checkLiuPo()` |
 | 十神計算 | 十神.docx | `packages/core/src/constants.ts` | `getTenGod()`, `getTenGodCategory()` |
 | 命盤計算 | 1-1, 1-2 | `packages/core/src/paipan.ts` | `calculateChart()`, `buildPillar()` |
-| 格局判定 | 定格局.docx | `packages/core/src/pattern.ts` | `determinePattern()`, `getPrimaryPattern()` |
-| 大運計算 | 大運流年補運架構 | `packages/core/src/dayun.ts` | `calculateDaYun()`, `getDaYunQuality()` |
+| 格局判定 | 定格局.docx ＋ 課程逐字稿 1-3/1-4（2026-10-27 徐玉蘭口徑對齊） | `packages/core/src/pattern.ts` | `determinePattern()`, `getPrimaryPattern()`, `getCheckYears()` |
+| 大運計算 | 大運流年補運架構 ＋ 逐字稿 2-1-1（前 5 天干後 5 地支） | `packages/core/src/dayun.ts` | `calculateDaYun()`, `getDaYunQuality()` |
 | 流年計算 | 2000-2030 流年五行對照表 | `packages/core/src/dayun.ts` | `getLiuNian()`, `getFutureLiuNian()` |
 | 合盤判斷 | 姻緣篇.docx | `src/matchmaking.ts` | `checkSpouseStar()`, `checkMutualComplement()` |
 

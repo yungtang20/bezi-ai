@@ -5,7 +5,7 @@ import CategoryPageTemplate from './CategoryPageTemplate';
 import { useState, useMemo, useEffect } from 'react';
 import { Solar } from 'lunar-javascript';
 import { BaziChart } from '../paipan';
-import { PatternScores } from '../pattern';
+import { PatternScores, determinePattern, getPatternLabel, PATTERN_CONTINUUM_NOTE } from '../pattern';
 import { getUpcomingDatesForCategory } from '../dailyAnalysis';
 import CategoryTimelineRemedy from './CategoryTimelineRemedy';
 import CategorySynastry from './CategorySynastry';
@@ -99,6 +99,10 @@ export default function CareerPage({ chart, primaryPattern, favorable, unfavorab
   // 身強/身弱判定
   const isStrong = useMemo(() => primaryPattern.includes('身強'), [primaryPattern]);
   const isWeak = useMemo(() => primaryPattern.includes('身弱'), [primaryPattern]);
+  // 徐玉蘭口徑：40-55% 屬連續體，顯示「偏平衡」而不是把工具分數講成定論
+  const patternResult = useMemo(() => determinePattern(chart), [chart]);
+  const patternLabel = getPatternLabel(patternResult, primaryPattern);
+  const isContinuum = patternResult.isContinuum && primaryPattern === patternResult.pattern;
 
   const dmElement = GAN_TO_ELEMENT[chart.dayMaster] || '金';
 
@@ -222,7 +226,9 @@ export default function CareerPage({ chart, primaryPattern, favorable, unfavorab
             <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-1 ring-1 ring-blue-500/20">
               <span className="text-[10px] text-blue-400/80">日主自己 (身命)</span>
               <strong className="text-base text-white font-black font-serif block">{chart.dayMaster} ({dmElement}命人)</strong>
-              <span className="text-[10px] text-zinc-400 block font-semibold">{isStrong ? '身強格（厚實）' : '身弱格（靈巧）'}</span>
+              <span className="text-[10px] text-zinc-400 block font-semibold" title={isContinuum ? PATTERN_CONTINUUM_NOTE : undefined}>
+                {isContinuum ? patternLabel : isStrong ? '身強格（厚實）' : isWeak ? '身弱格（靈巧）' : `${primaryPattern}格`}
+              </span>
             </div>
             <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-1">
               <span className="text-[10px] text-zen-muted">時柱天干 ({chart.hour.gan})</span>

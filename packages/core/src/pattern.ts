@@ -57,6 +57,16 @@ function isDrySoil(zhi: string): boolean {
   return DRY_SOIL.includes(zhi);
 }
 
+/**
+ * 濕土（含天干）：地支辰、丑，以及天干「己」。
+ * 教師口徑（1-4 [07:14]-[07:18]）點名的是地支辰、丑；天干層面依同一定義處理——
+ * 己為田園濕土、戊為燥土（講義日主篇：己＝田園濕土、戊＝高山大地）。
+ * 因此金日主遇己土算印，遇戊土不算。
+ */
+export function isWetEarth(source?: string): boolean {
+  return source === '己' || (source ? isWetSoil(source) : false);
+}
+
 // ==================== 天干五合 ====================
 // 來源：天干地支合化條件.pdf P1
 
@@ -212,11 +222,11 @@ interface TenGodCount {
 // ==================== 輔助函式 ====================
 
 /** 判斷某五行是否為日主的「印比」（生我或同我） */
-function isSupporting(dayElement: string, other: string): boolean {
+function isSupporting(dayElement: string, other: string, source?: string): boolean {
   // 徐玉蘭口徑（1-4 [07:14]-[07:18]）：土生金須區分濕土燥土——
-  // 「濕土能生金，燥土比較無法生金」。金日主只認丑、辰（濕土）為印，
-  // 未、戌（燥土）不列為生扶。
-  if (dayElement === '金' && other === '土') return false; // 燥土預設不生金，濕土分支在呼叫端處理
+  // 「濕土能生金，燥土比較無法生金」。金日主只認辰、丑（濕土）與天干己（濕土）為印，
+  // 未、戌、戊（燥土）不列為生扶。source 傳入實際的干或支字才判斷得出濕燥。
+  if (dayElement === '金' && other === '土') return isWetEarth(source);
   return other === dayElement || ELEMENT_GENERATES[other] === dayElement;
 }
 
@@ -546,6 +556,23 @@ export function getPrimaryPattern(scores: PatternScores): '身強' | '身弱' | 
 }
 
 /**
+ * 連續體地帶（40–55%）的說明文字。
+ * 教師口徑（1-3 [39:48]-[54:52]）：分數只是工具，定盤（流年體感回測）才是裁判。
+ */
+export const PATTERN_CONTINUUM_NOTE =
+  '分數落在 40–55% 的連續體地帶，體質介於身強與身弱之間。標籤僅供參考，仍以流年定盤（體感回測）為準。';
+
+/**
+ * 顯示用的格局標籤：連續體時加註「偏平衡」，避免把工具分數講成定論。
+ * 若定盤（scores）已把格局改成別格，則以定盤為準，不加註。
+ */
+export function getPatternLabel(computed: PatternResult, primaryPattern?: string): string {
+  const label = primaryPattern ?? computed.pattern;
+  if (!computed.isContinuum || label !== computed.pattern) return label;
+  return `${label}（偏平衡）`;
+}
+
+/**
  * 找最弱五行
  *
  * 邏輯：
@@ -702,7 +729,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
         reasons.push(`P${i+1}天干合化${harmonyResult}（印比）→ 負變正加分`);
       }
     } else if (!isDamaged) {
-      if (isSupporting(dayElement, ganEl)) {
+      if (isSupporting(dayElement, ganEl, gans[i])) {
         ganSupport += ganWeights[i];
       } else {
         // 扣分項：剋我、我剋、我生
@@ -713,9 +740,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
     // 地支加分/扣分
     let zhiSupport = 0;
     // 濕土分支（徐玉蘭 1-4 [07:14]）：金日主遇丑、辰（濕土）仍視為印——土生金
-    const zhiSupporting = zhiMain === '土' && dayElement === '金' && isWetSoil(zhis[i])
-      ? true
-      : isSupporting(dayElement, zhiMain);
+    const zhiSupporting = isSupporting(dayElement, zhiMain, zhis[i]);
     if (harmonyResult) {
       if (isSupporting(dayElement, harmonyResult)) {
         zhiSupport += zhiWeights[i];
@@ -728,9 +753,9 @@ export function determinePattern(chart: BaziChart): PatternResult {
         negativeScore += zhiWeights[i] * 0.5;
       }
 
-      // 藏干加分
-      hiddenEls.forEach(h => {
-        if (isSupporting(dayElement, h)) {
+      // 藏干加分（濕燥看「所在的地支」，不看藏干本身：未中的己土仍是燥土裡的火土）
+      hiddenEls.forEach((h) => {
+        if (isSupporting(dayElement, h, zhis[i])) {
           zhiSupport += zhiWeights[i] * 0.3;  // 藏干權重較低
         }
       });
@@ -758,14 +783,10 @@ export function determinePattern(chart: BaziChart): PatternResult {
       // 庫被啟動，檢查啟動後的五行是否為日主加分
       const actualElement = tomb.tombType.replace('庫', '');
       // 金庫（丑）：對金日主而言是「同我」；金日主 + 濕土（丑辰）→ 印（濕土生金）
-      const actualSupporting = actualElement === '土' && dayElement === '金' && isWetSoil(tomb.zhi)
-        ? true
-        : isSupporting(dayElement, actualElement);
+      const actualSupporting = isSupporting(dayElement, actualElement, tomb.zhi);
       if (actualSupporting) {
         const zhiMainEl = ZHI_TO_ELEMENT[tomb.zhi];
-        const mainSupporting = zhiMainEl === '土' && dayElement === '金' && isWetSoil(tomb.zhi)
-          ? true
-          : isSupporting(dayElement, zhiMainEl);
+        const mainSupporting = isSupporting(dayElement, zhiMainEl, tomb.zhi);
         if (!mainSupporting) {
           // 本氣非印比、庫五行是印比 → 該柱地支權重整筆轉列加分
           const w = zhiWeights[tomb.pillarIndex] || 0;
@@ -780,7 +801,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   for (const tg of touGan) {
     if (tg.appearsInGan) {
       const hElement = GAN_TO_ELEMENT[tg.hiddenStem];
-      if (isSupporting(dayElement, hElement)) {
+      if (isSupporting(dayElement, hElement, tg.hiddenStem)) {
         positiveScore += 3;
         reasons.push(`${tg.zhi}藏${tg.hiddenStem}透干於P${tg.ganPosition!+1}+3`);
       }
@@ -804,12 +825,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   let reason: string;
 
   // 從格嚴格判斷：需檢查是否有根（金日主的根須考慮濕土生金：丑辰算根、未戌不算）
-  const hasRoot = zhis.some(z => {
-    if (!z) return false;
-    const el = ZHI_TO_ELEMENT[z];
-    if (el === '土' && dayElement === '金') return isWetSoil(z);
-    return isSupporting(dayElement, el);
-  });
+  const hasRoot = zhis.some(z => (z ? isSupporting(dayElement, ZHI_TO_ELEMENT[z], z) : false));
 
   if (finalScore > 80 && !hasRoot) {
     pattern = '從強';

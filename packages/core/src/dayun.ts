@@ -143,6 +143,48 @@ export function getDaYunQuality(
 
   return '平運';
 }
+/**
+ * 徐玉蘭口徑例外表：引擎分段判斷與老師實測口徑不一致時，以老師口徑為準。
+ * 每條記錄可獨立審計，原因欄位註明對應逐字稿段落，避免硬編碼散落在 React 元件內。
+ */
+export interface DaYunQualityOverride {
+  dayMaster: string;
+  gender: '男' | '女';
+  ganZhi: string;
+  quality: '好運' | '壞運' | '平運';
+  reason: string;
+}
+
+export const DA_YUN_QUALITY_OVERRIDES: DaYunQualityOverride[] = [
+  {
+    dayMaster: '癸',
+    gender: '男',
+    ganZhi: '壬午',
+    quality: '好運',
+    reason: '老師實測口徑（2-1-1 [00:23]-[03:30]）：癸男壬午大運實測為好運，與機率模型分段判斷不一致，以老師口徑為準。',
+  },
+];
+
+/**
+ * 大運分段好壞判斷，包含老師口徑例外（override）。
+ * 先檢查 override 表；命中以老師口徑為準；否則退回 getDaYunQuality。
+ * 純函式，可單元測試，不依賴 React 元件狀態。
+ */
+export function getDaYunSegmentQuality(
+  dayMaster: string,
+  gender: '男' | '女',
+  gan: string,
+  zhi: string,
+  favorable: string[],
+  unfavorable: string[],
+  opts?: { daYunStartYear?: number; year?: number },
+): '好運' | '壞運' | '平運' {
+  const override = DA_YUN_QUALITY_OVERRIDES.find(
+    o => o.dayMaster === dayMaster && o.gender === gender && o.ganZhi === `${gan}${zhi}`,
+  );
+  if (override) return override.quality;
+  return getDaYunQuality(gan, zhi, favorable, unfavorable, opts);
+}
 
 /**
  * 取得指定年份的流年干支

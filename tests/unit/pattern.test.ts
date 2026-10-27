@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateChart } from '../../src/paipan';
 import { determinePattern, getCheckYears, type PatternResult } from '../../src/pattern';
-import { GAN_TO_ELEMENT } from '../../src/constants';
 
 describe('Pattern Determination (Ge Ju)', () => {
   it('correctly determines pattern and favorable elements for a Bazi chart', () => {

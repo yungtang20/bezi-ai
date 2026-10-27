@@ -348,7 +348,7 @@ export default function HealthPage({ chart, primaryPattern, weakestElement, weak
                   {currentDaYun ? `${currentDaYun.startAge}歲~${currentDaYun.startAge + 9}歲大運：${currentDaYun.ganZhi}` : '查無大運'}
                 </strong>
                 <span className="text-xs text-zen-muted block">
-                  大限管中局：奠定這十年健康修復與病理的背景底色。
+                  大限管中局：奠定這十年健康修復與病理的背景底色。（歲數為大致區間，非判定因素）
                 </span>
               </div>
               <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">

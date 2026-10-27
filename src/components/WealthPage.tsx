@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { BaziChart } from '../paipan';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../constants';
+import { determinePattern, getPatternLabel, PATTERN_CONTINUUM_NOTE } from '../pattern';
 import { calculateDaYun, getLiuNian, getTenGodForDaYun } from '../dayun';
 import { Solar } from 'lunar-javascript';
 import { WEALTH_GUIDELINES, WEALTH_PILLAR_MEANINGS, NO_WEALTH_REMEDIES, SOLVE_MONEY_LOSS, WEALTH_LOST_TIMING } from '../data/charts/wealthGuidelines';
@@ -122,6 +123,10 @@ export default function WealthPage({ chart, primaryPattern, favorable, unfavorab
   // 身強/身弱判定
   const isStrong = useMemo(() => primaryPattern.includes('身強'), [primaryPattern]);
   const isWeak = useMemo(() => primaryPattern.includes('身弱'), [primaryPattern]);
+  // 徐玉蘭口徑：40-55% 屬連續體，顯示「偏平衡」而不是把工具分數講成定論
+  const patternResult = useMemo(() => determinePattern(chart), [chart]);
+  const patternLabel = getPatternLabel(patternResult, primaryPattern);
+  const isContinuum = patternResult.isContinuum && primaryPattern === patternResult.pattern;
 
   // 3. 歲運推演：當前大運 & 流年取得
   const currentYear = new Date().getFullYear();
@@ -358,7 +363,9 @@ export default function WealthPage({ chart, primaryPattern, favorable, unfavorab
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-1 ring-1 ring-yellow-400/20">
                 <span className="text-[10px] text-yellow-400/80">日主自己 (己身)</span>
                 <strong className="text-base text-white font-black font-serif block">{chart.dayMaster} ({GAN_TO_ELEMENT[chart.dayMaster]}命人)</strong>
-                <span className="text-[10px] text-zinc-400 block font-semibold">{isStrong ? '身強格（氣充）' : '身弱格（待扶）'}</span>
+                <span className="text-[10px] text-zinc-400 block font-semibold" title={isContinuum ? PATTERN_CONTINUUM_NOTE : undefined}>
+                  {isContinuum ? patternLabel : isStrong ? '身強格（氣充）' : isWeak ? '身弱格（待扶）' : `${primaryPattern}格`}
+                </span>
               </div>
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-1">
                 <span className="text-[10px] text-zen-muted">時柱天干 ({chart.hour.gan})</span>
@@ -626,7 +633,7 @@ export default function WealthPage({ chart, primaryPattern, favorable, unfavorab
                   {currentDaYun ? `${currentDaYun.startAge}歲~${currentDaYun.startAge + 9}歲大運：${currentDaYun.ganZhi}` : '目前無大運'}
                 </strong>
                 <span className="text-xs text-zinc-400 block font-semibold">
-                  大限評定：{daYunWealthDetails.status}
+                  大限評定：{daYunWealthDetails.status}（歲數為大致區間，非判定因素）
                 </span>
               </div>
               <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">

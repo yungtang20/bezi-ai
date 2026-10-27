@@ -23,7 +23,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { BaziChart } from "../paipan";
-import { PatternScores } from "../pattern";
+import { PatternScores, determinePattern, getPatternLabel, PATTERN_CONTINUUM_NOTE } from "../pattern";
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from "../constants";
 import { getUpcomingDatesForCategory } from "../dailyAnalysis";
 import { calculateDaYun, getTenGodForDaYun, getDaYunQuality, getLiuNian } from "../dayun";
@@ -80,6 +80,11 @@ export default function RomancePage({
   onNavigate,
 }: Props) {
     const [flyingStarYear, setFlyingStarYear] = useState(2026);
+
+  // 徐玉蘭口徑：40-55% 屬連續體，顯示「偏平衡」而不是把工具分數講成定論
+  const patternResult = useMemo(() => determinePattern(chart), [chart]);
+  const patternLabel = getPatternLabel(patternResult, primaryPattern);
+  const isContinuum = patternResult.isContinuum && primaryPattern === patternResult.pattern;
 
   const isMale = chart.gender === "男";
   const dayZhi = chart.day.zhi;
@@ -654,7 +659,10 @@ export default function RomancePage({
                 欲抽身爛桃花，必須精選五行平調的流年月，有利談判重大決定：
               </p>
               <div className="mt-1.5 p-2 bg-pink-950/10 border border-pink-900/45 rounded-lg space-y-1">
-                <p className="font-bold">您的身強弱格局：{primaryPattern}</p>
+                <p className="font-bold">您的身強弱格局：{patternLabel}</p>
+                {isContinuum && (
+                  <p className="text-[10px] text-zinc-500 leading-relaxed">{PATTERN_CONTINUUM_NOTE}</p>
+                )}
                 <p className="text-white">
                   {primaryPattern.includes("弱") ? (
                     currentDaYun && currentDaYun.ganZhi === "壬午" ? 

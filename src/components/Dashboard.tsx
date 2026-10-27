@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { BaziChart, getHiddenTenGodsForZhi, ZHI_HIDE_GAN, DAY_MASTER_PERSONALITY } from '../paipan';
-import { PatternScores, getPrimaryPattern, determinePattern } from '../pattern';
+import { PatternScores, getPrimaryPattern, determinePattern, getPatternLabel, PATTERN_CONTINUUM_NOTE } from '../pattern';
 import { GAN_TO_ELEMENT } from '../constants';
 import { TEN_GOD_TRAITS } from '../data';
 import { calculateDaYun, getLiuNian } from '../dayun';
@@ -123,9 +123,9 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
       isHighlighted: true
     },
     {
-      label: `大運 ${currentDaYun?.startAge}歲`,
+      label: `大運 ${currentDaYun ? `${currentDaYun.startAge}-${currentDaYun.startAge + 9}` : '?'} 歲`,
       mobileLabel: '大運',
-      mobileSubLabel: `${currentDaYun?.startAge}歲`,
+      mobileSubLabel: currentDaYun ? `${currentDaYun.startAge}-${currentDaYun.startAge + 9} 歲` : '',
       data: {
         gan: currentDaYun?.gan || '?',
         zhi: currentDaYun?.zhi || '?',
@@ -224,9 +224,16 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
             };
             const style = elementStyles[dayElement] || elementStyles['水'];
             return (
-              <div className={`${style.bg} px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-inner border`}>
-                <span className="text-xl font-bold font-serif">{chart?.dayMaster}{dayElement}</span>
-                <span className={`text-sm font-bold tracking-wide ${style.text}`}>{primaryPattern}</span>
+              <div className="flex flex-col items-end gap-1">
+                <div className={`${style.bg} px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-inner border`}>
+                  <span className="text-xl font-bold font-serif">{chart?.dayMaster}{dayElement}</span>
+                  <span className={`text-sm font-bold tracking-wide ${style.text}`}>{getPatternLabel(patternResult, primaryPattern)}</span>
+                </div>
+                {patternResult.isContinuum && (
+                  <p className="text-[10px] text-zinc-500 leading-snug max-w-[260px] text-right">
+                    {PATTERN_CONTINUUM_NOTE}
+                  </p>
+                )}
               </div>
             );
           })()}
