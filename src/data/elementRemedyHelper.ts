@@ -268,9 +268,9 @@ export const WEAK_ELEMENT_ROMANCE: Record<string, ElementRemedy> = {
 // 補洩法方位/顏色資料（根據日主五行 + 身強/身弱）
 // ──────────────────────────────────────────────
 
-/** 各五行的方位 */
+/** 各五行的方位（1-5 講義：土無方位，借火的南方） */
 export const ELEMENT_DIRECTION: Record<string, string> = {
-  '木': '東方', '火': '南方', '土': '中央', '金': '西方', '水': '北方',
+  '木': '東方', '火': '南方', '土': '南方（土無方位，借火）', '金': '西方', '水': '北方',
 };
 
 /** 各五行的代表顏色 */
@@ -287,17 +287,19 @@ export const ELEMENT_DECOR: Record<string, string> = {
   '水': '水缸或玻璃杯、藍色/黑色系掛畫、水晶',
 };
 
-/** 根據日主強弱取得補洩法建議 */
+/** 根據日主強弱取得補洩法建議（徐玉蘭 1-4／1-5 口徑） */
 export function getRemedyStrategy(
   dayElement: string,
   isWeak: boolean,
 ): { method: string; directions: string[]; colors: string[]; decor: string; avoid: string } {
   const genMe = Object.entries({ '木': '火', '火': '土', '土': '金', '金': '水', '水': '木' })
-    .find(([, v]) => v === dayElement)?.[0] || ''; // 生我的
-  const myCtrl = ({ '木': '土', '土': '水', '水': '火', '火': '金', '金': '木' })[dayElement] || ''; // 我生的
+    .find(([, v]) => v === dayElement)?.[0] || ''; // 生我的（印）
+  const myControl = ({ '木': '土', '土': '水', '水': '火', '火': '金', '金': '木' })[dayElement] || ''; // 我剋的（財）
+  const ctrlMe = ({ '土': '木', '水': '土', '火': '水', '金': '火', '木': '金' })[dayElement] || ''; // 剋我的（官殺）
+  const myOutput = ({ '木': '火', '火': '土', '土': '金', '金': '水', '水': '木' })[dayElement] || ''; // 我生的（食傷）
 
   if (isWeak) {
-    // 身弱：補 — 生我 + 同我
+    // 身弱：補生扶組＝印（生我）＋比劫（同我）
     const dirs = [ELEMENT_DIRECTION[genMe], ELEMENT_DIRECTION[dayElement]].filter(Boolean);
     const cols = [ELEMENT_COLOR[genMe], ELEMENT_COLOR[dayElement]].filter(Boolean);
     return {
@@ -308,15 +310,16 @@ export function getRemedyStrategy(
       avoid: genMe ? ELEMENT_COLOR[({ '木': '金', '火': '水', '土': '木', '金': '火', '水': '土' })[genMe] || ''] : '',
     };
   } else {
-    // 身強：洩 — 我生
-    const dirs = [ELEMENT_DIRECTION[myCtrl], ELEMENT_DIRECTION[dayElement]].filter(Boolean);
-    const cols = [ELEMENT_COLOR[myCtrl], ELEMENT_COLOR[dayElement]].filter(Boolean);
+    // 身強：洩耗組＝財（我剋）＋官殺（剋我）＋食傷（我生），不可混入印比劫
+    const drain = [myControl, ctrlMe, myOutput].filter(Boolean);
+    const dirs = drain.map(e => ELEMENT_DIRECTION[e]).filter(Boolean);
+    const cols = drain.map(e => ELEMENT_COLOR[e]).filter(Boolean);
     return {
       method: '洩法',
       directions: dirs,
       colors: cols,
-      decor: `少量${ELEMENT_DECOR[myCtrl]}；適度${ELEMENT_DECOR[dayElement]}`,
-      avoid: myCtrl ? `過多${ELEMENT_COLOR[myCtrl]}` : '',
+      decor: drain.map(e => ELEMENT_DECOR[e]).filter(Boolean).join('；'),
+      avoid: `過多${ELEMENT_COLOR[genMe] || ''}與${ELEMENT_COLOR[dayElement] || ''}（印、比劫為忌）`,
     };
   }
 }
