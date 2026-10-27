@@ -5,6 +5,7 @@ export * from './careerRoles';
 // [AI MOD] familyInteraction removed — dead code (no external consumers)
 export * from './familyRoles';
 export * from './fengShui2026';
+export * from './fengShuiSystemGuide';
 // [AI MOD] friendSupport re-enabled — used by ElementRemedyCard for friends category
 export * from './friendSupport';
 export * from './healthData';

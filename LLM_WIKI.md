@@ -373,12 +373,18 @@
 | 桃花位佈局 | 5-2 講義 | `src/data/lecture/lectureData.ts` | `LECTURE_DATA.FLYING_STARS_ROMANCE` |
 | 2026 飛星 | 5-2 講義 | `src/data/charts/fengShui2026.ts` | `FENG_SHUI_2026`, `getFlyingStarsForYear()` |
 | 文昌位 | 5-2 講義 | `src/data/charts/fengShui2026.ts` | `starDetails[4]` (四綠文曲星) |
+| 風水系統知識庫 | skill hsu-yulan-bazi v2.1 風水章節（風水磁場順心術：課程 113 全 45 節逐字稿＋`D:\徐玉蘭\風水\` 9 份 PDF） | `src/data/charts/fengShuiSystemGuide.ts` | `FENG_SHUI_SYSTEM_GUIDE`（六大節 boundary / feixing-rules / waiju / neiju / shangye / ritual） |
+| 風水 AI 檢索 | 同上 | `src/ai/knowledge/registry.ts` | `fengshuiBuilder`（關鍵詞 gated，掛 wealth / career / health / family / general_bazi / other）＋ `src/components/FengShuiSystemGuide.tsx` |
+
+**風水 Domain Rule（最高鐵律）**：「風水的系統跟八字理論系統是不一樣」（skill v2.1 qa-0106 [61:21]）。
+風水佈局不看身強身弱、不看八字忌神；八字用神色只用在穿著、手機殼等貼身物；兩系統絕不互相推導。
+風水佈局一律以風水系統為準（命主五行 × 宮位方位），健康主題先正規醫療、再佩帶用品、最後才是風水（5-3 [09:11]）。
 
 #### 大運流年篇 (08_大運流年)
 
 | 概念 | 來源檔案 | 實現檔案 | 變數 |
 |------|----------|----------|------|
-| 大運流年補運架構 | 大運流年補運架構/ | `src/data/rules/dayunLiunian.ts` | `DAYUN_LIUNIAN_GUIDES` |
+| 大運流年補運架構（靜態速查） | 大運流年補運架構/ ＋ 課程逐字稿 2-1-1～2-1-3 | `src/data/rules/dayunLiunian.ts` | `DAYUN_LIUNIAN_GUIDES`（2026-10-27 重構：分支語義 remedyAlways / remedyWhenDayunGood / remedyWhenDayunBad；金日主濕土例外 note；喜忌方向由 `fiveElementsBalance.getLiunianAndRemedy` 程序化產生，單一來源） |
 | 大運流年斷應 | 大運流年補運架構/ | `src/data/rules/timelineGuidelines.ts` | `TIMELINE_GUIDELINES` |
 | 大運排法 | 大運流年補運架構/ | `src/dayun.ts` | `calculateDaYun()` |
 | 流年斷應 | 2000-2030 流年五行對照表 | `src/dayun.ts` | `getLiuNian()`, `getFutureLiuNian()` |
@@ -386,6 +392,12 @@
 | 太歲判斷 | 天干地支含刑沖破害 | `src/data/rules/taiSui.ts` | `checkTaiSui()`, `getTaiSuiAdvice()` |
 | 每日流日分析 | 5-2 講義 | `src/data/rules/dailyFlowDays.ts` | `checkDayType()` |
 | 每日能量分析 | 5-2 講義 | `src/dailyAnalysis.ts` | `getDailyEnergy()` |
+
+**大運流年補運 Domain Rule（徐玉蘭口徑，2.5 補運架構十張表）**：
+身強補運只有一組（耗洩：財、官殺、食傷），大運好壞流年好壞都不改；身弱補運**看大運不看流年**——
+大運走生扶 → 補耗洩（既有配置兌現，非新事件；2-1-2 [04:53]），大運走耗洩 → 補生扶（印比）；
+從格求順勢不求解平衡，成格全好、破格全壞（2-1-3 [00:10]）；金日主補土挑濕土（辰、丑；1-4 [07:14]）。
+測試：`tests/unit/dayunLiunian.test.ts` 釘住全部分支語義。
 
 #### 基礎理論篇 (01_基礎理論)
 

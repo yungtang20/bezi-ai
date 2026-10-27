@@ -23,6 +23,7 @@ import {
   DAY_MASTER_RELATIONS,
 } from '../../data/core/index';
 import { DAYUN_LIUNIAN_GUIDES } from '../../data/rules/dayunLiunian';
+import { FENG_SHUI_SYSTEM_GUIDE } from '../../data/charts/fengShuiSystemGuide';
 import { getTaiSuiAdvice } from '../../data/rules/taiSui';
 import { LECTURE_DATA } from '../../data/lecture/lectureData';
 import { familyRoles } from '../../data/charts/familyRoles';
@@ -165,8 +166,15 @@ const dayunBuilders: Builder[] = [
     if (!ctx.pattern) return [];
     const guide = DAYUN_LIUNIAN_GUIDES[ctx.dayElement as keyof typeof DAYUN_LIUNIAN_GUIDES]?.[ctx.pattern as keyof (typeof DAYUN_LIUNIAN_GUIDES)['木']];
     if (!guide) return [];
+    const content =
+      `好大運：${guide.goodDayun.join('、')}；不好的大運：${guide.badDayun.join('、')}。` +
+      `補運規則：大運好時補 ${guide.remedyWhenDayunGood.join('、')}；大運不好時補 ${guide.remedyWhenDayunBad.join('、')}。` +
+      (guide.remedyWhenDayunGood.join() === guide.remedyWhenDayunBad.join()
+        ? `不論大運好壞，補運一律 ${guide.remedyAlways.join('、')}。`
+        : '身弱補運看大運、不看流年，未確認當前大運喜忌時不可只給單一組。') +
+      `注意：${guide.note}`;
     return [item('dayunLiunian', `guide-${ctx.dayElement}-${ctx.pattern}`, `大運流年補運（${ctx.dayElement}命・${ctx.pattern}）`,
-      fmtRecord(guide), `格局 ${ctx.pattern} 決定大運流年吉凶方向`)];
+      content, `格局 ${ctx.pattern} 決定大運流年吉凶方向與補運分支`)];
   },
   (_ctx, topics) => {
     if (!topics.some(t => ['太歲', '犯太歲'].includes(t))) return [];
@@ -209,14 +217,30 @@ const generalBuilders: Builder[] = [
   },
 ];
 
+// ---------- 風水（系統分離：風水系統與八字系統不互相推導） ----------
+
+const FENG_SHUI_TOPIC_KEYS = ['風水', '居家', '擺設', '朝向', '方位', '收銀', '店面', '辦公室', '紫白', '飛星', '入宅', '動工', '裝修', '明堂', '穿堂'];
+
+// [AI MOD] fengshuiBuilder 以話題關鍵詞 gate（classifier 會把風水詞抽進 topics），
+// 掛到風水查詢可能落入的分類：店面收銀→wealth、辦公室→career、居家健康→health、
+// 孩子房間→family，general_bazi 為 other fallback 的落點。
+export const fengshuiBuilder: Builder = (_ctx, topics) => {
+  const hit = topics.some(t => FENG_SHUI_TOPIC_KEYS.some(k => t.includes(k) || k.includes(t)));
+  if (!hit) return [];
+  return FENG_SHUI_SYSTEM_GUIDE.map(section => item(
+    'fengShuiSystemGuide', section.id, `風水系統：${section.title}`,
+    `${section.boundary ? `界線：${section.boundary} ` : ''}${section.items.map(it => `${it.name}：${it.detail}`).join('；')}`,
+    '查詢涉及風水系統（佈局／方位／擺件／選房／商業空間／儀式），依「風水系統 ≠ 八字系統」鐵律提供'));
+};
+
 export const REGISTRY: Record<QueryCategory, Builder[]> = {
   spouse: spouseBuilders,
-  wealth: wealthBuilders,
-  career: careerBuilders,
-  health: healthBuilders,
-  family: familyBuilders,
+  wealth: [...wealthBuilders, fengshuiBuilder],
+  career: [...careerBuilders, fengshuiBuilder],
+  health: [...healthBuilders, fengshuiBuilder],
+  family: [...familyBuilders, fengshuiBuilder],
   dayun_liunian: dayunBuilders,
   daily: dailyBuilders,
-  general_bazi: generalBuilders,
-  other: [],
+  general_bazi: [...generalBuilders, fengshuiBuilder],
+  other: [fengshuiBuilder],
 };

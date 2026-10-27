@@ -7,8 +7,8 @@ import { buildChartContext } from './chartContext';
 import type { EvidenceData } from '../../lib/evidence/provider';
 import type { ChartContext, KnowledgeItem, QueryCategory, QueryClassification } from './types';
 
-/** 每類最多檢索條數（控制 prompt 大小） */
-const MAX_ITEMS_PER_CATEGORY = 6;
+/** 每類最多檢索條數（控制 prompt 大小；風水知識 6 節可與分類知識並存） */
+const MAX_ITEMS_PER_CATEGORY = 9;
 
 export interface RetrievalResult {
   items: KnowledgeItem[];
