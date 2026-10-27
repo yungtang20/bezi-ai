@@ -8,6 +8,8 @@ import { DAY_MASTER_FENG_SHUI } from '../../src/data/charts/romanceFengShui';
 import { ROMANCE_FENG_SHUI_DATA } from '../../src/data/charts/romanceRemediesData';
 import { getFlyingStarsForYear } from '../../src/data/charts/fengShui2026';
 import { getRemedyStrategy } from '../../src/data/elementRemedyHelper';
+import { GENDER_PALACE_DECOR } from '../../src/data/charts/homeDecorGuide';
+import { getWealthCareer } from '../../src/data/charts/wealthCareers';
 
 const EL = ['木', '火', '土', '金', '水'] as const;
 
@@ -99,5 +101,56 @@ describe('財星＝我剋（錢是「我剋的」）', () => {
     expect(WEALTH_GUIDELINES['水'].wealthElement).toBe('火');
     expect(WEALTH_GUIDELINES['火'].wealthElement).toBe('金');
     expect(WEALTH_GUIDELINES['土'].wealthElement).toBe('水');
+  });
+});
+
+// 《軟裝添運對照表》（docx-軟裝添運對照表.md）是子息宮／桃花宮的唯一權威。
+// 曾經因為「只用五行規則推導、沒回頭對原表」而寫錯水命女／火命女／土命女的子息與桃花。
+// 這張表逐格釘住老師原表的方位、色彩、生肖，任何一格被改動就會紅燈。
+describe('軟裝添運對照表：子息宮／桃花宮 20 格（老師原表）', () => {
+  const EXPECTED: Record<string, { dirs: string[]; colors: string; zodiac: string }> = {
+    '金男 子息宮': { dirs: ['南', '東南', '西南'], colors: '紅、黃、橘、綠色系', zodiac: '虎、蛇、馬、羊、狗' },
+    '金女 子息宮': { dirs: ['東北', '西北', '北'], colors: '藍、藍綠、黑色系', zodiac: '鼠、龍、猴、豬' },
+    '金男 桃花宮': { dirs: ['南', '東南', '西南', '東', '西'], colors: '綠色、藍綠色系', zodiac: '虎、兔、龍、羊、豬' },
+    '金女 桃花宮': { dirs: ['南', '東南', '西南'], colors: '紅、黃、粉、橘色系', zodiac: '虎、蛇、馬、羊、狗' },
+    '木男 子息宮': { dirs: ['西', '西北', '西南', '東北'], colors: '白、灰、金、銀色系', zodiac: '牛、蛇、猴、雞' },
+    '木女 子息宮': { dirs: ['南', '東南', '西南'], colors: '紅、橘、黃色系', zodiac: '蛇、馬、羊、狗' },
+    '木男 桃花宮': { dirs: ['南', '東南', '西南'], colors: '紅、橘、黃、土黃色系', zodiac: '牛、龍、蛇、馬、羊、狗' },
+    '木女 桃花宮': { dirs: ['西', '西北', '西南', '東北'], colors: '白、灰、金、銀色系', zodiac: '牛、蛇、猴、雞' },
+    '水男 子息宮': { dirs: ['南', '東南', '西南'], colors: '紅、黃、橘、土黃色系', zodiac: '牛、龍、蛇、馬、羊、狗' },
+    '水女 子息宮': { dirs: ['東北', '東', '東南', '北'], colors: '綠、藍綠色系', zodiac: '虎、兔、龍、羊、豬' },
+    '水男 桃花宮': { dirs: ['南', '東南', '西南', '東'], colors: '紅、橘、黃、綠色系', zodiac: '虎、蛇、馬、羊、狗' },
+    '水女 桃花宮': { dirs: ['南', '東南', '西南'], colors: '紅、黃、橘、土黃色系', zodiac: '牛、龍、蛇、馬、羊、狗' },
+    '火男 子息宮': { dirs: ['南', '東南', '西南', '東', '西', '北'], colors: '藍、藍綠、黑、白、灰、金、銀色系', zodiac: '鼠、牛、龍、猴、雞、豬' },
+    '火女 子息宮': { dirs: ['南', '東南', '西南', '東北', '西北'], colors: '紅、黃、橘、土黃色系', zodiac: '牛、龍、蛇、馬、羊、狗' },
+    '火男 桃花宮': { dirs: ['南', '西南', '西', '西北'], colors: '白、灰、金、銀色系', zodiac: '牛、蛇、猴、雞' },
+    '火女 桃花宮': { dirs: ['南', '東南', '西南', '東', '西', '北'], colors: '藍、藍綠、黑、白、灰、金、銀色系', zodiac: '鼠、牛、龍、猴、雞、豬' },
+    '土男 子息宮': { dirs: ['東北', '東', '東南', '北'], colors: '藍、藍綠、綠色系', zodiac: '虎、兔、龍、羊、豬' },
+    '土女 子息宮': { dirs: ['南', '西南', '西', '西北'], colors: '白、灰、金、銀色系', zodiac: '牛、蛇、猴、雞' },
+    '土男 桃花宮': { dirs: ['南', '西南', '西', '西北'], colors: '藍、藍綠、黑、白、灰、金、銀色系', zodiac: '鼠、牛、龍、猴、雞、豬' },
+    '土女 桃花宮': { dirs: ['東北', '東', '東南', '北'], colors: '藍、藍綠、綠色系', zodiac: '虎、兔、龍、羊、豬' },
+  };
+
+  for (const [key, exp] of Object.entries(EXPECTED)) {
+    it(`${key} 方位／色彩／生肖與原表一致`, () => {
+      const [el, palace] = key.split(' ');
+      const gender = el.endsWith('男') ? 'male' : 'female';
+      const element = el[0] as '金' | '木' | '水' | '火' | '土';
+      const d = GENDER_PALACE_DECOR[element][palace as '子息宮' | '桃花宮'][gender];
+      expect(d, `${key} 應存在`).toBeTruthy();
+      expect(d.directions).toEqual(exp.dirs);
+      expect(d.colors).toBe(exp.colors);
+      expect(d.zodiac).toBe(exp.zodiac);
+    });
+  }
+});
+
+describe('3-3 官殺×印：長官緣佳（不是長輩緣佳）', () => {
+  it('官殺為主星、印星為次星時，文字用「長官緣佳」與「身殺兩停」', () => {
+    const r = getWealthCareer('正官', '正印');
+    expect(r).toBeTruthy();
+    expect(r!.suitableCareers).toContain('長官緣佳');
+    expect(r!.suitableCareers).toContain('身殺兩停');
+    expect(r!.suitableCareers).not.toContain('長輩緣佳');
   });
 });

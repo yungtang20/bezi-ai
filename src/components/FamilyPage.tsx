@@ -6,6 +6,8 @@ import { useState, useEffect } from 'react';
 import { BaziChart } from '../paipan';
 import { PatternScores } from '../pattern';
 import { getFamilyRole, SIBLING_RELATIONS, FAMILY_CHANGES } from '../data';
+import { getPalaceDecor } from '../data/charts/homeDecorGuide';
+import type { FiveElement } from '../data/core/types';
 import { getUpcomingDatesForCategory } from '../dailyAnalysis';
 import { checkLiuChong, checkLiuHai, checkLiuPo, checkXiangXing } from '../matchmaking';
 import CategoryTimelineRemedy from './CategoryTimelineRemedy';
@@ -44,130 +46,7 @@ interface Props {
   partners?: PartnerInfo[];
 }
 
-interface DecorGuide {
-  location: string;
-  directions: string[];
-  items: string[];
-  ornament: string;
-}
-
-const CHILD_PALACE_DECOR: Record<string, Record<'male' | 'female', DecorGuide>> = {
-  '金': {
-    male: {
-      location: '臥室 / 個人空間',
-      directions: ['南', '東南', '西南'],
-      items: [
-        '擺放綠色或藍綠色系掛畫或地毯',
-        '擺放紅色香氛、紅色燈具',
-        '擺放水缸或裝水玻璃杯',
-        '擺放綠色植栽、竹子或萬年青',
-        '特別推薦使用與子息宮同色系的床單與枕頭套（或以太太子息宮色彩為主）'
-      ],
-      ornament: '生肖擺件：虎、兔、龍、羊、豬（宜選擇木質、木製材質，色彩以紅、橘、黃色為主）'
-    },
-    female: {
-      location: '臥室 / 個人空間',
-      directions: ['東北', '西北', '北'],
-      items: [
-        '擺放藍色、藍綠色、黑色系的床單、枕頭套',
-        '擺放流動的水缸或裝水玻璃杯'
-      ],
-      ornament: '生肖擺件：鼠、龍、猴、豬（宜選擇玻璃、水晶材質擺件）'
-    }
-  },
-  '木': {
-    male: {
-      location: '臥室 / 個人空間',
-      directions: ['西', '西北', '西南', '東北'],
-      items: [
-        '擺放白色、灰色、金色、銀色系的地毯、掛畫或燈具',
-        '擺放白色瓶身的香氛、金屬製鬧鐘、風鈴、或音樂盒',
-        '特別推薦使用與子息宮同色系的床單與枕頭套（或以太太子息宮色彩為主）'
-      ],
-      ornament: '生肖擺件：牛、蛇、猴、雞（宜選擇金屬材質擺件）'
-    },
-    female: {
-      location: '臥室 / 個人空間',
-      directions: ['南', '東南', '西南'],
-      items: [
-        '擺放紅色、橘色、黃色系的床單、枕頭套、地毯',
-        '擺放紅/紫子的鮮花、紅色燈具、紅色香氛或香氛蠟燭',
-        '擺放紅色瓶身的香氛/香水'
-      ],
-      ornament: '生肖擺件：蛇、馬、羊、狗（宜選擇陶瓷、玉石製材質，或同色系生肖布偶）'
-    }
-  },
-  '水': {
-    male: {
-      location: '臥室 / 個人空間',
-      directions: ['南', '東南', '西南'],
-      items: [
-        '擺放紅色、黃色、橘色、土黃色系的掛畫或地毯',
-        '擺放紅色燈具、鹽燈、紅色/紫色/土黃色瓶身香氛',
-        '擺放陶瓷、玉石、或陶土擺件',
-        '特別推薦使用與子息宮同色系的床單與枕頭套（或以太太子息宮色彩為主）'
-      ],
-      ornament: '生肖擺件：牛、龍、蛇、馬、羊、狗（宜選擇陶瓷、玉石製材質）'
-    },
-    female: {
-      location: '臥室 / 個人空間',
-      directions: ['東北', '東', '東南', '北'],
-      items: [
-        '擺放綠色、藍綠色系的床單、枕頭套、地毯',
-        '擺放綠色裝飾植栽、萬年青、竹子',
-        '擺放綠色水晶、翡翠、綠色燈具/鹽燈'
-      ],
-      ornament: '生肖擺件：虎、兔、龍、羊、豬（宜選擇木製材質擺件）'
-    }
-  },
-  '火': {
-    male: {
-      location: '臥室 / 個人空間',
-      directions: ['南', '東南', '西南', '東', '西', '北'],
-      items: [
-        '擺放藍色、藍綠色、黑色、白色、灰色、金色、銀色系的地毯、掛畫',
-        '擺放同色系瓶身的精緻香氛',
-        '擺放藍/白/灰/金/銀色燈具、金屬裝飾製品',
-        '擺放流動水缸或裝水玻璃杯',
-        '特別推薦使用與子息宮同色系的床單與枕頭套（或以太太子息宮色彩為主）'
-      ],
-      ornament: '生肖擺件：鼠、牛、龍、猴、雞、豬（宜選擇金屬、玻璃、水晶製材質）'
-    },
-    female: {
-      location: '臥室 / 個人空間',
-      directions: ['南', '東南', '西南', '東北', '西北'],
-      items: [
-        '擺放紅色、黃色、橘色、土黃色系的床單、枕頭套、地毯',
-        '擺放紅/紫/土黃色系瓶身香氛、紅色燈具/鹽燈',
-        '擺放溫潤質感之陶瓷、陶土、玉石類擺飾'
-      ],
-      ornament: '生肖擺件：牛、龍、蛇、馬、羊、狗（宜選擇陶瓷、玉石製材質）'
-    }
-  },
-  '土': {
-    male: {
-      location: '臥室 / 個人空間',
-      directions: ['東北', '東', '東南', '北'],
-      items: [
-        '擺放藍色、藍綠色、綠色系的掛畫、地毯、燈具',
-        '擺放同色系瓶身的清爽香氛',
-        '擺放綠色水晶、翡翠、或優雅木製品',
-        '特別推薦使用與子息宮同色系的床單與枕頭套（或以太太子息宮色彩為主）'
-      ],
-      ornament: '生肖擺件：虎、兔、龍、羊、豬（宜選擇木製材質）'
-    },
-    female: {
-      location: '臥室 / 個人空間',
-      directions: ['南', '西南', '西', '西北'],
-      items: [
-        '擺放白色、灰色、金色、銀色系的地毯、掛畫、床單、與枕頭套',
-        '擺放白色淡雅瓶身的香氛',
-        '擺放具金屬亮面質感之鬧鐘、風鈴、經典音樂盒、或裝飾錢幣'
-      ],
-      ornament: '生肖擺件：牛、蛇、猴、雞（宜選擇金製、金屬材質擺件）'
-    }
-  }
-};
+// 子息宮軟裝資料改由 src/data/charts/homeDecorGuide.ts 單一來源提供（原本在此重複一份，已與講義漂移）
 
 export default function FamilyPage({ chart, primaryPattern, favorable, unfavorable, weakestElement, weakestElements, partners, onNavigate }: Props) {
   const [activeSection, setActiveSection] = useState('judgment');
@@ -290,8 +169,8 @@ export default function FamilyPage({ chart, primaryPattern, favorable, unfavorab
   }
   const matchingSiblingTrait = SIBLING_RELATIONS.traits.find(t => t.tenGod === maxCat) || SIBLING_RELATIONS.traits[3];
 
-  // 2. 2026年子息宮催旺
-  const childPalaceDecor = CHILD_PALACE_DECOR[dayElement]?.[isMale ? 'male' : 'female'];
+  // 2. 2026年子息宮催旺（單一來源：src/data/charts/homeDecorGuide.ts 的 GENDER_PALACE_DECOR）
+  const childPalaceDecor = getPalaceDecor(dayElement as FiveElement, '子息宮', isMale ? '男' : '女');
 
     const menuItems = [
     { id: 'judgment', label: '1. 我是怎麼判斷的', labelShort: '判斷依據', icon: Compass },
@@ -747,7 +626,7 @@ export default function FamilyPage({ chart, primaryPattern, favorable, unfavorab
                 <Gift className="text-emerald-400 shrink-0" size={24} />
                 <div className="space-y-0.5">
                   <span className="text-xs text-emerald-400 font-bold block">🧸 催旺開運生肖擺件：</span>
-                  <p className="text-xs text-zinc-300 leading-relaxed">{childPalaceDecor.ornament}</p>
+                  <p className="text-xs text-zinc-300 leading-relaxed">生肖擺件：{childPalaceDecor.zodiac}（{childPalaceDecor.zodiacMaterial}）</p>
                 </div>
               </div>
 
