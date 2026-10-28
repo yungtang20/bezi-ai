@@ -1,6 +1,6 @@
 # 八字命理 LLM Wiki
 
-> 最後更新：2026-06-05
+> 最後更新：2026-10-27（格局判定對齊徐玉蘭口徑：權重 年支 20%/時支 10%、貪生忘剋限日柱旁、庫整筆轉列、40–55% 連續體、濕土燥土、定盤年 2013/14/15、大運前 5 天干後 5 地支）
 > 目的：建立「來源講義 → Wiki 知識頁 → 程式碼」的完整知識圖譜，供 LLM 問答與系統開發使用
 
 ---
@@ -252,6 +252,21 @@
 命盤年柱不同。系統與市售標準八字排盤軟體一致採立春學派。向使用者解釋時，若其命盤落在
 該窗口，可主動說明兩種學派的年柱差異。
 
+**格局判定 Domain Rule（2026-10-27 對齊徐玉蘭口徑，課程 156 逐字稿 1-3/1-4/2-1-1）**：
+以下口徑已落版於 `packages/core/src/pattern.ts` 與 `dayun.ts`，AI 解釋格局時必須使用，
+舊口徑（年支 10%、時支 20%、燥土生金、定盤年 2018/2025）已廢止。
+
+| 概念 | 口徑 | 實作 |
+|------|------|------|
+| 格局加權 | 年干 5%、年支 **20%**、月干 5%、月支 35%、日支 20%、時干 5%、時支 **10%**（1-3 [10:06]） | `pattern.ts` `ganWeights/zhiWeights` |
+| 貪生忘剋 | 僅日柱旁兩柱（月柱、時柱）成立；非鄰柱的剋鏈不算化解（1-3 [31:41]） | `checkShengWangKe()` 位置限制 |
+| 庫 | 必須透干才算庫；啟動後該柱地支權重整筆以庫五行計（如「未的木庫力量 35%」），非固定 +5（1-3 [12:32]、[14:22]） | `pattern.ts` 庫差額制 |
+| 連續體地帶 | 分數 40–55% 不硬貼標籤，標 `isContinuum`，UI 顯示「偏平衡」＋定盤註記；分數只是工具，定盤（流年體感回測）才是裁判（1-3 [39:48]、[54:52]） | `pattern.ts` `isContinuum`、`getPatternLabel()`、`PATTERN_CONTINUUM_NOTE` |
+| 濕土燥土 | 金日主只認辰、丑（濕土）為印；未、戌（燥土）不生金、不作根（1-4 [07:14]） | `pattern.ts` `isWetSoil` 分支（計分／庫／hasRoot） |
+| 定盤流年 | 五行旺年：金水→2020/2021、木→2023/2024、火土→**2013/2014/2015/2018/2025**；從格與一般格用同一批年份分辨（1-3 [38:44]、[56:32]） | `pattern.ts` `YEAR_CHECK_MAP`、`getCheckYears()` |
+| 從格口徑 | 從強＝日主極旺順勢、從弱＝日主極弱順勢；求順勢非求平衡；從強喜忌＝身弱、從弱喜忌＝身強（5-1 [20:09]） | `pattern.ts`、`FoundationPage.tsx` PATTERNS |
+| 大運分段 | 前五年走天干、後五年走地支；地支力量大於天干；起運歲數不採計（僅顯示為大致區間、非判定因素）（2-1-1 [00:23]、[00:37]） | `dayun.ts` `getDaYunQuality(opts)`、UI 區間顯示 |
+
 **正確性證據鏈**（2026-10-22 建立，不依賴引擎自我宣告）：
 
 1. 節氣時刻以 Meeus 低精度太陽黃經獨立計算交叉驗證
@@ -275,8 +290,8 @@
 | 地支相破 | 天干地支含刑沖破害 | `src/matchmaking.ts` | `checkLiuPo()` |
 | 十神計算 | 十神.docx | `packages/core/src/constants.ts` | `getTenGod()`, `getTenGodCategory()` |
 | 命盤計算 | 1-1, 1-2 | `packages/core/src/paipan.ts` | `calculateChart()`, `buildPillar()` |
-| 格局判定 | 定格局.docx | `packages/core/src/pattern.ts` | `determinePattern()`, `getPrimaryPattern()` |
-| 大運計算 | 大運流年補運架構 | `packages/core/src/dayun.ts` | `calculateDaYun()`, `getDaYunQuality()` |
+| 格局判定 | 定格局.docx ＋ 課程逐字稿 1-3/1-4（2026-10-27 徐玉蘭口徑對齊） | `packages/core/src/pattern.ts` | `determinePattern()`, `getPrimaryPattern()`, `getCheckYears()` |
+| 大運計算 | 大運流年補運架構 ＋ 逐字稿 2-1-1（前 5 天干後 5 地支） | `packages/core/src/dayun.ts` | `calculateDaYun()`, `getDaYunQuality()` |
 | 流年計算 | 2000-2030 流年五行對照表 | `packages/core/src/dayun.ts` | `getLiuNian()`, `getFutureLiuNian()` |
 | 合盤判斷 | 姻緣篇.docx | `src/matchmaking.ts` | `checkSpouseStar()`, `checkMutualComplement()` |
 
@@ -373,12 +388,19 @@
 | 桃花位佈局 | 5-2 講義 | `src/data/lecture/lectureData.ts` | `LECTURE_DATA.FLYING_STARS_ROMANCE` |
 | 2026 飛星 | 5-2 講義 | `src/data/charts/fengShui2026.ts` | `FENG_SHUI_2026`, `getFlyingStarsForYear()` |
 | 文昌位 | 5-2 講義 | `src/data/charts/fengShui2026.ts` | `starDetails[4]` (四綠文曲星) |
+| 風水系統知識庫 | skill hsu-yulan-bazi v2.1 風水章節（風水磁場順心術：課程 113 全 45 節逐字稿＋`D:\徐玉蘭\風水\` 9 份 PDF） | `src/data/charts/fengShuiSystemGuide.ts` | `FENG_SHUI_SYSTEM_GUIDE`（六大節 boundary / feixing-rules / waiju / neiju / shangye / ritual） |
+| 風水 AI 檢索 | 同上 | `src/ai/knowledge/registry.ts` | `fengshuiBuilder`（關鍵詞 gated，掛 wealth / career / health / family / general_bazi / other）＋ `src/components/FengShuiSystemGuide.tsx` |
+| AI 斷法紀律與人格 | skill v2.1 §0（使用協議／輸出格式／四類分流）、§3（表達 DNA）、skill 免責聲明 | `src/ai/prompts.ts` | `DISCIPLINE_RULE`（讀盤序／連續體／時辰未知／用神方向／輸出結構／四類分流／界線／語氣）＋ `PERSONA_RULE`（AI 以「徐老師」身分回答；被問是否本人須如實回答「係依其教學框架建立之助手」，禁承諾線下服務） |
+
+**風水 Domain Rule（最高鐵律）**：「風水的系統跟八字理論系統是不一樣」（skill v2.1 qa-0106 [61:21]）。
+風水佈局不看身強身弱、不看八字忌神；八字用神色只用在穿著、手機殼等貼身物；兩系統絕不互相推導。
+風水佈局一律以風水系統為準（命主五行 × 宮位方位），健康主題先正規醫療、再佩帶用品、最後才是風水（5-3 [09:11]）。
 
 #### 大運流年篇 (08_大運流年)
 
 | 概念 | 來源檔案 | 實現檔案 | 變數 |
 |------|----------|----------|------|
-| 大運流年補運架構 | 大運流年補運架構/ | `src/data/rules/dayunLiunian.ts` | `DAYUN_LIUNIAN_GUIDES` |
+| 大運流年補運架構（靜態速查） | 大運流年補運架構/ ＋ 課程逐字稿 2-1-1～2-1-3 | `src/data/rules/dayunLiunian.ts` | `DAYUN_LIUNIAN_GUIDES`（2026-10-27 重構：分支語義 remedyAlways / remedyWhenDayunGood / remedyWhenDayunBad；金日主濕土例外 note；喜忌方向由 `fiveElementsBalance.getLiunianAndRemedy` 程序化產生，單一來源） |
 | 大運流年斷應 | 大運流年補運架構/ | `src/data/rules/timelineGuidelines.ts` | `TIMELINE_GUIDELINES` |
 | 大運排法 | 大運流年補運架構/ | `src/dayun.ts` | `calculateDaYun()` |
 | 流年斷應 | 2000-2030 流年五行對照表 | `src/dayun.ts` | `getLiuNian()`, `getFutureLiuNian()` |
@@ -386,6 +408,12 @@
 | 太歲判斷 | 天干地支含刑沖破害 | `src/data/rules/taiSui.ts` | `checkTaiSui()`, `getTaiSuiAdvice()` |
 | 每日流日分析 | 5-2 講義 | `src/data/rules/dailyFlowDays.ts` | `checkDayType()` |
 | 每日能量分析 | 5-2 講義 | `src/dailyAnalysis.ts` | `getDailyEnergy()` |
+
+**大運流年補運 Domain Rule（徐玉蘭口徑，2.5 補運架構十張表）**：
+身強補運只有一組（耗洩：財、官殺、食傷），大運好壞流年好壞都不改；身弱補運**看大運不看流年**——
+大運走生扶 → 補耗洩（既有配置兌現，非新事件；2-1-2 [04:53]），大運走耗洩 → 補生扶（印比）；
+從格求順勢不求解平衡，成格全好、破格全壞（2-1-3 [00:10]）；金日主補土挑濕土（辰、丑；1-4 [07:14]）。
+測試：`tests/unit/dayunLiunian.test.ts` 釘住全部分支語義。
 
 #### 基礎理論篇 (01_基礎理論)
 

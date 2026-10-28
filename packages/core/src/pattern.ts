@@ -57,6 +57,16 @@ function isDrySoil(zhi: string): boolean {
   return DRY_SOIL.includes(zhi);
 }
 
+/**
+ * 濕土（含天干）：地支辰、丑，以及天干「己」。
+ * 教師口徑（1-4 [07:14]-[07:18]）點名的是地支辰、丑；天干層面依同一定義處理——
+ * 己為田園濕土、戊為燥土（講義日主篇：己＝田園濕土、戊＝高山大地）。
+ * 因此金日主遇己土算印，遇戊土不算。
+ */
+export function isWetEarth(source?: string): boolean {
+  return source === '己' || (source ? isWetSoil(source) : false);
+}
+
 // ==================== 天干五合 ====================
 // 來源：天干地支合化條件.pdf P1
 
@@ -189,6 +199,7 @@ export interface PatternResult {
   favorable: string[];      // 喜用神
   unfavorable: string[];    // 忌神
   score: number;            // 0-100 強弱分數
+  isContinuum: boolean;     // 徐玉蘭口徑：40–55% 連續體地帶，不硬貼標籤，以定盤為準
   weakestElement: string;
   weakestElements: string[]; // [AI MOD] 所有最弱五行（含被旺神重剋者，可能多個）
   reason?: string;          // 判斷理由（前端顯示用）
@@ -211,7 +222,11 @@ interface TenGodCount {
 // ==================== 輔助函式 ====================
 
 /** 判斷某五行是否為日主的「印比」（生我或同我） */
-function isSupporting(dayElement: string, other: string): boolean {
+function isSupporting(dayElement: string, other: string, source?: string): boolean {
+  // 徐玉蘭口徑（1-4 [07:14]-[07:18]）：土生金須區分濕土燥土——
+  // 「濕土能生金，燥土比較無法生金」。金日主只認辰、丑（濕土）與天干己（濕土）為印，
+  // 未、戌、戊（燥土）不列為生扶。source 傳入實際的干或支字才判斷得出濕燥。
+  if (dayElement === '金' && other === '土') return isWetEarth(source);
   return other === dayElement || ELEMENT_GENERATES[other] === dayElement;
 }
 
@@ -486,11 +501,13 @@ function checkTouGan(chart: BaziChart): TouGanInfo[] {
  */
 function checkShengWangKe(chart: BaziChart): { from: number; to: number; via: number; element: string }[] {
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
-  const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
   const resolved: { from: number; to: number; via: number; element: string }[] = [];
 
   // 簡化版：檢查天干
+  // 徐玉蘭口徑（1-3 [31:41]）：位置限定——只有「日柱旁邊」的柱（月柱 i=1、時柱 i=2）的貪生忘剋才成立
   for (let i = 0; i < 4; i++) {
+    // 位置限制：化解者必須緊鄰日柱（月柱或時柱）
+    if (i !== 1 && i !== 2) continue;
     for (let j = 0; j < 4; j++) {
       if (i === j) continue;
       const elI = GAN_TO_ELEMENT[gans[i]];
@@ -536,6 +553,23 @@ export function getPrimaryPattern(scores: PatternScores): '身強' | '身弱' | 
   if (scores.weak === max) return '身弱';
   if (scores.followStrong === max) return '從強';
   return '從弱';
+}
+
+/**
+ * 連續體地帶（40–55%）的說明文字。
+ * 教師口徑（1-3 [39:48]-[54:52]）：分數只是工具，定盤（流年體感回測）才是裁判。
+ */
+export const PATTERN_CONTINUUM_NOTE =
+  '分數落在 40–55% 的連續體地帶，體質介於身強與身弱之間。標籤僅供參考，仍以流年定盤（體感回測）為準。';
+
+/**
+ * 顯示用的格局標籤：連續體時加註「偏平衡」，避免把工具分數講成定論。
+ * 若定盤（scores）已把格局改成別格，則以定盤為準，不加註。
+ */
+export function getPatternLabel(computed: PatternResult, primaryPattern?: string): string {
+  const label = primaryPattern ?? computed.pattern;
+  if (!computed.isContinuum || label !== computed.pattern) return label;
+  return `${label}（偏平衡）`;
 }
 
 /**
@@ -650,11 +684,11 @@ export function determinePattern(chart: BaziChart): PatternResult {
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
   const isHourEmpty = !chart.hour.gan || !chart.hour.zhi;
 
-  // 權重（來源：定格局.pdf P1）
+  // 權重（來源：定格局.docx P1 ＋ 課程逐字稿 1-3 [10:06]-[10:25]，徐玉蘭口徑）
   // 天干：5% 5% 5% 5%（年/月/日/時）
-  // 地支：10% 20% 35% 20%（年/月/日/時）
+  // 地支：20% 35% 20% 10%（年/月/日/時）— 年支20%、時支10%
   const ganWeights = [5, 5, 5, isHourEmpty ? 0 : 5];
-  const zhiWeights = [10, 20, 35, isHourEmpty ? 0 : 20];
+  const zhiWeights = [20, 35, 20, isHourEmpty ? 0 : 10];
 
   // 總分 = 加分項百分比（0~100）
   let positiveScore = 0;
@@ -695,7 +729,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
         reasons.push(`P${i+1}天干合化${harmonyResult}（印比）→ 負變正加分`);
       }
     } else if (!isDamaged) {
-      if (isSupporting(dayElement, ganEl)) {
+      if (isSupporting(dayElement, ganEl, gans[i])) {
         ganSupport += ganWeights[i];
       } else {
         // 扣分項：剋我、我剋、我生
@@ -705,21 +739,23 @@ export function determinePattern(chart: BaziChart): PatternResult {
 
     // 地支加分/扣分
     let zhiSupport = 0;
+    // 濕土分支（徐玉蘭 1-4 [07:14]）：金日主遇丑、辰（濕土）仍視為印——土生金
+    const zhiSupporting = isSupporting(dayElement, zhiMain, zhis[i]);
     if (harmonyResult) {
       if (isSupporting(dayElement, harmonyResult)) {
         zhiSupport += zhiWeights[i];
         reasons.push(`P${i+1}地支合化${harmonyResult}（印比）→ 負變正加分`);
       }
     } else if (!isDamaged) {
-      if (isSupporting(dayElement, zhiMain)) {
+      if (zhiSupporting) {
         zhiSupport += zhiWeights[i];
       } else {
         negativeScore += zhiWeights[i] * 0.5;
       }
 
-      // 藏干加分
-      hiddenEls.forEach(h => {
-        if (isSupporting(dayElement, h)) {
+      // 藏干加分（濕燥看「所在的地支」，不看藏干本身：未中的己土仍是燥土裡的火土）
+      hiddenEls.forEach((h) => {
+        if (isSupporting(dayElement, h, zhis[i])) {
           zhiSupport += zhiWeights[i] * 0.3;  // 藏干權重較低
         }
       });
@@ -738,13 +774,25 @@ export function determinePattern(chart: BaziChart): PatternResult {
   }
 
   // 8. 庫的加分
+  // 徐玉蘭口徑（1-3 [12:32]、[14:22]）：必須透干才算庫，單獨存在不算；
+  // 啟動後該地支的力量（本柱地支權重）整筆以庫的五行計算（如「未的木庫力量 35%」），
+  // 不再以地支本氣屬性計分。此處採差額制：逐柱計算時已按本氣計過一次，
+  // 若本氣非印比而庫五行為印比，補回該柱地支權重。
   for (const tomb of tombs) {
     if (tomb.activated) {
       // 庫被啟動，檢查啟動後的五行是否為日主加分
       const actualElement = tomb.tombType.replace('庫', '');
-      if (isSupporting(dayElement, actualElement)) {
-        positiveScore += 5;
-        reasons.push(`${tomb.zhi}啟動為${tomb.tombType}（印比）+5`);
+      // 金庫（丑）：對金日主而言是「同我」；金日主 + 濕土（丑辰）→ 印（濕土生金）
+      const actualSupporting = isSupporting(dayElement, actualElement, tomb.zhi);
+      if (actualSupporting) {
+        const zhiMainEl = ZHI_TO_ELEMENT[tomb.zhi];
+        const mainSupporting = isSupporting(dayElement, zhiMainEl, tomb.zhi);
+        if (!mainSupporting) {
+          // 本氣非印比、庫五行是印比 → 該柱地支權重整筆轉列加分
+          const w = zhiWeights[tomb.pillarIndex] || 0;
+          positiveScore += w;
+          reasons.push(`${tomb.zhi}透干啟動為${tomb.tombType}（印比）+${w}`);
+        }
       }
     }
   }
@@ -753,7 +801,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   for (const tg of touGan) {
     if (tg.appearsInGan) {
       const hElement = GAN_TO_ELEMENT[tg.hiddenStem];
-      if (isSupporting(dayElement, hElement)) {
+      if (isSupporting(dayElement, hElement, tg.hiddenStem)) {
         positiveScore += 3;
         reasons.push(`${tg.zhi}藏${tg.hiddenStem}透干於P${tg.ganPosition!+1}+3`);
       }
@@ -776,8 +824,8 @@ export function determinePattern(chart: BaziChart): PatternResult {
   let pattern: '身強' | '身弱' | '從強' | '從弱';
   let reason: string;
 
-  // 從格嚴格判斷：需檢查是否有根
-  const hasRoot = zhis.some(z => z && isSupporting(dayElement, ZHI_TO_ELEMENT[z]));
+  // 從格嚴格判斷：需檢查是否有根（金日主的根須考慮濕土生金：丑辰算根、未戌不算）
+  const hasRoot = zhis.some(z => (z ? isSupporting(dayElement, ZHI_TO_ELEMENT[z], z) : false));
 
   if (finalScore > 80 && !hasRoot) {
     pattern = '從強';
@@ -793,6 +841,13 @@ export function determinePattern(chart: BaziChart): PatternResult {
     reason = `加分項${finalScore.toFixed(1)}%（<45%）→ 身弱`;
   }
 
+  // 徐玉蘭口徑（1-3 [39:48]、[54:52]）：40–55% 是灰色地帶（連續體），不要硬貼標籤——
+  // 分數只是工具，定盤（流年體感回測）才是裁判。此區間標記 isContinuum，UI 顯示「身強偏平衡／身弱偏平衡」而非定論。
+  const isContinuum = finalScore >= 40 && finalScore < 55;
+  if (isContinuum) {
+    reason += `（40–55% 連續體地帶：${pattern}偏平衡，需以流年定盤確認，不宜視為定論）`;
+  }
+
   if (reasons.length > 0) {
     reason += ` | ${reasons.slice(0, 5).join('；')}`;
   }
@@ -805,6 +860,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
     favorable,
     unfavorable,
     score: Math.round(finalScore),
+    isContinuum,
     weakestElement: weakestElements[0] || '木',
     weakestElements,
     reason,
@@ -859,36 +915,38 @@ export function countTenGods(chart: BaziChart): TenGodCount[] {
 
 // ==================== 流年定盤 ====================
 
-// 來源：定格局.pdf P2
+// 來源：定格局.docx P2 ＋ 課程逐字稿 1-3 [38:44]（徐玉蘭口徑）
+// 五行特別旺的年份：金水→2020/2021；木→2023/2024；火土→2013/2014/2015/2018/2025
+// 從格與一般格要用「同一批年份」分辨（1-3 [56:32]）——光看分數分不出從強與身強。
 const YEAR_CHECK_MAP: Record<string, { strong: number[]; weak: number[]; followStrong: number[]; followWeak: number[] }> = {
   '金': {
     strong: [2020, 2021],
-    weak: [2018, 2025],
+    weak: [2013, 2014, 2015, 2018, 2025],
     followStrong: [2020, 2021],
-    followWeak: [2018, 2025],
+    followWeak: [2013, 2014, 2015, 2018, 2025],
   },
   '木': {
     strong: [2023, 2024],
-    weak: [2018, 2025],
+    weak: [2013, 2014, 2015, 2018, 2025],
     followStrong: [2020, 2021],
-    followWeak: [2018, 2025],
+    followWeak: [2013, 2014, 2015, 2018, 2025],
   },
   '水': {
     strong: [2020, 2021],
-    weak: [2018, 2025],
+    weak: [2013, 2014, 2015, 2018, 2025],
     followStrong: [2020, 2021],
-    followWeak: [2018, 2025],
+    followWeak: [2013, 2014, 2015, 2018, 2025],
   },
   '火': {
-    strong: [2018, 2025],
+    strong: [2013, 2014, 2015, 2018, 2025],
     weak: [2023, 2024],
-    followStrong: [2020, 2021],
+    followStrong: [2013, 2014, 2015, 2018, 2025],
     followWeak: [2018, 2025],
   },
   '土': {
-    strong: [2018, 2025],
+    strong: [2013, 2014, 2015, 2018, 2025],
     weak: [2023, 2024],
-    followStrong: [2020, 2021],
+    followStrong: [2013, 2014, 2015, 2018, 2025],
     followWeak: [2018, 2025],
   },
 };

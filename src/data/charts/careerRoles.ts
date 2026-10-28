@@ -66,7 +66,7 @@ export const careerRoles: CareerRole[] = [
   {
     tenGodType: '比劫',
     tenGodName: '比肩',
-    role: '穩健合夥人 / 獨立工作者',
+    role: '穩健合夥人 / 群體協作者',
     suitable: '重視夥伴關係、團隊合作，講義氣且好勝不服輸，適合需要協作與夥伴關係的環境。',
     advice: '有堅持到底的毅力，但有時過於重視自身觀點而難被說服。'
   },

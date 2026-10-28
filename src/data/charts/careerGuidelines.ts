@@ -25,10 +25,11 @@ export const CAREER_GUIDELINES: Record<FiveElement, CareerGuide> = {
       combinations: ['丙寅', '丁巳', '丙午', '丁未', '丙戌']
     },
     fengShui: {
+      // 3-4 講義：金與木兩日主的事業位頁逐字相同（方位、色彩、擺件全同），照原樣不可自行改
       element: '火',
-      directions: ['東北方', '正南方', '東南方', '西南方'],
-      colors: '紅色、黃色、橙色、綠色',
-      luckyItems: ['馬、虎、狗、羊、蛇的木製擺件', '紅色、橙色、黃色的陶瓷擺件']
+      directions: ['正西方', '西南方', '西北方', '東北方'],
+      colors: '白色、灰色、金色、銀色',
+      luckyItems: ['蛇、猴、雞、牛的金屬擺件', '金屬製鬧鐘、錢幣、風鈴、音樂盒', '白/灰/金/銀色瓶身香氛', '金銀色燈罩的燈具']
     },
     boostActions: '坐官殺方位寫提案、開會。整理事業宮位的佈置擺件。'
   },

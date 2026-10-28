@@ -65,7 +65,7 @@ export const DAY_MASTER_FENG_SHUI: Record<string, DayMasterFengShuiProfile> = {
     genderGuide: {
       男: {
         element: "火（財）",
-        directions: ["正南方", "東南方", "西南方", "正東方"],
+        directions: ["正南方", "東南方", "西南方"],
         colors: ["紅色", "黃色", "橘色", "綠色"],
         items: "紅花、紫花、紅色燈具/鹽燈、紅/紫香氛、綠色盆栽、萬年青、竹子",
         zodiacs: "馬、虎、狗、羊、蛇（選擇木製材質或紅、黃、橘色系生肖布偶）",

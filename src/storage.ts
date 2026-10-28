@@ -136,9 +136,28 @@ export async function saveNotification(notification: AppNotification): Promise<v
   await txComplete(tx);
 }
 
-// [AI MOD] getAllNotifications / getUnreadNotifications 已移除 — dead export（無外部消費者）
-// 通知資料透過 exportAllData 中的 read('notifications') 序列化
+// 讀取所有通知（用於校準面板顯示因果鏈）
+export async function getAllNotifications(): Promise<AppNotification[]> {
+  const db = await openDB();
+  const store = db.transaction('notifications', 'readonly').objectStore('notifications');
+  const all = await dbRequest<AppNotification[]>(store, 'getAll');
+  return all.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+}
 
+export async function markNotificationRead(createdAt: string): Promise<void> {
+  const db = await openDB();
+  const tx = db.transaction('notifications', 'readwrite');
+  const store = tx.objectStore('notifications');
+  const all = await dbRequest<AppNotification[]>(store, 'getAll');
+  const target = all.find((n) => n.createdAt === createdAt);
+  if (!target) return;
+  await dbRequest(store, 'put', { ...target, read: true });
+  await txComplete(tx);
+}
+
+ // 標記通知為已讀
+
+ // [AI MOD] getAllNotifications / getUnreadNotifications 已移除 — dead export（無外部消費者）
 // ------------------- 伴侶命盤管理 -------------------
 
 // [AI MOD] exportAllData / importAllData 已移除 — dead export（無外部消費者）

@@ -138,8 +138,8 @@ const PATTERNS = [
   },
   {
     name: '從強',
-    condition: '日主極弱，順勢而為',
-    feature: '極端、順應大勢',
+    condition: '日主極旺、幾乎無剋洩耗，順勢而為',
+    feature: '極端、順應大勢（求順勢，非求平衡）',
     favorable: '生我、同我（順勢）',
     unfavorable: '剋我、我剋、我生',
     color: 'text-purple-400',
@@ -148,8 +148,8 @@ const PATTERNS = [
   },
   {
     name: '從弱',
-    condition: '日主極強，順勢而為',
-    feature: '極端、不與對抗',
+    condition: '日主極弱、幾乎無生扶，順勢而為',
+    feature: '極端、不與對抗（求順勢，非求平衡）',
     favorable: '剋我、我剋、我生（順勢）',
     unfavorable: '生我、同我',
     color: 'text-orange-400',

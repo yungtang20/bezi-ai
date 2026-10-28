@@ -9,6 +9,7 @@ import { FiveElement } from '../data/core/types';
 import type { FengShuiItem } from './FiveElementFengShui';
 import FiveElementFengShui from './FiveElementFengShui';
 import FlyingStarsDisplay from './FlyingStarsDisplay';
+import FengShuiSystemGuide from './FengShuiSystemGuide';
 
 interface Props {
   /** 日主天干 */
@@ -207,12 +208,15 @@ export default function PersonalizedFengShui({
       {/* 第五層：飛星 */}
       <FlyingStarsDisplay
         title={<><span>🌟</span> 紫白飛星地利佈局 ({flyingStarYear} {Solar.fromYmdHms(flyingStarYear, 6, 1, 0, 0, 0).getLunar().getYearInGanZhi()}年)</>}
-        subtitle={`除了個人日主的八字喜忌與空間佈置外，流年五行紫白星更能為您引動旺盛的${palaceType}能量。請善用 ${flyingStarYear} 年流年吉星方位：`}
+        subtitle={`風水佈置以風水系統為準（命主五行 × 宮位方位），不看身強身弱、不混用八字忌神；流年紫白星再為您引動旺盛的${palaceType}能量。請善用 ${flyingStarYear} 年流年吉星方位：`}
         year={flyingStarYear}
         onYearChange={setFlyingStarYear}
         stars={getFlyingStarsForYear(flyingStarYear).stars.filter((s) => filterFn(s.name))}
         accentColor={accentColor}
       />
+
+      {/* 第六層：風水系統速查手冊（風水系統 ≠ 八字系統） */}
+      <FengShuiSystemGuide />
 
       <p className="text-[11px] text-zen-muted mt-4 leading-relaxed font-sans">
         ※ 此五行開運軟裝指南依據您個人日主五行（{element}）與性別（{gender}）客製化，飛星則由 {flyingStarYear} 流年地利磁場決定。在您的專屬流日時，加強上述空間佈置淨化，開局最有利。

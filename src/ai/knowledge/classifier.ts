@@ -49,6 +49,9 @@ const TEN_GOD_ALIASES: Record<string, string> = {
 
 const FIVE_ELEMENTS = ['木', '火', '土', '金', '水'];
 
+// 風水主題關鍵詞（風水系統與八字系統分離，僅作為 topics 供 fengshuiBuilder gate）
+const FENG_SHUI_KEYWORDS = ['風水', '居家', '擺設', '朝向', '方位', '收銀', '店面', '辦公室', '紫白', '飛星', '入宅', '動工', '裝修', '明堂', '穿堂'];
+
 /**
  * 對使用者查詢做決定性分類。
  * @param query 查詢文字（多則訊息合併）
@@ -78,6 +81,10 @@ export function classifyQuery(query: string): QueryClassification {
   for (const el of FIVE_ELEMENTS) {
     // 避免把日常用語當五行（如「今天」含「天」不含五行字本身）
     if (text.includes(el) && !topics.includes(el)) topics.push(el);
+  }
+
+  for (const kw of FENG_SHUI_KEYWORDS) {
+    if (text.includes(kw) && !topics.includes(kw)) topics.push(kw);
   }
 
   if (hits.size === 0) {

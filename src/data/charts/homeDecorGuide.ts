@@ -210,13 +210,14 @@ export const GENDER_PALACE_DECOR: Record<FiveElement, {
       'female': {
         palace: '子息宮',
         location: '臥室 / 個人空間',
-        colors: '紅、黃、橘、土黃色系',
-        items: ['紅、黃、橘、土黃色系的床單、枕頭套、地毯', '紅/紫/土黃色系瓶身香氛', '紅色燈具/鹽燈', '陶瓷、玉石、陶土擺件'],
-        material: '宜選擇陶瓷、玉石、陶土材質',
+        // 水命女子息＝木（食傷）；依《軟裝添運對照表》水命女子息宮原表
+        colors: '綠、藍綠色系',
+        items: ['綠、藍綠色系的床單、枕頭套、地毯', '綠色植栽、萬年青、竹子', '綠色水晶、翡翠、綠色燈具'],
+        material: '宜選擇木製材質',
         directionsHeaven: ['東北', '西北', '西南', '東南', '正南'],
-        directions: ['東北', '西北', '西南', '東南', '正南'],
-        zodiac: '馬、狗、羊、蛇、龍、牛',
-        zodiacMaterial: '宜選擇陶瓷、玉石、陶土材質'
+        directions: ['東北', '東', '東南', '北'],
+        zodiac: '虎、兔、龍、羊、豬',
+        zodiacMaterial: '宜選擇木製材質'
       }
     }
   },
@@ -262,13 +263,14 @@ export const GENDER_PALACE_DECOR: Record<FiveElement, {
       'female': {
         palace: '子息宮',
         location: '臥室 / 個人空間',
-        colors: '白、灰、金、銀色系',
-        items: ['白、灰、金、銀色系的床單、枕頭套、地毯', '白/灰/金/銀色瓶身香氛', '同色系燈具', '白色鮮花', '金屬製音樂盒/錢幣/風鈴', '金製或金屬、鋼、銅製擺件'],
-        material: '宜選擇金製或金屬、鋼、銅製材質',
+        // 火命女子息＝土（食傷）；依《軟裝添運對照表》火命女子息宮原表
+        colors: '紅、黃、橘、土黃色系',
+        items: ['紅、黃、橘、土黃色系的床單、枕頭套、地毯', '紅/紫/土黃色系瓶身香氛', '紅色燈具/鹽燈', '陶瓷、陶土、玉石擺飾'],
+        material: '宜選擇陶瓷、玉石製材質',
         directionsHeaven: ['西北', '正西', '西南', '東北'],
-        directions: ['西北', '正西', '西南', '東北'],
-        zodiac: '蛇、猴、雞、牛',
-        zodiacMaterial: '宜選擇金製或金屬、鋼、銅製材質'
+        directions: ['南', '東南', '西南', '東北', '西北'],
+        zodiac: '牛、龍、蛇、馬、羊、狗',
+        zodiacMaterial: '宜選擇陶瓷、玉石製材質'
       }
     }
   },
@@ -293,7 +295,7 @@ export const GENDER_PALACE_DECOR: Record<FiveElement, {
         items: ['掛畫（藍、藍綠、綠色系）', '地毯', '燈具', '同色系瓶身香氛', '綠色水晶', '翡翠', '木製品', '尤其推薦使用同色系床單與枕頭套'],
         material: '宜選擇木製材質',
         directionsHeaven: ['正東', '東北', '東南方'],
-        directions: ['正東', '東北', '東南方'],
+        directions: ['東北', '東', '東南', '北'],
         zodiac: '虎、兔、龍、羊、豬',
         zodiacMaterial: '宜選擇木製材質',
         flowerSide: '躺下來的左側床邊櫃可擺放鮮花'

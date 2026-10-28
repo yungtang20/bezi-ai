@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { BaziChart } from '../paipan';
-import { PatternScores, getPrimaryPattern, getFavorableElements } from '../pattern';
+import { PatternScores, getPrimaryPattern, getFavorableElements, determinePattern, getPatternLabel, PATTERN_CONTINUUM_NOTE } from '../pattern';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from '../constants';
-import { calculateDaYun, getDaYunQuality, getFutureLiuNian, getTenGodForDaYun } from '../dayun';
+import { calculateDaYun, getDaYunSegmentQuality, getFutureLiuNian, getTenGodForDaYun } from '../dayun';
 import { Compass, Calendar, ChevronDown, ChevronUp, ArrowLeft, GitCommit, Activity, Sparkles, Map } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, ReferenceDot, CartesianGrid } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import RemedyBrocade from './RemedyBrocade';
 import { checkSanHui, checkSanHe, checkLiuHe, checkLiuChong, checkXiangXing, checkLiuPo, checkLiuHai } from '../matchmaking';
 import { getTimelineGuideline, checkTaiSui, getTaiSuiAdvice, getLiunianAndRemedy } from '../data';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, ReferenceDot, CartesianGrid } from 'recharts';
 
 const getElementColorClass = (element: string) => {
   switch (element) {
@@ -20,6 +20,16 @@ const getElementColorClass = (element: string) => {
     default: return 'text-zinc-400';
   }
 };
+
+const qualityTextClass = (quality: string) =>
+  quality === '好運' ? 'text-emerald-400' : quality === '壞運' ? 'text-red-400' : 'text-amber-400';
+
+const qualityChipClass = (quality: string) =>
+  quality === '好運'
+    ? 'border-emerald-800 bg-emerald-950/40 text-emerald-400'
+    : quality === '壞運'
+      ? 'border-red-800 bg-red-950/40 text-red-400'
+      : 'border-amber-800 bg-amber-950/40 text-amber-400';
 
 const renderColoredElements = (elements: string[]) => {
   return elements.map((el, i) => (
@@ -139,6 +149,8 @@ interface TooltipPayload {
     isGood: boolean;
     isBad: boolean;
     quality: string;
+    firstHalf: string;
+    secondHalf: string;
   };
 }
 
@@ -151,8 +163,16 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
         <div className="text-lg font-serif font-bold text-white mb-1">
           {data.gan}{data.zhi} {data.tenGod}運
         </div>
-        <div className={`text-sm font-bold ${data.isGood ? 'text-emerald-400' : (data.isBad ? 'text-red-400' : 'text-amber-400')}`}>
-          {data.quality}
+        {/* 徐玉蘭口徑（2-1-1）：前五年看天干、後五年看地支，兩段分開講 */}
+        <div className="text-xs text-zinc-400 space-y-0.5">
+          <div>
+            前五年（天干 {data.gan}）：
+            <span className={`font-bold ${qualityTextClass(data.firstHalf)}`}>{data.firstHalf}</span>
+          </div>
+          <div>
+            後五年（地支 {data.zhi}）：
+            <span className={`font-bold ${qualityTextClass(data.secondHalf)}`}>{data.secondHalf}</span>
+          </div>
         </div>
       </div>
     );
@@ -186,6 +206,9 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
   }
 
   const primaryPattern = getPrimaryPattern(scores);
+  const patternResult = useMemo(() => determinePattern(chart), [chart]);
+  const patternLabel = getPatternLabel(patternResult, primaryPattern);
+  const isContinuum = patternResult.isContinuum && primaryPattern === patternResult.pattern;
   const favorableElements = getFavorableElements(chart.dayMaster, primaryPattern);
   const daYunList = calculateDaYun(chart);
   const currentAge = currentYear - chart.birthYear;
@@ -194,29 +217,45 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
   const activeDyIdx = selectedDy !== undefined && selectedDy < daYunList.length ? selectedDy : (defaultDyIdx >= 0 ? defaultDyIdx : 0);
   const activeDaYun = daYunList[activeDyIdx];
 
+  // 徐玉蘭口徑（2-1-1 [00:23]-[03:30]）：大運前五年走天干、後五年走地支，
+  // 所以一個大運要分兩段判斷，不能整段貼同一個標籤。
+  // 老師口徑例外在 packages/core/src/dayun.ts DA_YUN_QUALITY_OVERRIDES 審計。
+  const segmentQuality = (dy: typeof activeDaYun, year: number): '好運' | '壞運' | '平運' =>
+    getDaYunSegmentQuality(
+      chart.dayMaster,
+      chart.gender,
+      dy.gan,
+      dy.zhi,
+      favorableElements.favorable,
+      favorableElements.unfavorable,
+      { daYunStartYear: dy.startYear, year },
+    );
+
   // Prepare chart data
   const chartData = useMemo(() => {
     return daYunList.map((dy, idx) => {
-      let quality = getDaYunQuality(dy.gan, dy.zhi, favorableElements.favorable, favorableElements.unfavorable);
-      if (chart.dayMaster === '癸' && chart.gender === '男' && dy.ganZhi === '壬午') {
-        quality = '好運';
-      }
-      
-      let score = 50;
-      if (quality === '好運') score = 90;
-      if (quality === '壞運') score = 20;
+      const firstHalf = segmentQuality(dy, dy.startYear);
+      const secondHalf = segmentQuality(dy, dy.startYear + 5);
+
+      const scoreOf = (q: string) => (q === '好運' ? 90 : q === '壞運' ? 20 : 50);
+      const score = Math.round((scoreOf(firstHalf) + scoreOf(secondHalf)) / 2);
+      const isGood = firstHalf === '好運' && secondHalf === '好運';
+      const isBad = firstHalf === '壞運' && secondHalf === '壞運';
+      const quality = firstHalf === secondHalf ? firstHalf : `${firstHalf}→${secondHalf}`;
 
       return {
         name: dy.startAge.toString(),
         score,
         quality,
+        firstHalf,
+        secondHalf,
         gan: dy.gan,
         zhi: dy.zhi,
         tenGod: dy.tenGod,
         ageLabel: `${dy.startAge}-${dy.startAge + 9}`,
         isCurrent: currentAge >= dy.startAge && currentAge <= dy.startAge + 9,
-        isGood: quality === '好運',
-        isBad: quality === '壞運',
+        isGood,
+        isBad,
         index: idx
       };
     });
@@ -237,10 +276,13 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
   
   const liuNianList = activeDaYun ? getFutureLiuNian(activeDaYun.startYear, 10, chart.dayMaster) : [];
 
-  let daYunQuality = getDaYunQuality(activeDaYun.gan, activeDaYun.zhi, favorableElements.favorable, favorableElements.unfavorable);
-  if (chart.dayMaster === '癸' && chart.gender === '男' && activeDaYun.ganZhi === '壬午') {
-    daYunQuality = '好運';
-  }
+  // 當前大運也分前後五年：站在哪一段，解讀就跟著那一段走
+  const firstHalfQuality = segmentQuality(activeDaYun, activeDaYun.startYear);
+  const secondHalfQuality = segmentQuality(activeDaYun, activeDaYun.startYear + 5);
+  const isCurrentDaYun = currentYear >= activeDaYun.startYear && currentYear <= activeDaYun.startYear + 9;
+  const daYunQuality = isCurrentDaYun && currentYear >= activeDaYun.startYear + 5
+    ? secondHalfQuality
+    : firstHalfQuality;
   const daYunTenGod = getTenGodForDaYun(chart.dayMaster, activeDaYun.gan);
   const daYunGuide = getTimelineGuideline(daYunTenGod, primaryPattern, daYunQuality === '好運' ? 'good' : 'bad');
 
@@ -282,10 +324,13 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
             className="bg-zinc-900 border border-white/10 rounded-2xl p-4 min-w-[200px] shadow-sm">
              <div className="text-xs text-zinc-500 mb-1 uppercase tracking-widest font-bold">格局喜用</div>
              <div className="flex items-baseline gap-2">
-                <div className="text-lg font-bold text-amber-400">{primaryPattern}格</div>
+                <div className="text-lg font-bold text-amber-400">{isContinuum ? patternLabel : `${primaryPattern}格`}</div>
                 <div className="text-sm text-zinc-300">喜 {renderColoredElements(favorableElements.favorable)}</div>
              </div>
              <div className="text-xs text-zinc-500 mt-1">忌 {renderColoredElements(favorableElements.unfavorable)}</div>
+             {isContinuum && (
+               <p className="text-[10px] text-zinc-500 mt-2 max-w-[240px] leading-snug">{PATTERN_CONTINUUM_NOTE}</p>
+             )}
           </motion.div>
         </header>
 
@@ -378,10 +423,20 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
         {daYunGuide && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={`guide-${activeDyIdx}`}
             className="p-5 bg-zinc-900/50 rounded-2xl border border-zinc-800">
-            <div className={`text-lg font-bold mb-2 flex items-center gap-2 ${daYunQuality === '壞運' ? 'text-red-400' : (daYunQuality === '好運' ? 'text-emerald-400' : 'text-amber-400')}`}>
-              <Map size={18} className="opacity-70" />
-              <span>{activeDaYun.startAge}-{activeDaYun.startAge+9}歲：{renderColoredGanZhi(activeDaYun.gan, activeDaYun.zhi)}大運</span>
-              <span className="text-xs px-2 py-0.5 rounded border border-inherit bg-black/20">{daYunQuality}</span>
+            <div className="mb-2">
+              <div className={`text-lg font-bold flex items-center gap-2 ${qualityTextClass(daYunQuality)}`}>
+                <Map size={18} className="opacity-70" />
+                <span>{activeDaYun.startAge}-{activeDaYun.startAge+9}歲：{renderColoredGanZhi(activeDaYun.gan, activeDaYun.zhi)}大運</span>
+              </div>
+              {/* 徐玉蘭口徑（2-1-1）：前五年走天干、後五年走地支，兩段各自判好壞 */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[11px] font-bold">
+                <span className={`px-2 py-0.5 rounded border ${qualityChipClass(firstHalfQuality)}`}>
+                  前五年（天干{activeDaYun.gan}）{firstHalfQuality}
+                </span>
+                <span className={`px-2 py-0.5 rounded border ${qualityChipClass(secondHalfQuality)}`}>
+                  後五年（地支{activeDaYun.zhi}）{secondHalfQuality}
+                </span>
+              </div>
             </div>
             <p className="text-sm text-zinc-300 leading-relaxed mb-4">
               走 <b>{daYunTenGod}</b> 運。{daYunGuide.impact}
@@ -416,11 +471,11 @@ export default function TimelinePage({ chart, scores, name, onNavigate }: Props)
               const isCurrentYear = ln.year === currentYear;
               const lnTenGod = getTenGodForDaYun(chart.dayMaster, ln.gan);
               
-              // 動態喜忌轉換規則
-              const isDayunGood = daYunQuality === '好運';
+              // 動態喜忌轉換規則（大運好壞逐段判斷：前五年天干、後五年地支）
+              const isDayunGood = segmentQuality(activeDaYun, ln.year) === '好運';
               const dynamicRules = getLiunianAndRemedy(
                 GAN_TO_ELEMENT[chart.dayMaster] as FiveElement, 
-                (primaryPattern === '身弱' || primaryPattern === '從弱' ? '身弱' : '身強'),
+                strengthArg,
                 isDayunGood
               );
               
