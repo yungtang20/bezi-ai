@@ -1,34 +1,25 @@
-import React, { useState, useMemo } from 'react';
-import { BaziChart, getHiddenTenGodsForZhi, ZHI_HIDE_GAN, DAY_MASTER_PERSONALITY } from '../paipan';
-import { PatternScores, getPrimaryPattern, determinePattern, getPatternLabel, PATTERN_CONTINUUM_NOTE } from '../pattern';
+// src/components/Dashboard.tsx
+// Dashboard — 薄協調層。邏輯交由 useDashboardLogic，呈現交由子 widget 與 accordion 區塊。
+import React, { useState } from 'react';
+import { BaziChart, DAY_MASTER_PERSONALITY } from '../paipan';
+import { PatternScores, getPatternLabel, PATTERN_CONTINUUM_NOTE } from '../pattern';
 import { GAN_TO_ELEMENT } from '../constants';
 import { TEN_GOD_TRAITS } from '../data';
-import { calculateDaYun, getLiuNian } from '../dayun';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ContentSection, SectionGrammar } from './shared';
 import FiveElementsRadar from './dashboard/FiveElementsRadar';
 import TenGodsPie from './dashboard/TenGodsPie';
 import BaziPillars from './dashboard/BaziPillars';
-import TodayEnergyCard from './dashboard/TodayEnergyCard';
-import { getFiveElementData, getTenGodData } from '../lib/chartTransform';
-import LifeTimeline from './dashboard/LifeTimeline';
-import ChartCodex from './dashboard/ChartCodex';
 import WeeklyReviewCard from './dashboard/WeeklyReviewCard';
+import ChartCodex from './dashboard/ChartCodex';
+import CalibrationPanel from './dashboard/CalibrationPanel';
+import PatternSwitchNotice from './dashboard/PatternSwitchNotice';
+import TodayEnergyCard from './dashboard/TodayEnergyCard';
+import LifeTimeline from './dashboard/LifeTimeline';
 import { useCheckInStats } from '../hooks/useCheckInStats';
 import { PartnerChart } from '../matchmaking';
 import PeopleCards from './dashboard/PeopleCards';
-
-const ELEMENT_COLORS: Record<string, string> = {
-  '甲': 'text-emerald-400', '乙': 'text-emerald-400',
-  '丙': 'text-red-400', '丁': 'text-red-400',
-  '戊': 'text-amber-500', '己': 'text-amber-500',
-  '庚': 'text-zinc-300', '辛': 'text-zinc-300',
-  '壬': 'text-blue-400', '癸': 'text-blue-400',
-  '寅': 'text-emerald-400', '卯': 'text-emerald-400',
-  '巳': 'text-red-400', '午': 'text-red-400',
-  '辰': 'text-amber-500', '戌': 'text-amber-500', '丑': 'text-amber-500', '未': 'text-amber-500',
-  '申': 'text-zinc-300', '酉': 'text-zinc-300',
-  '亥': 'text-blue-400', '子': 'text-blue-400',
-};
+import { useDashboardLogic } from './dashboard/useDashboardLogic';
 
 interface Props {
   bazi?: { year: string; month: string; day: string; time: string; chart?: BaziChart } | null;
@@ -61,93 +52,54 @@ function AccordionSection({
   return (
     <div className="glass-card overflow-hidden animate-fade-in-up">
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors"
+        onClick={() => setIsOpen((o) => !o)}
+        className="w-full flex items-center justify-between p-3 text-left bg-zinc-900/40 border border-white/5 rounded-lg hover:bg-zinc-900/60 transition-colors"
       >
         <div className="flex items-center gap-2">
-          {icon && <span className="text-sm">{icon}</span>}
-          <span className="text-sm md:text-base font-bold text-zinc-100 tracking-wide">{title}</span>
-          {badge && <span className="text-[10px] text-zinc-500">{badge}</span>}
+          {icon && <span className="text-zinc-400">{icon}</span>}
+          <span className="text-sm font-bold text-zinc-100">{title}</span>
+          {badge && <span className="ml-auto text-[10px] text-zinc-500">{badge}</span>}
         </div>
-        {isOpen
-          ? <ChevronUp size={16} className="text-amber-500/70" />
-          : <ChevronDown size={16} className="text-zinc-500" />}
+        <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
-        <div className="px-3 md:px-4 pb-3 md:pb-4 border-t border-white/5">
-          {children}
-        </div>
+        <div className="p-3 border-t border-white/5">{children}</div>
       )}
     </div>
   );
 }
 
-export default function Dashboard({ bazi, name, scores, birthDate, birthTime, gender, onNavigate, onLoadPerson, view = 'today' }: Props) {
+export default function Dashboard({
+  bazi,
+  name,
+  scores,
+  birthDate,
+  birthTime,
+  gender,
+  onNavigate,
+  onLoadPerson,
+  view = 'today',
+}: Props) {
   const chart = bazi?.chart;
   // [AI MOD] 打卡 log（命盤圖鑑/週回顧用）— 须在 early return 前（hooks 規則）
   const { logs: checkInLogs } = useCheckInStats();
 
   if (!chart || !scores) return <div className="text-center p-10 text-zen-muted">命盤資料載入中...</div>;
 
-  const primaryPattern = getPrimaryPattern(scores);
-  const patternResult = useMemo(() => determinePattern(chart), [chart]);
-
-  const currentYear = new Date().getFullYear();
-  const daYuns = useMemo(() => calculateDaYun(chart), [chart]);
-  const currentDaYun = daYuns.find(d => currentYear >= d.startYear && currentYear <= d.endYear);
-  const currentLiuNian = useMemo(() => getLiuNian(currentYear, chart.dayMaster), [currentYear, chart.dayMaster]);
-
-  const dayElement = GAN_TO_ELEMENT[chart.dayMaster];
-  const myTenGods = Array.from(new Set([chart.year.tenGod, chart.month.tenGod, chart.hour.tenGod].filter(Boolean)));
-  const fiveElementData = useMemo(() => getFiveElementData(chart), [chart]);
-  const tenGodData = useMemo(() => getTenGodData(chart), [chart]);
-
-  const liuNianZhiHidden = currentLiuNian.zhi ? (ZHI_HIDE_GAN[currentLiuNian.zhi] || []) : [];
-  const liuNianZhiTenGods = currentLiuNian.zhi ? getHiddenTenGodsForZhi(currentLiuNian.zhi, chart.dayMaster) : [];
-
-  const daYunZhiHidden = currentDaYun?.zhi ? (ZHI_HIDE_GAN[currentDaYun.zhi] || []) : [];
-  const daYunZhiTenGods = currentDaYun?.zhi ? getHiddenTenGodsForZhi(currentDaYun.zhi, chart.dayMaster) : [];
-
-  const pillars = [
-    {
-      label: `流年 ${currentLiuNian.year}`,
-      mobileLabel: '流年',
-      mobileSubLabel: `${currentLiuNian.year}`,
-      data: {
-        gan: currentLiuNian.gan,
-        zhi: currentLiuNian.zhi,
-        tenGod: currentLiuNian.relation,
-        hiddenGan: liuNianZhiHidden,
-        hiddenTenGods: liuNianZhiTenGods
-      },
-      isHighlighted: true
-    },
-    {
-      label: `大運 ${currentDaYun ? `${currentDaYun.startAge}-${currentDaYun.startAge + 9}` : '?'} 歲`,
-      mobileLabel: '大運',
-      mobileSubLabel: currentDaYun ? `${currentDaYun.startAge}-${currentDaYun.startAge + 9} 歲` : '',
-      data: {
-        gan: currentDaYun?.gan || '?',
-        zhi: currentDaYun?.zhi || '?',
-        tenGod: currentDaYun?.tenGod || '?',
-        hiddenGan: daYunZhiHidden,
-        hiddenTenGods: daYunZhiTenGods
-      },
-      isHighlighted: true
-    },
-    { label: '時柱', mobileLabel: '時柱', data: chart.hour, isHighlighted: false },
-    {
-      label: `日柱（${currentYear - chart.birthYear}歲）`,
-      mobileLabel: '日柱',
-      mobileSubLabel: `${currentYear - chart.birthYear}歲`,
-      data: chart.day,
-      isHighlighted: false
-    },
-    { label: '月柱', mobileLabel: '月柱', data: chart.month, isHighlighted: false },
-    { label: '年柱', mobileLabel: '年柱', data: chart.year, isHighlighted: false },
-  ];
-
-  const getElementColor = (ganZhi: string) => ELEMENT_COLORS[ganZhi] || 'text-zinc-400';
+  const {
+    primaryPattern,
+    patternResult,
+    currentYear,
+    daYuns,
+    currentDaYun,
+    currentLiuNian,
+    dayElement,
+    myTenGods,
+    fiveElementData,
+    tenGodData,
+    pillars,
+    getElementColor,
+  } = useDashboardLogic({ chart, scores });
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-2.5 md:space-y-3 pb-8 px-3 md:px-0">
@@ -162,6 +114,9 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
         </p>
         <div className="gold-divider mt-2 mx-auto max-w-[200px]" />
       </div>
+
+      {/* B 軸：打卡改變格局時顯式顯示因果鏈 */}
+      <PatternSwitchNotice />
 
       {/* [AI MOD] 今日能量卡（每日鉤子）：首屏第一眼 */}
       {view === 'today' && <TodayEnergyCard chart={chart} scores={scores} name={name} onNavigate={onNavigate} />}
@@ -372,12 +327,15 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
         title="先天個性核心"
         icon={<span>🧬</span>}
       >
-        <div className="pt-2">
-          <div className="glass-card p-3 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl -ml-8 -mt-8 pointer-events-none" />
-            <p className="text-xs md:text-sm text-zinc-300 leading-snug relative z-10">{DAY_MASTER_PERSONALITY[chart.dayMaster]}</p>
-          </div>
-        </div>
+        <ContentSection
+          defaultOpen
+          grammar={{
+            title: "先天個性核心",
+            level: 3,
+            conclusion: DAY_MASTER_PERSONALITY[chart.dayMaster],
+            evidence: `日主 ${chart.dayMaster}（${dayElement}）定義你的先天氣質與行事底色。`,
+          }}
+        />
       </AccordionSection>
 
       {/* 區段 3：外在展現（天干主星） */}
@@ -386,7 +344,7 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
         icon={<span>🌟</span>}
         badge={<span className="text-zinc-600 text-[10px]">天干主星 · 社會形象</span>}
       >
-        <div className="pt-2 space-y-1.5">
+        <div className="pt-2 space-y-2">
           {[
             { god: chart.year.tenGod, pillar: '年干', gan: chart.year.gan },
             { god: chart.month.tenGod, pillar: '月干', gan: chart.month.gan },
@@ -394,28 +352,33 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
           ].filter(t => t.god).map((t, idx) => {
             const trait = TEN_GOD_TRAITS[t.god];
             if (!trait) return null;
+            const grammar: SectionGrammar = {
+              title: `${t.god}（${t.pillar}）`,
+              level: 3,
+              conclusion: trait.trait,
+              evidence: (
+                <>
+                  <p className="text-[10px] text-zinc-500 mb-2 truncate">{trait.image}</p>
+                  <div className="space-y-1">
+                    <div className="bg-green-500/5 p-2 rounded border border-green-500/10">
+                      <span className="text-[10px] font-bold text-green-500/80 block mb-0.5">✔️ 優勢</span>
+                      <span className="text-[10px] text-green-100/70">{trait.overload.pros}</span>
+                    </div>
+                    <div className="bg-red-500/5 p-2 rounded border border-red-500/10">
+                      <span className="text-[10px] font-bold text-red-500/80 block mb-0.5">❌ 盲點</span>
+                      <span className="text-[10px] text-red-100/70">{trait.overload.cons}</span>
+                    </div>
+                  </div>
+                </>
+              ),
+              timeWindow: `天干：${t.gan}`,
+              actions: [
+                `強化 ${trait.category} 特質`,
+                `留意 ${trait.overload.cons}`,
+              ],
+            };
             return (
-              <div key={`${t.pillar}-${t.god}-${idx}`} className="glass-card p-3 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/3 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none" />
-                <div className="flex justify-between items-center mb-1 relative z-10">
-                  <span className="text-xs md:text-sm font-bold text-amber-500">
-                    {t.god} <span className="text-[10px] text-amber-500/70 ml-1">({t.pillar}: {t.gan})</span>
-                  </span>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/10 text-amber-300 rounded border border-amber-500/20">{trait.category}</span>
-                </div>
-                <p className="text-[10px] text-zinc-500 mb-1 truncate relative z-10">{trait.image}</p>
-                <p className="text-xs text-zinc-300 leading-snug mb-2 relative z-10">{trait.trait}</p>
-                <div className="space-y-1 relative z-10">
-                  <div className="bg-green-500/5 p-2 rounded border border-green-500/10">
-                    <span className="text-[10px] font-bold text-green-500/80 block mb-0.5">✔️ 優勢</span>
-                    <span className="text-[10px] text-green-100/70">{trait.overload.pros}</span>
-                  </div>
-                  <div className="bg-red-500/5 p-2 rounded border border-red-500/10">
-                    <span className="text-[10px] font-bold text-red-500/80 block mb-0.5">❌ 盲點</span>
-                    <span className="text-[10px] text-red-100/70">{trait.overload.cons}</span>
-                  </div>
-                </div>
-              </div>
+              <ContentSection key={`${t.pillar}-${t.god}-${idx}`} grammar={grammar} defaultOpen />
             );
           })}
           {myTenGods.length === 0 && <p className="text-xs text-zinc-500">無主星紀錄</p>}
@@ -428,24 +391,34 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
         icon={<span>🌙</span>}
         badge={<span className="text-zinc-600 text-[10px]">地支性格</span>}
       >
-        <div className="pt-2 space-y-1.5">
-          {[
-            { name: '動態魅力', zhis: ['子', '午', '卯', '酉'], desc: '高顏值、目光焦點喜打扮，具備獨特個人魅力。' },
-            { name: '開創行動', zhis: ['寅', '申', '巳', '亥'], desc: '陽剛明快、有話直說、行動力強、充滿活力的變動。' },
-            { name: '穩重內斂', zhis: ['辰', '戌', '丑', '未'], desc: '穩重踏實、安靜內斂、富有內涵、喜歡將話藏心中。' }
-          ].map(cat => {
-            const matched = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi].filter(z => cat.zhis.includes(z));
-            if (matched.length === 0) return null;
-            return (
-              <div key={cat.name} className="glass-card p-2.5 flex items-start gap-3">
-                <span className="text-xs font-bold text-amber-500/80 shrink-0 w-16 pt-0.5">{cat.name}</span>
-                <div className="flex-1">
-                  <p className="text-xs text-zinc-300 leading-snug">{cat.desc}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <ContentSection
+          defaultOpen
+          grammar={{
+            title: "私下展現（地支性格）",
+            level: 3,
+            conclusion: "你的地支性格由命盤四柱地支決定，呈現私底下的真實面向。",
+            evidence: (
+              <>
+                {[
+                  { name: '動態魅力', zhis: ['子', '午', '卯', '酉'], desc: '高顏值、目光焦點喜打扮，具備獨特個人魅力。' },
+                  { name: '開創行動', zhis: ['寅', '申', '巳', '亥'], desc: '陽剛明快、有話直說、行動力強、充滿活力的變動。' },
+                  { name: '穩重內斂', zhis: ['辰', '戌', '丑', '未'], desc: '穩重踏實、安靜內斂、富有內涵、喜歡將話藏心中。' }
+                ].map(cat => {
+                  const matched = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi].filter(z => cat.zhis.includes(z));
+                  if (matched.length === 0) return null;
+                  return (
+                    <div key={cat.name} className="glass-card p-2.5 flex items-start gap-3">
+                      <span className="text-xs font-bold text-amber-500/80 shrink-0 w-16 pt-0.5">{cat.name}</span>
+                      <div className="flex-1">
+                        <p className="text-xs text-zinc-300 leading-snug">{cat.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            ),
+          }}
+        />
       </AccordionSection>
 
       {/* 區段 5：命局交互作用 */}
@@ -454,47 +427,71 @@ export default function Dashboard({ bazi, name, scores, birthDate, birthTime, ge
         icon={<span>⚡</span>}
         badge={<span className="text-zinc-600 text-[10px]">刑沖合會</span>}
       >
-        <div className="pt-2 space-y-1.5">
-          {(() => {
-            const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
-            const interactions: string[] = [];
+        <ContentSection
+          defaultOpen
+          grammar={{
+            title: "命局交互作用",
+            level: 3,
+            conclusion: "地支之間的刑沖合會決定命盤能量的穩定與變動幅度。",
+            evidence: (
+              <>
+                {(() => {
+                  const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
+                  const interactions: string[] = [];
 
-            const chongPairs = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
-            chongPairs.forEach(([z1, z2]) => {
-              if (zhis.includes(z1) && zhis.includes(z2)) {
-                interactions.push(`命局帶【${z1}${z2}六沖】：能量變動大，人生較多起伏，適合遠行開創。`);
-              }
-            });
+                  const chongPairs = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
+                  chongPairs.forEach(([z1, z2]) => {
+                    if (zhis.includes(z1) && zhis.includes(z2)) {
+                      interactions.push(`命局帶【${z1}${z2}六沖】：能量變動大，人生較多起伏，適合遠行開創。`);
+                    }
+                  });
 
-            const hePairs = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
-            hePairs.forEach(([z1, z2]) => {
-              if (zhis.includes(z1) && zhis.includes(z2)) {
-                interactions.push(`命局帶【${z1}${z2}六合】：人際和諧，多貴人相助，關係穩定。`);
-              }
-            });
+                  const hePairs = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
+                  hePairs.forEach(([z1, z2]) => {
+                    if (zhis.includes(z1) && zhis.includes(z2)) {
+                      interactions.push(`命局帶【${z1}${z2}六合】：人際和諧，多貴人相助，關係穩定。`);
+                    }
+                  });
 
-            const selfZhis = ['辰', '午', '酉', '亥'];
-            const counts: Record<string, number> = {};
-            zhis.forEach(z => counts[z] = (counts[z] || 0) + 1);
-            selfZhis.forEach(sz => {
-              if (counts[sz] >= 2) interactions.push(`命局帶【${sz}${sz}自刑】：內心易糾結，自我要求高，需學會寬心。`);
-            });
+                  const selfZhis = ['辰', '午', '酉', '亥'];
+                  const counts: Record<string, number> = {};
+                  zhis.forEach(z => counts[z] = (counts[z] || 0) + 1);
+                  selfZhis.forEach(sz => {
+                    if (counts[sz] >= 2) interactions.push(`命局帶【${sz}${sz}自刑】：內心易糾結，自我要求高，需學會寬心。`);
+                  });
 
-            if (interactions.length === 0) return (
-              <div className="glass-card p-2.5 text-center">
-                <p className="text-xs text-zinc-500 italic">本命地支氣場平穩，無劇烈刑沖。</p>
-              </div>
-            );
+                  if (interactions.length === 0) return (
+                    <div className="glass-card p-2.5 text-center">
+                      <p className="text-xs text-zinc-500 italic">本命地支氣場平穩，無劇烈刑沖。</p>
+                    </div>
+                  );
 
-            return interactions.map((inter, i) => (
-              <div key={i} className="glass-card p-2.5 flex items-start gap-2">
-                <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
-                <p className="text-xs text-zinc-300 leading-snug">{inter}</p>
-              </div>
-            ));
-          })()}
-        </div>
+                  return interactions.map((inter, i) => (
+                    <div key={i} className="glass-card p-2.5 flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-1 shrink-0" />
+                      <p className="text-xs text-zinc-300 leading-snug">{inter}</p>
+                    </div>
+                  ));
+                })()}
+              </>
+            ),
+            uncertainty: "刑沖合會僅為命盤結構推斷，實際事件仍受大運、流年與個人選擇影響。",
+          }}
+        />
       </AccordionSection>
+      {/* B 軸：越用越準校準面板 */}
+      <AccordionSection
+        title="越用越準校準面板"
+        icon={<span>📈</span>}
+        badge={<span className="text-zinc-600 text-[10px]">打卡回閉環</span>}
+      >
+        <CalibrationPanel
+          scores={scores}
+          patternResult={patternResult}
+          onNavigate={onNavigate}
+        />
+      </AccordionSection>
+
 
       {/* 理論速查引用出處 */}
       <div className="pt-3 pb-6 flex justify-center">

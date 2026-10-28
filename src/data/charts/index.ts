@@ -2,7 +2,7 @@
 export * from './careerGuidelines';
 export * from './careerRemediesData';
 export * from './careerRoles';
-// [AI MOD] familyInteraction removed — dead code (no external consumers)
+export * from './familyInteraction';
 export * from './familyRoles';
 export * from './fengShui2026';
 export * from './fengShuiSystemGuide';
