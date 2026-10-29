@@ -1,6 +1,6 @@
 // App — thin step coordinator.
 // 路由與頁面調度層：不再包含表單驗證、排盤計算、校準邏輯（已拆至 hooks）。
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowRight, Compass, Moon, Sun, Github, Sparkles, Settings } from "lucide-react";
 import Sidebar from "./components/Sidebar";
@@ -12,7 +12,15 @@ import { useAppStep } from "./hooks/useAppStep";
 import { useBirthChart } from "./hooks/useBirthChart";
 import { useCalibration } from "./hooks/useCalibration";
 import AIChatPanel from "./components/AIChatPanel";
-import { type PatternScores } from "@bezi/core";
+import { BIRTH_CITIES, cityLongitude } from "./lib/trueSolarCities";
+import { getPatternScores } from "./storage";
+import {
+  GAN_TO_ELEMENT,
+  getCheckYears,
+  getFavorableElements,
+  getPrimaryPattern,
+  type PatternScores,
+} from "@bezi/core";
 import { CLIENT_CONFIG } from "./config";
 import { trackProductEvent } from "./lib/productEvents";
 
@@ -39,6 +47,8 @@ const DEMO_BIRTH = {
 
 export default function App() {
   const { step, handleNavigate } = useAppStep();
+  const [initializing, setInitializing] = useState(true);
+  const initDoneRef = useRef(false);
   const {
     form,
     timeInputRef,
@@ -49,7 +59,16 @@ export default function App() {
     isGenerating,
     errorMsg,
     handleStart,
-  } = useBirthChart(onChartReady);
+    restoreFromStorage,
+  } = useBirthChart(onChartReady, {
+    onChartSettled: () => handleNavigate(3),
+    onChartFailed: () => {
+      // deep-link 指向需命盤的頁面但排盤失敗 → 回表單並清 hash。
+      if (window.location.hash) window.location.hash = "";
+      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+      handleNavigate(1);
+    },
+  });
   const {
     scores,
     setScores,
@@ -57,7 +76,7 @@ export default function App() {
     handleCalibration,
     skipCalibration,
     loadScores,
-  } = useCalibration(null, null);
+  } = useCalibration(null, pattern);
 
   function onChartReady(
     chartDisplay: { chart: unknown; year: string; month: string; day: string; time: string },
@@ -68,12 +87,72 @@ export default function App() {
     setScores(nextScores);
   }
 
-  const showAI = false; // kept minimal; Drawer toggled via Sidebar
+  // Mount 時還原：localStorage 有出生資料 → 重排盤並依「是否有存檔分數」決定回 4 或 3；
+  // 無存檔 → step 1。StrictMode 雙跑以 ref 防重複（舊版 mount effect 的 hook 化還原）。
+  useEffect(() => {
+    if (initDoneRef.current) return;
+    initDoneRef.current = true;
+
+    const hasSaved =
+      localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.NAME) &&
+      localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.GENDER) &&
+      localStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.DATE) !== null;
+
+    if (!hasSaved) {
+      handleNavigate(1);
+      sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+      setInitializing(false);
+      return;
+    }
+
+    void (async () => {
+      const restored = await restoreFromStorage();
+      if (!restored) {
+        // 存檔排盤失敗 → 清 deep-link，回表單重填。
+        if (window.location.hash) window.location.hash = "";
+        sessionStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP);
+        handleNavigate(1);
+        setInitializing(false);
+        return;
+      }
+      try {
+        const savedScores = await getPatternScores();
+        if (savedScores) {
+          setScores(savedScores);
+          // sessionStorage 有步驟（deep-link / 回退）則尊重之；無則進 dashboard。
+          if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
+            handleNavigate(4);
+          }
+        } else {
+          if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
+            handleNavigate(3);
+          }
+        }
+      } catch {
+        // DB 錯誤不擋 UI：分數留空由校準重算。
+        if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
+          handleNavigate(3);
+        }
+      }
+      setInitializing(false);
+    })();
+  }, [handleNavigate, restoreFromStorage, setScores]);
+
+  const [showAI, setShowAI] = useState(false);
   const showSettings = false;
 
   const openAI = () => {
     trackProductEvent("ai_panel_opened");
+    setShowAI(true);
   };
+
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-zen-bg flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-zen-sage/30 border-t-zen-sage animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zen-bg text-zen-text overflow-hidden flex flex-col items-center justify-start md:justify-center relative selection:bg-zen-sage selection:text-white">
@@ -104,7 +183,7 @@ export default function App() {
             currentStep={step}
             onNavigate={handleNavigate}
             showAI={showAI}
-            onToggleAI={openAI}
+            onToggleAI={() => (showAI ? setShowAI(false) : openAI())}
             onOpenSettings={() => {}}
           />
         )}
@@ -402,7 +481,7 @@ export default function App() {
                               value={form.birthTimeInput}
                               onChange={(e) => form.parseHourInput(e.target.value)}
                               onKeyDown={form.handleTimeKeyDown}
-                              placeholder="例如：1430；不知道可留空"
+                              placeholder="例如：1430 或 14：30；不知道可留空"
                               aria-describedby="birth-time-help"
                               aria-invalid={Boolean(form.hourError)}
                               className={`w-full bg-transparent outline-none text-base font-serif text-zen-text placeholder:text-zen-muted/30 ${form.hourError ? "text-rose-400" : ""}`}
@@ -435,8 +514,34 @@ export default function App() {
                             出生城市（選填，用於真太陽時校正）
                           </label>
                           <div className="flex flex-wrap gap-1.5">
-                            {[]}
+                            {BIRTH_CITIES.map((c) => (
+                              <button
+                                key={c.name}
+                                type="button"
+                                onClick={() => {
+                                  const next = birthCity === c.name ? "" : c.name;
+                                  setBirthCity(next);
+                                  if (next) {
+                                    localStorage.setItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE, next);
+                                  } else {
+                                    localStorage.removeItem(CLIENT_CONFIG.STORAGE_KEYS.LONGITUDE);
+                                  }
+                                }}
+                                className={`px-2.5 py-1 rounded-lg border text-xs transition-colors ${
+                                  birthCity === c.name
+                                    ? "border-zen-gold/60 bg-zen-gold/20 text-zen-gold"
+                                    : "border-white/10 bg-white/5 text-zen-muted hover:bg-white/10"
+                                }`}
+                              >
+                                {c.name}
+                              </button>
+                            ))}
                           </div>
+                          {birthCity && (
+                            <p className="text-zen-accent/80 text-[11px] mt-1.5">
+                              已依「{birthCity}」的真太陽時校正時辰（經度 {cityLongitude(birthCity)}°E）。
+                            </p>
+                          )}
                         </div>
                       )}
                       <details id="birth-date-help" className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-zen-muted/80">
@@ -507,12 +612,78 @@ export default function App() {
                 </motion.div>
                 <h2 className="font-serif text-2xl md:text-3xl mb-2 tracking-tight">先用兩個年份，讓結果更貼近你</h2>
                 <p className="text-sm text-zen-muted mb-3">你可以回答，也可以直接查看完整結果。</p>
+                <div className="flex flex-col items-center gap-1 mb-3">
+                  <p className="text-sm text-zen-muted">
+                    <span>喜用神：</span>
+                    <span className="text-zen-text">
+                      {bazi && pattern
+                        ? getFavorableElements(
+                            bazi.chart.dayMaster,
+                            scores ? getPrimaryPattern(scores) : pattern.pattern
+                          ).favorable.join("、")
+                        : pattern?.favorable.join("、")}
+                    </span>
+                  </p>
+                  <p className="text-sm text-zen-muted">
+                    <span>最弱五行：</span>
+                    <span className="text-amber-500">{pattern?.weakestElement}</span>
+                  </p>
+                </div>
                 <div className="text-zen-muted text-xs leading-relaxed max-w-lg mx-auto text-left bg-white/5 p-2 rounded-lg border border-white/5 space-y-0.5">
                   <p className="font-medium text-zen-text mb-1.5">回想這些年份是否出現明顯的工作、關係、財務或生活轉變，幫助系統記錄你的能量起伏。</p>
                   <p>回答沒有標準答案，依你的真實感受選擇即可。</p>
                 </div>
               </div>
-              <div className="w-full space-y-2">{null}</div>
+
+              <div className="w-full space-y-2">
+                {bazi && pattern
+                  ? getCheckYears(
+                      GAN_TO_ELEMENT[bazi.chart.dayMaster],
+                      pattern.pattern
+                    ).map((year, idx) => {
+                        const item = { year: year.toString(), name: `${year}年` };
+                        return (
+                          <motion.div
+                            key={`${item.year}-${idx}`}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.4 + idx * 0.15, duration: 0.6 }}
+                            className="bg-zen-card/80 backdrop-blur-md rounded-xl md:rounded-2xl p-3 md:p-4 shadow-sm border border-white/5 md:border-white/10"
+                          >
+                            <div className="flex justify-between items-center mb-2 md:mb-3">
+                              <div className="flex items-baseline gap-2">
+                                <span className="font-serif text-2xl text-zen-text">{item.year}</span>
+                                <span className="text-zen-muted text-xs tracking-widest">{item.name}</span>
+                              </div>
+                              {calibrations[item.year] && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-2 h-2 bg-zen-sage rounded-full"
+                                />
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {["順利", "不順", "平穩"].map((opt) => (
+                                <button
+                                  key={opt}
+                                  onClick={() => handleCalibration(item.year, opt)}
+                                  aria-pressed={calibrations[item.year] === opt}
+                                  className={`py-2 md:py-2.5 px-1 rounded-lg text-sm md:text-base font-medium transition-all duration-300 border ${
+                                    calibrations[item.year] === opt
+                                      ? "bg-zen-text text-zen-bg border-zen-text shadow-md transform scale-[1.02]"
+                                      : "bg-white/5 border-transparent text-zen-muted hover:border-zen-muted/20 hover:text-zen-text"
+                                  }`}
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        );
+                      })
+                  : null}
+              </div>
               <button
                 onClick={skipCalibration}
                 className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-zen-muted transition-colors hover:bg-white/10 hover:text-zen-text"
@@ -564,7 +735,7 @@ export default function App() {
 
       {/* AI Chat Panel - Right Side Overlay */}
       {step >= 4 && showAI && (
-        <Drawer isOpen={showAI} onClose={() => {}} title="AI 智能問答" icon={<Sparkles size={16} className="text-zen-gold" />}>
+        <Drawer isOpen={showAI} onClose={() => setShowAI(false)} title="AI 智能問答" icon={<Sparkles size={16} className="text-zen-gold" />}>
           <Suspense fallback={<SkeletonPage />}>
             <AIChatPanel bazi={bazi} />
           </Suspense>

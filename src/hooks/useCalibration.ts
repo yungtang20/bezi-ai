@@ -4,6 +4,8 @@ import { useCallback, useState } from "react";
 import { applyCalibrationDelta } from "../calibration";
 import { getPatternScores, savePatternScores } from "../storage";
 import { PatternScores, PatternResult } from "../pattern";
+import { stepToHash } from "../lib/router";
+import type { Step } from "../App";
 
 const RETURN_AFTER_EDIT_KEY = "bezi:return-after-edit";
 
@@ -54,9 +56,9 @@ export function useCalibration(
       setCalibrationsState((prev) => {
         const next = { ...prev, [year]: value };
         if (Object.keys(next).length === 2) {
-          const returnStep = sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === "12" ? "12" : "4";
+          const returnStep = (sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === "12" ? 12 : 4) as Step;
           sessionStorage.removeItem(RETURN_AFTER_EDIT_KEY);
-          window.location.hash = `#/${returnStep}`;
+          window.location.hash = stepToHash(returnStep);
           window.scrollTo({ top: 0, behavior: "smooth" });
         }
         return next;
@@ -66,9 +68,9 @@ export function useCalibration(
   );
 
   const skipCalibration = useCallback(() => {
-    const returnStep = sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === "12" ? "12" : "4";
+    const returnStep = (sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === "12" ? 12 : 4) as Step;
     sessionStorage.removeItem(RETURN_AFTER_EDIT_KEY);
-    window.location.hash = `#/${returnStep}`;
+    window.location.hash = stepToHash(returnStep);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
