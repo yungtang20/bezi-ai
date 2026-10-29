@@ -10,18 +10,10 @@ import {
 import {
   ContentSection,
   SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface InherentSectionProps {
   relations: { type: string; msg: string }[];
@@ -52,7 +44,7 @@ export default function InherentSection({
     <div className="space-y-6">
       {/* 家族宮位刑沖克害 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "家族宮位刑沖克害",
           2,
           relations.length > 0
@@ -107,7 +99,7 @@ export default function InherentSection({
 
       {/* 子息緣分觀測 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "子息緣份與子女宮位觀測",
           2,
           childStar
@@ -154,7 +146,7 @@ export default function InherentSection({
 
       {/* 專屬孕育時機與生產吉日 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "專屬易懷胎得子流年",
           3,
           childStar

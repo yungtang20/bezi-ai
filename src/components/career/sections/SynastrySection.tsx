@@ -1,25 +1,10 @@
 // src/components/career/sections/SynastrySection.tsx
 // 職場人際與合盤觀測 — 十神團隊搭配與合盤觀察。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, type SectionGrammar, makeSection } from "../../../components/shared";
 import CategorySynastry from "../../CategorySynastry";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface SynastrySectionProps {
   chart: {
@@ -48,7 +33,7 @@ interface SynastrySectionProps {
 
 export function SynastrySection({ chart, partners }: SynastrySectionProps) {
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "職場人際與合盤觀測",
       2,
       `與 ${partners.length} 位合作夥伴進行合盤觀測，分析職場人際互補與對撞。`,

@@ -1,20 +1,11 @@
 // src/components/career/sections/RemedySection.tsx
 // 個人事業五行補運 — ElementRemedyCard 包裝。
 import React from "react";
-import { ContentSection, ReasoningCard, UncertaintyNotice, SectionGrammar } from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, type SectionGrammar, makeSection } from "../../../components/shared";
 import ElementRemedyCard from "../../ElementRemedyCard";
 import { CAREER_REMEDIES_DATA } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface RemedySectionProps {
   chart: { dayMaster: string };
@@ -32,7 +23,7 @@ export function RemedySection({
   const primaryWeak = weakestElements[0] || dmElement;
 
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "個人事業五行補運",
       2,
       `依據日主「${chart.dayMaster}」(${dmElement}) 與最弱五行「${primaryWeak}」，針對事業宮位（官殺方位）進行補運。`,

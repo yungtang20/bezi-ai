@@ -6,7 +6,7 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import {
   ZHI_TO_ZODIAC,
@@ -24,15 +24,6 @@ function currentYearZhi(year: number): string {
   return YEAR_ZHI[(year % 12 + 8) % 12];
 }
 
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
-
 interface TripleSectionProps {
   chart: BaziChart;
 }
@@ -48,7 +39,7 @@ export default function TripleSection({ chart }: TripleSectionProps) {
     <div className="space-y-6">
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "流年生肖三合桃花旺年",
           2,
           `您的生肖為 ${userZodiac ?? "—"}，${currentYear} 年（${yearZhi}）${

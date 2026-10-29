@@ -7,20 +7,11 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { LECTURE_DATA, getTimelineGuideline } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface TimelineSectionProps {
   patternResult: PatternResult;
@@ -74,7 +65,7 @@ export default function TimelineSection({
     <div className="space-y-6">
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "當前大運與流年感情運勢",
           2,
           `當前年齡 ${currentAge} 歲（${currentYear} 年），處於 ${currentDaYun?.ganZhi ?? "—"} 大運，流年 ${currentLiuNian.ganZhi ?? "—"}${
@@ -128,7 +119,7 @@ export default function TimelineSection({
         )}
       />
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "桃花時機與補運",
           3,
           `日主 ${dayMasterElement} 命（${isMale ? "男" : "女"}命），${romanceRemedy}，桃花時機參考官殺流年。`,

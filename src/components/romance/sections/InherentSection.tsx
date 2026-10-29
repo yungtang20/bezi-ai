@@ -6,21 +6,11 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { TEN_GOD_TRAITS, getSpouseTrait, ZHI_TO_ZODIAC, getCompatibilityRule } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
-
 interface InherentSectionProps {
   tenGodCounts: Record<string, number>;
   maxGodInfo: { name: string; count: number };
@@ -68,7 +58,7 @@ export default function InherentSection({
   const spouseStarTrait = TEN_GOD_TRAITS[spouseTenGodForTraits];
 
   const sections = [
-    section(
+    makeSection(
       "夫妻星位置與身分",
       2,
       spouseStarScan
@@ -99,7 +89,7 @@ export default function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "伴侶性格與外貌特質",
       3,
       `配偶星 ${spouseTenGodForTraits} 的特質：${tenGodTraitInfo?.trait ?? "—"}`,
@@ -134,7 +124,7 @@ export default function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "夫妻宮衝刑害檢視",
       3,
       `夫妻宮 ${dayBranch}（${zodiac ? zodiac + "年" : "—"}${
@@ -190,7 +180,7 @@ export default function InherentSection({
             : "夫妻宮特質僅供參考，實際感情關係仍受後天運勢與個人選擇影響。",
       },
     ),
-    section(
+    makeSection(
       "夫妻星衝刑檢視",
       3,
       `夫妻星所在柱位與鄰近地支${
@@ -230,7 +220,7 @@ export default function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "先天姻緣特質綜合",
       3,
       `綜合 ${maxGodInfo.name} 主星與配偶星 ${spouseTenGodForTraits}，您的先天姻緣特質傾向於 ${

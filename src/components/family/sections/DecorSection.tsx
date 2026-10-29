@@ -5,20 +5,12 @@ import React from "react";
 import {
   ContentSection,
   SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { Layers } from "lucide-react";
 import { Gift } from "lucide-react";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface DecorSectionProps {
   dayElement: string;
@@ -60,7 +52,7 @@ export default function DecorSection({
         ) : (
           <ContentSection
             defaultOpen
-            grammar={section(
+            grammar={makeSection(
               "子息宮佈置核心",
               2,
               `${childPalaceDecor.location} 為子息宮佈置核心空間，2026年催旺方位：${childPalaceDecor.directions.join("、")}方。`,

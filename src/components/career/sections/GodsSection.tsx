@@ -1,24 +1,9 @@
 // src/components/career/sections/GodsSection.tsx
 // 專屬十神事業開運指南 — 主星與次星特質。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, type SectionGrammar, makeSection } from "../../../components/shared";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface GodsSectionProps {
   maxGod: string;
@@ -102,7 +87,7 @@ export function GodsSection({
   if (!mainAdvice) return null;
 
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "主要星耀特質",
       2,
       `您的事業主力結構以 ${maxGod}（${topCount1} 個）為核心主幹${secGod ? `，次主力以 ${secGod}（${topCount2} 個）起到輔佐平衡的作用` : ""}。`,
@@ -127,7 +112,7 @@ export function GodsSection({
 
   if (secAdvice) {
     sections.push(
-      section(
+      makeSection(
         "輔助星耀特質",
         3,
         `次主力以 ${secGod}（${topCount2} 個）起到輔佐平衡的作用。`,

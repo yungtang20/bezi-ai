@@ -1,22 +1,9 @@
 // src/components/family/sections/JudgmentSection.tsx
 // 命盤十神分布 — 我是怎麼判斷的。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, SectionGrammar, makeSection } from "../../../components/shared";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface JudgmentSectionProps {
   tenGodCount: Record<string, number>;
@@ -39,7 +26,7 @@ export default function JudgmentSection({
       {/* 十神分布總覽 */}
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "命盤十神分布（四柱占卜透出）",
           2,
           `命盤共 ${total} 位十神，${maxGod} 出現 ${maxCount} 次為最多。`,
@@ -77,7 +64,7 @@ export default function JudgmentSection({
 
       {/* 判斷依據說明 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "研判依據",
           3,
           "本派學術體系以命盤十神分布（四柱天干）之旺衰作為核心依據。",

@@ -25,3 +25,15 @@ export const GRAMMAR_RULES = {
   conclusionMaxChars: 120,
   actionsMax: 3,
 };
+/**
+ * 建立 ContentSection 文法物件，統一所有 section 組件的結構。
+ * 結論先行 → 依據 → 時間窗 → 3 個可執行動作 → 不確定處。
+ */
+export function makeSection(
+  title: string,
+  level: SectionGrammar["level"],
+  conclusion: string,
+  rest: Partial<SectionGrammar>,
+): SectionGrammar {
+  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
+}

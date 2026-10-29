@@ -1,25 +1,10 @@
 // src/components/career/sections/JudgmentSection.tsx
 // 命盤十神分布 — 我是怎麼判斷的。
 // 所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, makeSection } from "../../../components/shared";
 import { TEN_GOD_TRAITS } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface JudgmentSectionProps {
   tenGodCount: Record<string, number>;
@@ -55,7 +40,7 @@ export default function JudgmentSection({
       {/* 十神分布總覽 */}
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "命盤十神分布總覽",
           2,
           `命盤共 ${total} 位十神，${topGod1} 出現 ${topCount1} 次為最多，${topGod2} 出現 ${topCount2} 次為次多。`,
@@ -91,7 +76,7 @@ export default function JudgmentSection({
 
       {/* 主次十神 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "主次十神與格局判斷",
           3,
           `${topGod1} 為主星（${topCount1} 位），${topGod2} 為次星（${topCount2} 位），格局為 ${patternLabel}。`,
@@ -128,7 +113,7 @@ export default function JudgmentSection({
 
       {/* 日主強弱 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "日主強弱判斷",
           3,
           isStrong
@@ -183,7 +168,7 @@ export default function JudgmentSection({
 
       {/* 各十神職業對照 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "各十神職業對照",
           3,
           "各十神代表不同得財模式與適合職業，以命盤主次十神為參考。",

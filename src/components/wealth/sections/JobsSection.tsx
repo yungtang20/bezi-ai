@@ -5,7 +5,7 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import {
   getWealthCareer,
@@ -30,15 +30,6 @@ interface JobsSectionProps {
 
 const MAX_ACTIONS = 3;
 
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
-
 export default function JobsSection({
   tenGodCounts,
   sortedTenGods,
@@ -61,7 +52,7 @@ export default function JobsSection({
       {/* 專屬十神與地支合適工作 */}
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "專屬十神與地支合適工作指導",
           2,
           "主導十神與次要十神交叉，決定最適合的工作屬性與得財鏈路；地支旺衰再決定流動與靜態的環境契合度。",
@@ -166,71 +157,71 @@ export default function JobsSection({
                       )}
                     </ReasoningCard>
                   )}
-                </div>
 
-                {/* 第二：十神交叉組合 */}
-                {topGod2 && (
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                      十神交叉組合：{topGod1} × {topGod2}
-                    </h3>
-                    <ReasoningCard label="二強聯手合力判讀" variant="accent">
-                      {(() => {
-                        const matchKeys = [
-                          `${topGod1}_${topGod2}`,
-                          `${topGod2}_${topGod1}`,
-                          `${topGod1.charAt(0)}_${topGod2.charAt(0)}`,
-                          `${topGod2.charAt(0)}_${topGod1.charAt(0)}`,
-                        ];
+                  {/* 第二：十神交叉組合 */}
+                  {topGod2 && (
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                        十神交叉組合：{topGod1} × {topGod2}
+                      </h3>
+                      <ReasoningCard label="二強聯手合力判讀" variant="accent">
+                        {(() => {
+                          const matchKeys = [
+                            `${topGod1}_${topGod2}`,
+                            `${topGod2}_${topGod1}`,
+                            `${topGod1.charAt(0)}_${topGod2.charAt(0)}`,
+                            `${topGod2.charAt(0)}_${topGod1.charAt(0)}`,
+                          ];
 
-                        for (const k of matchKeys) {
-                          const directAdvice =
-                            LECTURE_DATA.TEN_GOD_CAREER_COMBO[
-                              k as keyof typeof LECTURE_DATA.TEN_GOD_CAREER_COMBO
-                            ];
-                          if (directAdvice) {
+                          for (const k of matchKeys) {
+                            const directAdvice =
+                              LECTURE_DATA.TEN_GOD_CAREER_COMBO[
+                                k as keyof typeof LECTURE_DATA.TEN_GOD_CAREER_COMBO
+                              ];
+                            if (directAdvice) {
+                              return (
+                                <p className="text-zen-text">
+                                  【{topGod1} 與 {topGod2} 二強聯手】：{directAdvice}
+                                </p>
+                              );
+                            }
+                          }
+
+                          // 模糊後備匹配
+                          if (
+                            (topGod1.includes("財") && topGod2.includes("食")) ||
+                            (topGod1.includes("食") && topGod2.includes("財"))
+                          ) {
                             return (
                               <p className="text-zen-text">
-                                【{topGod1} 與 {topGod2} 二強聯手】：{directAdvice}
+                                【食傷生財結構】：
+                                {LECTURE_DATA.TEN_GOD_CAREER_COMBO["財_食傷"]}
                               </p>
                             );
                           }
-                        }
+                          if (
+                            (topGod1.includes("財") && topGod2.includes("官")) ||
+                            (topGod1.includes("官") && topGod2.includes("財"))
+                          ) {
+                            return (
+                              <p className="text-zen-text">
+                                【財生官殺結構】：
+                                {LECTURE_DATA.TEN_GOD_CAREER_COMBO["財_官殺"]}
+                              </p>
+                            );
+                          }
 
-                        // 模糊後備匹配
-                        if (
-                          (topGod1.includes("財") && topGod2.includes("食")) ||
-                          (topGod1.includes("食") && topGod2.includes("財"))
-                        ) {
                           return (
                             <p className="text-zen-text">
-                              【食傷生財結構】：
-                              {LECTURE_DATA.TEN_GOD_CAREER_COMBO["財_食傷"]}
+                              您的格局組合為「{topGod1}配{topGod2}」，兼具強大自我特徵與多重
+                              辦事思路。在與大企業合作或搭建多渠道變現鏈路時較能得心應手。
                             </p>
                           );
-                        }
-                        if (
-                          (topGod1.includes("財") && topGod2.includes("官")) ||
-                          (topGod1.includes("官") && topGod2.includes("財"))
-                        ) {
-                          return (
-                            <p className="text-zen-text">
-                              【財生官殺結構】：
-                              {LECTURE_DATA.TEN_GOD_CAREER_COMBO["財_官殺"]}
-                            </p>
-                          );
-                        }
-
-                        return (
-                          <p className="text-zen-text">
-                            您的格局組合為「{topGod1}配{topGod2}」，兼具強大自我特徵與多重
-                            辦事思路。在與大企業合作或搭建多渠道變現鏈路時較能得心應手。
-                          </p>
-                        );
-                      })()}
+                        })()}
                     </ReasoningCard>
                   </div>
                 )}
+                </div>
 
                 {/* 第三：地支旺特性 */}
                 <div className="space-y-3">

@@ -1,25 +1,10 @@
 // src/components/career/sections/TimelineSection.tsx
 // 歲運推演與化解 — 大運流年好壞運與化解建議（依命盤十神類別與格局強弱）。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, type SectionGrammar, makeSection } from "../../../components/shared";
 import CategoryTimelineRemedy from "../../CategoryTimelineRemedy";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface TimelineSectionProps {
   chart: {
@@ -70,7 +55,7 @@ export function TimelineSection({
   currentDaYun,
 }: TimelineSectionProps) {
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "當前大運與流年品質",
       2,
       `目前大運 ${currentDaYun?.ganZhi ?? "—"}，今年流年 ${currentYear} 年。`,

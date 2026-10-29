@@ -6,20 +6,12 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  type SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { TEN_GOD_TRAITS } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface InherentSectionProps {
   tenGodCounts: Record<string, number>;
@@ -55,7 +47,7 @@ export function InherentSection({
   const secGodTrait = TEN_GOD_TRAITS[topGod2];
 
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "我是怎麼判斷的：命盤十神分布",
       2,
       `命盤中出現次數最多的十神是 ${topGod1}（${topCount1} 個），其次是 ${topGod2}（${topCount2} 個）。日主 ${
@@ -84,7 +76,7 @@ export function InherentSection({
           "十神分布僅反映命盤原始特質，實際財富表現仍受大運、流年與個人選擇影響，僅供參考，非斷言。",
       },
     ),
-    section(
+    makeSection(
       "主星十神特質",
       3,
       `首要十神 ${topGod1} 代表您先天最慣用的財富模式：${topGodTrait?.trait ?? "—"}`,
@@ -106,7 +98,7 @@ export function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "次要十神輔助",
       3,
       `次要十神 ${topGod2}（${topCount2} 個）為輔助財富模式，與 ${topGod1} 共同構成先天財富特質。`,
@@ -126,7 +118,7 @@ export function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "日主強弱與格局",
       3,
       `日主 ${
@@ -167,7 +159,7 @@ export function InherentSection({
           "強弱與格局判斷依命盤五行生剋推斷，不同流派有差異，僅供參考，非絕對斷言。",
       },
     ),
-    section(
+    makeSection(
       "先天財富特質綜合",
       3,
       `綜合 ${topGod1}、${topGod2} 與日主強弱狀態，您的先天財富特質傾向於 ${

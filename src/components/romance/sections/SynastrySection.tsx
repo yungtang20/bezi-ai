@@ -6,22 +6,13 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { PARTNER_MATCHING_DATA, getTenGodCategory } from "../../../data";
 import type { BaziChart } from "@bezi/core";
 import type { PartnerInfo } from "../../../types";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface SynastrySectionProps {
   chart: BaziChart;
@@ -35,7 +26,7 @@ export default function SynastrySection({ chart, primaryPattern, partners }: Syn
   const partnerChart = partner?.chart;
 
   const sections = [
-    section(
+    makeSection(
       "合盤適配總覽",
       2,
       partner
@@ -65,7 +56,7 @@ export default function SynastrySection({ chart, primaryPattern, partners }: Syn
           : ["補入伴侶八字資料", "重新檢視合盤適配"].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "五行能量互補",
       3,
       partner
@@ -95,7 +86,7 @@ export default function SynastrySection({ chart, primaryPattern, partners }: Syn
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "十神適配模式",
       3,
       partner ? "依據雙方十神類型判斷適配模式與相處建議。" : "需先提供伴侶命盤。",
@@ -124,7 +115,7 @@ export default function SynastrySection({ chart, primaryPattern, partners }: Syn
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "生肖六合與三合",
       3,
       partner

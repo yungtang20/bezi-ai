@@ -6,7 +6,8 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  type SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { BaziChart } from "../../../paipan";
 import { GAN_TO_ELEMENT } from "../../../constants";
@@ -20,15 +21,6 @@ import {
 import { LECTURE_DATA } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface CrisisSectionProps {
   chart: BaziChart;
@@ -94,7 +86,7 @@ export function CrisisSection({
     "暫無對應危機規則";
 
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "桃花危機診斷",
       2,
       currentCrisis
@@ -123,7 +115,7 @@ export function CrisisSection({
           "危機診斷依傳統八字斷法（財坐比劫／官殺坐比劫等規則），不等於必然發生，實際感情尚受雙方性格與經驗影響，僅供參考。",
       },
     ),
-    section(
+    makeSection(
       "當前大運與流年危機風險",
       3,
       currentCrisis
@@ -163,7 +155,7 @@ export function CrisisSection({
           "大運與流年危機風險僅反映天干地支十神組合，實際吉凶需結合整體格局、用神與喜忌綜合判斷，非絕對斷言。",
       },
     ),
-    section(
+    makeSection(
       "斬斷孽緣與補運建議",
       3,
       isWeak

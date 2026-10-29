@@ -6,21 +6,12 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { ZHI_TO_ZODIAC } from "../../../data";
 import type { BaziChart } from "@bezi/core";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface ObservationSectionProps {
   chart: BaziChart;
@@ -58,7 +49,7 @@ export default function ObservationSection({
     <div className="space-y-6">
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "夫妻宮衝刑害觀測",
           2,
           `夫妻宮 ${dayBranch}（${zodiac ?? "—"} 年）與月柱 ${monthZhi}、時柱 ${hourZhi} 的關係：${
@@ -119,7 +110,7 @@ export default function ObservationSection({
         )}
       />
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "夫妻星衝刑觀測",
           3,
           `夫妻星與鄰近地支的關係：${
@@ -163,7 +154,7 @@ export default function ObservationSection({
         )}
       />
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "日主五行姻緣觀測",
           3,
           `日主五行 ${dayMasterElement}${

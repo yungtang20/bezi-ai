@@ -6,7 +6,8 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  type SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import {
   TIMELINE_GUIDELINES,
@@ -15,15 +16,6 @@ import {
 } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface TimelineSectionProps {
   tenGodCounts: Record<string, number>;
@@ -80,7 +72,7 @@ export function TimelineSection({
         : "中和";
 
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "命盤主星十神與歲運走向",
       2,
       `主星十神 ${topGod1}（${topCount1} 個）為 ${qLabel(q1)}，次要十神 ${topGod2 || "—"}（${topCount2} 個）為 ${qLabel(q2)}；整體格局 ${strengthLabel}，歲運以此為喜忌基準。`,
@@ -130,7 +122,7 @@ export function TimelineSection({
       },
     ),
 
-    section(
+    makeSection(
       "十神好壞運與化解建議",
       3,
       "依十神類別與目標格局，列出對應的好運影響與壞運風險，並附化解建議。",
@@ -171,7 +163,7 @@ export function TimelineSection({
       },
     ),
 
-    section(
+    makeSection(
       "身強／身弱 運勢關鍵",
       3,
       `${strengthLabel} 命盤的歲運關鍵在於${isStrong ? "耗洩（財、官殺、食傷）為喜，生扶（印、比劫）為忌" : isWeak ? "生扶（印、比劫）為喜，耗洩（財、官殺、食傷）為忌" : "五行平衡，無明顯偏強偏弱"}。`,

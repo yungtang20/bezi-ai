@@ -6,20 +6,11 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { TEN_GOD_TRAITS, getCompatibilityRule } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface JudgmentSectionProps {
   tenGodCounts: Record<string, number>;
@@ -51,7 +42,7 @@ export default function JudgmentSection({
     <div className="space-y-6">
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "命盤十神分布總覽",
           2,
           `命盤共 ${total} 位十神，${topGod} 出現 ${topCount} 次為最多，${secondGod} 出現 ${secondCount} 次為次多。`,
@@ -86,7 +77,7 @@ export default function JudgmentSection({
         )}
       />
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "主星十神與自我相容",
           3,
           `主星 ${topGod}（${topCount} 位）為您最慣用的能量模式；${compatibility?.tenGodName} 類型的自我相容傾向：${compatibility?.traits ?? "—"}`,
@@ -125,7 +116,7 @@ export default function JudgmentSection({
         )}
       />
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "日支夫妻宮特質",
           3,
           `日支 ${dayZhi} 屬 ${dayZhiType} 群組，夫妻宮呈現對應的伴侶外貌與性格傾向。`,

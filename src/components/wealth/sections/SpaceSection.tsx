@@ -7,20 +7,12 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  type SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { GAN_TO_ELEMENT } from "../../../constants";
 import { WEALTH_GUIDELINES } from "../../../data";
 import type { FiveElement } from "../../../data/core/types";
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface SpaceSectionProps {
   /** 日主天干，用於查表對應的理致富財星與佈置建議。 */
@@ -33,7 +25,7 @@ export function SpaceSection({ dayMaster }: SpaceSectionProps) {
   const { wealthElement, fengShui } = guide;
 
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "2026年 財星催旺空間佈置指南",
       2,
       `日主${dayMaster}（${dmElement}命）的理致富財星為 ${wealthElement} 氣，2026年宜在住家客廳、個人辦公桌與辦公室強化 ${wealthElement} 氣場以招商催旺。`,
@@ -50,7 +42,7 @@ export function SpaceSection({ dayMaster }: SpaceSectionProps) {
           "風水佈置為象徵性調整，與命理斷應分開；實際財務狀況仍憑個人經營、經驗與市場，僅供參考，非投資建議。",
       },
     ),
-    section(
+    makeSection(
       "旺財色系與空間配置",
       3,
       `依 ${wealthElement} 氣屬性選用對應色系，強化財位空間磁場。`,
@@ -64,7 +56,7 @@ export function SpaceSection({ dayMaster }: SpaceSectionProps) {
         ],
       },
     ),
-    section(
+    makeSection(
       "專屬得財方位",
       3,
       `朝向 fengShui 所列方位擺設財星物品，催旺正財與偏財氣場。`,
@@ -77,7 +69,7 @@ export function SpaceSection({ dayMaster }: SpaceSectionProps) {
         actions: ["在得財方位擺放財星五行對應物品", "保持該處通風與採光"],
       },
     ),
-    section(
+    makeSection(
       "招財軟裝吉品與生肖開運物",
       3,
       "擺放對應五行的軟裝與生肖開運物，以土氣/木氣等媒介引動財星。",
@@ -102,7 +94,7 @@ export function SpaceSection({ dayMaster }: SpaceSectionProps) {
         </h2>
       </div>
       <p className="text-xs text-zen-muted mb-4 leading-relaxed">
-        依據日命主五行生剋關係，推演出您專屬的<strong>財位風水與空間軟裝加強對策</strong>（不論身強或身弱，專為招商催旺）：
+        依據日命主五行生剋關係，推演出您的<strong>財位風水與空間軟裝加強對策</strong>（不論身強或身弱，專為招商催旺）：
       </p>
       {sections.map((s) => (
         <ContentSection key={s.title} grammar={s} defaultOpen={s.level === 2} />

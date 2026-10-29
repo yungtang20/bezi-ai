@@ -6,21 +6,13 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { LECTURE_DATA } from "../../../data";
 import type { BaziChart } from "@bezi/core";
 import { GAN_TO_ELEMENT } from "../../../constants";
-const MAX_ACTIONS = 3;
 
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
+const MAX_ACTIONS = 3;
 
 interface DatesSectionProps {
   chart: BaziChart;
@@ -42,7 +34,7 @@ export default function DatesSection({ chart, category }: DatesSectionProps) {
     <div className="space-y-6">
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "近期專屬桃花日",
           2,
           `日主 ${chart.dayMaster}（${dayMasterElement} ${gender}命），${combos.length} 個專屬桃花流日組合。`,

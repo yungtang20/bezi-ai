@@ -6,20 +6,11 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { TEN_GOD_TRAITS, wealthCareers } from "../../../data";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface JudgmentSectionProps {
   tenGodCounts: Record<string, number>;
@@ -53,7 +44,7 @@ export default function JudgmentSection({
       {/* 十神分布總覽 */}
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "命盤十神分布總覽",
           2,
           `命盤共 ${total} 位十神，${topGod1} 出現 ${topCount1} 次為最多，${topGod2} 出現 ${topCount2} 次為次多。`,
@@ -89,7 +80,7 @@ export default function JudgmentSection({
 
       {/* 主次十神 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "主次十神與格局判斷",
           3,
           `${topGod1} 為主星（${topCount1} 位），${topGod2} 為次星（${topCount2} 位），格局為 ${patternLabel}。`,
@@ -115,7 +106,7 @@ export default function JudgmentSection({
                 ) : null}
               </div>
             ),
-            timeWindow: "先天格局固定，以大運流年透出主次十神時效果更明顯。",
+            timeWindow: "先天格局固定，以大運與流年臨旺時效果更明顯。",
             actions: ["確認主次十神", "對照格局判斷", "觀察大運流年透出"].slice(
               0,
               MAX_ACTIONS,
@@ -126,7 +117,7 @@ export default function JudgmentSection({
 
       {/* 日主強弱 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "日主強弱判斷",
           3,
           isStrong
@@ -170,18 +161,17 @@ export default function JudgmentSection({
               </div>
             ),
             timeWindow: "先天命盤固定，大運與流年五行臨旺時強弱會有動態變化。",
-            actions: [
-              "確認日主強弱",
-              "對照用神與忌神",
-              "監控大運流年變化",
-            ].slice(0, MAX_ACTIONS),
+            actions: ["確認日主強弱", "對照用神與忌神", "監控大運流年變化"].slice(
+              0,
+              MAX_ACTIONS,
+            ),
           }
         )}
       />
 
       {/* 各十神職業對照 */}
       <ContentSection
-        grammar={section(
+        grammar={makeSection(
           "十神得財模式與適合職業",
           3,
           "各十神代表不同得財模式與適合職業，以命盤主次十神為參考。",

@@ -6,7 +6,8 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  type SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { WEALTH_GUIDELINES } from "../../../data";
 
@@ -23,17 +24,7 @@ interface DatesSectionProps {
   isWeak: boolean;
 }
 
-// 與財星/食傷生財直接相關的十神，用於判斷得財日時機。
 const WEALTH_RELATED_TEN_GODS: string[] = ["正財", "偏財", "食神", "傷官"];
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 export default function DatesSection({
   tenGodCounts,
@@ -56,7 +47,7 @@ export default function DatesSection({
     0,
   );
 
-  const grammar: SectionGrammar = section(
+    const grammar: SectionGrammar = makeSection(
     "我是怎麼判斷的：命盤十神分布",
     2,
     `得財日依您日主五行與命盤十神分布判斷：以正財／偏財（我剋）與食神／傷官（生財）交會的流日為開運日，避開財星被沖、被合之日。`,

@@ -1,25 +1,10 @@
 // src/components/career/sections/DecorSection.tsx
 // 學術級事業風水佈局 — customCareerFengShui。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, type SectionGrammar, makeSection } from "../../../components/shared";
 import { BookOpen } from "lucide-react";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface DecorSectionProps {
   dmElement: string;
@@ -28,7 +13,7 @@ interface DecorSectionProps {
 
 export function DecorSection({ dmElement, customCareerFengShui }: DecorSectionProps) {
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "您的日主專屬事業五行",
       2,
       `您的日主五行屬「${dmElement}」— 專屬事業五行屬 ${customCareerFengShui.element}。`,

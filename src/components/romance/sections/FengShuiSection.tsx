@@ -6,22 +6,14 @@ import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
-  SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import { ROMANCE_FENG_SHUI_DATA } from "../../../data";
 import type { BaziChart } from "@bezi/core";
 import { DAY_MASTER_FENG_SHUI } from "../../../data/charts/romanceFengShui";
 import { GAN_TO_ELEMENT } from "../../../constants";
-const MAX_ACTIONS = 3;
 
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
+const MAX_ACTIONS = 3;
 
 interface FengShuiSectionProps {
   chart: BaziChart;
@@ -53,7 +45,7 @@ export default function FengShuiSection({
     <div className="space-y-6">
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "2026桃花催旺位",
           2,
           `日主 ${dayMasterElement} ${genderKey}命，${detail?.directions ?? "—"} 為桃花催旺方位。`,
@@ -83,7 +75,7 @@ export default function FengShuiSection({
       />
       {romanceFengShui ? (
         <ContentSection
-          grammar={section(
+          grammar={makeSection(
             "補充桃花風水建議",
             3,
             `${dayMasterElement} ${genderKey}命的桃花補強元素為 ${romanceFengShui.elementName}，方位 ${romanceFengShui.direction}。`,

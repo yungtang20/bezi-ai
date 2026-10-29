@@ -1,25 +1,10 @@
 // src/components/career/sections/CollabSection.tsx
 // 十神團隊搭配與分工攻略。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, type SectionGrammar, makeSection } from "../../../components/shared";
 import { CheckCircle2 } from "lucide-react";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface CollabSectionProps {
   maxGod: string;
@@ -82,7 +67,7 @@ const COLLAB_DATA = [
 export function CollabSection({ maxGod, secGod }: CollabSectionProps) {
   const sections: SectionGrammar[] = COLLAB_DATA.map((col) => {
     const isMyType = col.isMyType(maxGod, secGod);
-    return section(
+    return makeSection(
       `${col.tag} — ${col.godGroup}`,
       3,
       isMyType

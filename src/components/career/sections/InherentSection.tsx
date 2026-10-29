@@ -1,24 +1,9 @@
 // src/components/career/sections/InherentSection.tsx
 // 先天職場角色與工作型態 — 命盤十神分布與日主強弱判斷。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, makeSection } from "../../../components/shared";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface InherentSectionProps {
   maxGod: string;
@@ -56,7 +41,7 @@ export function InherentSection({
             : '與您地支三合之生肖';
 
   const sections = [
-    section(
+    makeSection(
       "核心職能角色",
       2,
       `您的命局中最具主導力的事業能量為：${maxGod}${secGod ? `，與輔助星 ${secGod}` : ""}。`,
@@ -82,7 +67,7 @@ export function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "合適行業與具體工作",
       3,
       `以 ${maxGod} 為主導能量，您適合的行業與具體工作如下。`,
@@ -107,7 +92,7 @@ export function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "合適環境與專家建議",
       3,
       roleData
@@ -134,7 +119,7 @@ export function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "團隊合夥與分工指導",
       3,
       careerInfo ? `以下為 ${maxGod} 特質的團隊合夥與分工指導建議。` : "暫無分工指導建議。",
@@ -157,7 +142,7 @@ export function InherentSection({
         ].slice(0, MAX_ACTIONS),
       },
     ),
-    section(
+    makeSection(
       "專屬職場生肖神隊友",
       3,
       `根據您命盤的年支「${chartYearZhi}」，生肖為 ${zodiacTeammates} 的合作夥伴，彼此磁場天然契合，極易達成共識！`,

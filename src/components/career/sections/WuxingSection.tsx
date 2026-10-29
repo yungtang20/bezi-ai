@@ -1,26 +1,11 @@
 // src/components/career/sections/WuxingSection.tsx
 // 五行職涯與轉職時機 — 地支密碼與轉職時機。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, type SectionGrammar, makeSection } from "../../../components/shared";
 import { LECTURE_DATA } from "../../../data";
 import { GAN_TO_ELEMENT } from "../../../constants";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface WuxingSectionProps {
   jobChangeAdvice: { condition: string; detail: string };
@@ -51,7 +36,7 @@ export function WuxingSection({
   const dominantGroup = groups[0];
 
   const sections: SectionGrammar[] = [
-    section(
+    makeSection(
       "轉職時機與高回報出口",
       2,
       `身強弱判定：${jobChangeAdvice.condition}`,
@@ -72,7 +57,7 @@ export function WuxingSection({
           "轉職時機依命理格局與大運流年推斷，實際決策仍需結合市場條件與個人準備，僅供參考。",
       },
     ),
-    section(
+    makeSection(
       "地支密碼與發展場域",
       3,
       dominantGroup.count === 0

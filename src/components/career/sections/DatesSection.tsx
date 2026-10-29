@@ -1,28 +1,13 @@
 // src/components/career/sections/DatesSection.tsx
 // 流日專屬事業預報 — 依日主五行與 CAREER_DAYS 表推演出專屬事業機會流日。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import {
-  ContentSection,
-  ReasoningCard,
-  UncertaintyNotice,
-  SectionGrammar,
-} from "../../../components/shared";
+import { ContentSection, ReasoningCard, UncertaintyNotice, makeSection } from "../../../components/shared";
 import { LECTURE_DATA } from "../../../data";
 import type { BaziChart } from "@bezi/core";
 import { GAN_TO_ELEMENT } from "../../../constants";
 import { getUpcomingDatesForCategory } from "../../../dailyAnalysis";
 
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface UpcomingDay {
   date: string;
@@ -53,7 +38,7 @@ export default function DatesSection({
     [],
   ) as UpcomingDay[];
 
-  const grammar = section(
+  const grammar = makeSection(
     "流日專屬事業預報",
     2,
     `日主 ${chart.dayMaster}（${dayMasterElement}）專屬事業機會流日：${careerDays.combos.length} 個推薦組合，${upcomingDays.length} 個近期旺日。`,

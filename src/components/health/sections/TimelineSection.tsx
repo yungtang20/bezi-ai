@@ -5,19 +5,11 @@ import React from "react";
 import {
   ContentSection,
   SectionGrammar,
+  makeSection,
 } from "../../../components/shared";
 import type { DaYun } from "../../../dayun";
 import type { LiuNian } from "../../../dayun";
 const MAX_ACTIONS = 3;
-
-function section(
-  title: string,
-  level: SectionGrammar["level"],
-  conclusion: string,
-  rest: Partial<SectionGrammar>,
-): SectionGrammar {
-  return { title, level, conclusion: conclusion.slice(0, 120), ...rest };
-}
 
 interface TimelineSectionProps {
   currentDaYun: DaYun | undefined;
@@ -101,7 +93,7 @@ export default function TimelineSection({
 
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "當前大運與流年品質",
           2,
           `目前大運 ${currentDaYun?.ganZhi ?? "—"}，今年流年 ${currentYear} 年。`,
@@ -120,7 +112,7 @@ export default function TimelineSection({
       {/* Subset A: 大運 x 先天健康狀況 */}
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "子項一：大運 x 先天健康狀況",
           3,
           `大運健康推演判定為「${daYunHealthDetails.status}」。`,
@@ -153,7 +145,7 @@ export default function TimelineSection({
       {/* Subset B: 大運 x 流年雙重干涉 */}
       <ContentSection
         defaultOpen
-        grammar={section(
+        grammar={makeSection(
           "子項二：大運 x 流年雙重干涉",
           3,
           `歲運合演結構：【${combinedYearlyAnalysis.phrase}】。`,
