@@ -7,7 +7,10 @@ import { PatternScores } from '../pattern';
 import { PartnerChart } from '../matchmaking';
 import { SynastryDetail } from '../types';
 import { LECTURE_DATA } from '../data';
-import { useSynastryLogic, type RelationshipType } from './synastry/useSynastryLogic';
+import {
+  useSynastryLogic,
+  type RelationshipType,
+} from './synastry/useSynastryLogic';
 import ShareImage from './share/ShareImage';
 import SynastryShareCard from './share/SynastryShareCard';
 
@@ -72,8 +75,12 @@ export default function SynastryPage({
         <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-4">
           <Users size={24} className="text-primary" />
         </div>
-        <h2 className="text-3xl font-serif text-white font-bold mb-3">夥伴合盤觀測</h2>
-        <p className="text-zinc-400">輸入伴侶、家人或合作夥伴的命盤，進行五行與緣分分析</p>
+        <h2 className="text-3xl font-serif text-white font-bold mb-3">
+          夥伴合盤觀測
+        </h2>
+        <p className="text-zinc-400">
+          輸入伴侶、家人或合作夥伴的命盤，進行五行與緣分分析
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -122,9 +129,7 @@ export default function SynastryPage({
                 </select>
                 <div className="flex gap-2">
                   <button
-                    onClick={() =>
-                      setFormData({ ...formData, gender: 'male' })
-                    }
+                    onClick={() => setFormData({ ...formData, gender: 'male' })}
                     className={`flex-1 p-2 rounded-lg text-sm border ${
                       formData.gender === 'male'
                         ? 'bg-primary/20 border-primary text-primary'
@@ -219,6 +224,7 @@ export default function SynastryPage({
                   <div className="flex gap-1">
                     <button
                       onClick={(e) => handleEditClick(e, p)}
+                      aria-label={`編輯夥伴 ${p.name}`}
                       className="p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white rounded-lg transition-colors"
                     >
                       <Edit2 size={14} />
@@ -228,6 +234,7 @@ export default function SynastryPage({
                         e.stopPropagation();
                         handleDelete(p.id);
                       }}
+                      aria-label={`刪除夥伴 ${p.name}`}
                       className="p-1.5 text-red-400/50 hover:bg-red-400/20 hover:text-red-400 rounded-lg transition-colors"
                     >
                       <Trash2 size={14} />
@@ -240,7 +247,10 @@ export default function SynastryPage({
         </div>
 
         <div className="md:col-span-2">
-          {selectedPartner && myChart && selectedPartner.chart && selectedPartner.chart.year ? (
+          {selectedPartner &&
+          myChart &&
+          selectedPartner.chart &&
+          selectedPartner.chart.year ? (
             <div className="bg-black/50 border border-zinc-800 rounded-2xl p-6">
               <h3 className="text-xl font-bold text-white mb-6 border-b border-zinc-800 pb-4">
                 {myName} <span className="text-primary mx-2">×</span>
@@ -257,7 +267,8 @@ export default function SynastryPage({
                       {myChart.dayMaster}
                     </strong>
                     <span className="text-zinc-400 text-xs ml-2">
-                      {myChart.day?.gan}{myChart.day?.zhi}
+                      {myChart.day?.gan}
+                      {myChart.day?.zhi}
                     </span>
                   </div>
                   <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl">
@@ -268,7 +279,8 @@ export default function SynastryPage({
                       {selectedPartner.chart.dayMaster}
                     </strong>
                     <span className="text-zinc-400 text-xs ml-2">
-                      {selectedPartner.chart.day?.gan}{selectedPartner.chart.day?.zhi}
+                      {selectedPartner.chart.day?.gan}
+                      {selectedPartner.chart.day?.zhi}
                     </span>
                   </div>
                 </div>
@@ -280,7 +292,8 @@ export default function SynastryPage({
                         <div className="bg-amber-950/10 p-5 rounded-2xl border border-amber-900/30 space-y-4 shadow-lg shadow-amber-900/5">
                           <h4 className="font-bold text-amber-400 text-sm flex items-center justify-between gap-2">
                             <span>
-                              <span className="mr-2">✨</span> 五行磁場交流 (契合度 {analysis.scoreData.score}%)
+                              <span className="mr-2">✨</span> 五行磁場交流
+                              (契合度 {analysis.scoreData.score}%)
                             </span>
                             <button
                               onClick={handleShare}
@@ -330,7 +343,11 @@ export default function SynastryPage({
                                   {analysis.spouseE}
                                 </div>
                                 <div className="text-sm text-pink-200 leading-relaxed">
-                                  {LECTURE_DATA.PARTNER_MATCHING?.['姻緣五行相同']}
+                                  {
+                                    LECTURE_DATA.PARTNER_MATCHING?.[
+                                      '姻緣五行相同'
+                                    ]
+                                  }
                                 </div>
                               </div>
                             )}
@@ -343,7 +360,11 @@ export default function SynastryPage({
                                   {analysis.spouseS}
                                 </div>
                                 <div className="text-sm text-pink-200 leading-relaxed">
-                                  {LECTURE_DATA.PARTNER_MATCHING?.['日主互為夫妻星']}
+                                  {
+                                    LECTURE_DATA.PARTNER_MATCHING?.[
+                                      '日主互為夫妻星'
+                                    ]
+                                  }
                                 </div>
                               </div>
                             )}
@@ -356,15 +377,21 @@ export default function SynastryPage({
                                   {analysis.daySim}
                                 </div>
                                 <div className="text-sm text-pink-200 leading-relaxed">
-                                  {LECTURE_DATA.PARTNER_MATCHING?.['八字/日柱結構相似']}
+                                  {
+                                    LECTURE_DATA.PARTNER_MATCHING?.[
+                                      '八字/日柱結構相似'
+                                    ]
+                                  }
                                 </div>
                               </div>
                             )}
-                            {!analysis.spouseE && !analysis.spouseS && !analysis.daySim && (
-                              <p className="text-sm text-zinc-500 py-2">
-                                命盤無特殊強烈的玄學桃花牽絆，屬於需靠後天用心經營的平穩緣分。
-                              </p>
-                            )}
+                            {!analysis.spouseE &&
+                              !analysis.spouseS &&
+                              !analysis.daySim && (
+                                <p className="text-sm text-zinc-500 py-2">
+                                  命盤無特殊強烈的玄學桃花牽絆，屬於需靠後天用心經營的平穩緣分。
+                                </p>
+                              )}
                           </div>
                         </div>
 
@@ -375,7 +402,8 @@ export default function SynastryPage({
                           ] && (
                             <div className="bg-blue-950/10 p-5 rounded-2xl border border-blue-900/30 space-y-4 shadow-lg shadow-blue-900/5">
                               <h4 className="font-bold text-blue-400 text-sm flex items-center gap-2">
-                                <span>🤝</span> 夥伴相處策略與個性提醒 (對方的 {analysis.pMaxGod})
+                                <span>🤝</span> 夥伴相處策略與個性提醒 (對方的{' '}
+                                {analysis.pMaxGod})
                               </h4>
                               <div className="space-y-3">
                                 <div className="bg-black/30 p-3.5 rounded-xl border border-blue-900/20">
@@ -383,15 +411,23 @@ export default function SynastryPage({
                                     性格特徵 (優勢 / 提醒)
                                   </div>
                                   <div className="text-base text-zinc-300 leading-relaxed">
-                                    <span className="text-green-400 font-bold">【優勢】</span>{' '}
-                                    {LECTURE_DATA.PARTNER_TRAITS[
-                                      analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
-                                    ].pros}
+                                    <span className="text-green-400 font-bold">
+                                      【優勢】
+                                    </span>{' '}
+                                    {
+                                      LECTURE_DATA.PARTNER_TRAITS[
+                                        analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
+                                      ].pros
+                                    }
                                     <br />
-                                    <span className="text-red-400 font-bold">【需留意】</span>{' '}
-                                    {LECTURE_DATA.PARTNER_TRAITS[
-                                      analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
-                                    ].cons}
+                                    <span className="text-red-400 font-bold">
+                                      【需留意】
+                                    </span>{' '}
+                                    {
+                                      LECTURE_DATA.PARTNER_TRAITS[
+                                        analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
+                                      ].cons
+                                    }
                                   </div>
                                 </div>
 
@@ -406,7 +442,10 @@ export default function SynastryPage({
                                           對待子女 (若為父母)
                                         </h4>
                                         <p className="text-base text-zinc-300 leading-relaxed">
-                                          {analysis.familyRoleInfo.childInteraction}
+                                          {
+                                            analysis.familyRoleInfo
+                                              .childInteraction
+                                          }
                                         </p>
                                       </div>
                                       <div className="bg-black/40 border border-purple-900/20 rounded-lg p-3">
@@ -414,7 +453,10 @@ export default function SynastryPage({
                                           對待父母 (若為子女)
                                         </h4>
                                         <p className="text-base text-zinc-300 leading-relaxed">
-                                          {analysis.familyRoleInfo.parentInteraction}
+                                          {
+                                            analysis.familyRoleInfo
+                                              .parentInteraction
+                                          }
                                         </p>
                                       </div>
                                     </div>
@@ -424,7 +466,8 @@ export default function SynastryPage({
                                 {analysis.matchingData && (
                                   <div className="bg-cyan-950/20 p-3.5 rounded-xl border border-cyan-900/30">
                                     <div className="text-[13px] font-bold text-cyan-300 mb-2">
-                                      🧑‍🤝‍🧑 朋友/合作適配度與建議 ({analysis.pMaxGodType})
+                                      🧑‍🤝‍🧑 朋友/合作適配度與建議 (
+                                      {analysis.pMaxGodType})
                                     </div>
                                     <div className="space-y-2 mt-2">
                                       <div className="bg-black/40 border border-cyan-900/20 rounded-lg p-3">
@@ -453,9 +496,11 @@ export default function SynastryPage({
                                       職位較高 / 長輩
                                     </p>
                                     <p className="text-base text-zinc-300 leading-relaxed">
-                                      {LECTURE_DATA.PARTNER_TRAITS[
-                                        analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
-                                      ].boss}
+                                      {
+                                        LECTURE_DATA.PARTNER_TRAITS[
+                                          analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
+                                        ].boss
+                                      }
                                     </p>
                                   </div>
                                   <div className="bg-black/30 p-3 rounded-lg border border-blue-900/20">
@@ -463,9 +508,11 @@ export default function SynastryPage({
                                       平輩 / 共事者
                                     </p>
                                     <p className="text-base text-zinc-300 leading-relaxed">
-                                      {LECTURE_DATA.PARTNER_TRAITS[
-                                        analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
-                                      ].colleague}
+                                      {
+                                        LECTURE_DATA.PARTNER_TRAITS[
+                                          analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
+                                        ].colleague
+                                      }
                                     </p>
                                   </div>
                                   <div className="bg-black/30 p-3 rounded-lg border border-blue-900/20">
@@ -473,106 +520,118 @@ export default function SynastryPage({
                                       職位較低 / 晚輩
                                     </p>
                                     <p className="text-base text-zinc-300 leading-relaxed">
-                                      {LECTURE_DATA.PARTNER_TRAITS[
-                                        analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
-                                      ].subordinate}
+                                      {
+                                        LECTURE_DATA.PARTNER_TRAITS[
+                                          analysis.pMaxGod as keyof typeof LECTURE_DATA.PARTNER_TRAITS
+                                        ].subordinate
+                                      }
                                     </p>
                                   </div>
                                 </div>
                               </div>
                             </div>
                           )}
-                        </>
-                      ) : (
-                        <div className="text-red-400 text-sm">
-                          分析發生錯誤，請重新檢查資料。
-                        </div>
-                      )}
+                      </>
+                    ) : (
+                      <div className="text-red-400 text-sm">
+                        分析發生錯誤，請重新檢查資料。
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* [AI MOD] 分享圖（離屏擷取） */}
+              {showSharePreview && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="合盤分享前預覽"
+                >
+                  <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
+                    <h3 className="text-base font-bold text-white">
+                      分享前隱私預覽
+                    </h3>
+                    <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                      預設只分享匿名契合度與摘要，不包含雙方姓名、日主或日柱。
+                    </p>
+                    <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={sharePrivateDetails}
+                        onChange={(event) =>
+                          setSharePrivateDetails(event.target.checked)
+                        }
+                        className="mt-0.5"
+                      />
+                      <span>我已取得對方同意，仍要顯示雙方姓名與命盤細節</span>
+                    </label>
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        onClick={() => setShowSharePreview(false)}
+                        className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300"
+                      >
+                        取消
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowSharePreview(false);
+                          setShareTarget(true);
+                        }}
+                        className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-zinc-950"
+                      >
+                        產生分享圖
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                {/* [AI MOD] 分享圖（離屏擷取） */}
-                {showSharePreview && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="合盤分享前預覽">
-                    <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
-                      <h3 className="text-base font-bold text-white">分享前隱私預覽</h3>
-                      <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                        預設只分享匿名契合度與摘要，不包含雙方姓名、日主或日柱。
-                      </p>
-                      <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
-                        <input
-                          type="checkbox"
-                          checked={sharePrivateDetails}
-                          onChange={(event) =>
-                            setSharePrivateDetails(event.target.checked)
-                          }
-                          className="mt-0.5"
-                        />
-                        <span>
-                          我已取得對方同意，仍要顯示雙方姓名與命盤細節
-                        </span>
-                      </label>
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          onClick={() => setShowSharePreview(false)}
-                          className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300"
-                        >
-                          取消
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowSharePreview(false);
-                            setShareTarget(true);
-                          }}
-                          className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-zinc-950"
-                        >
-                          產生分享圖
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <ShareImage active={shareTarget} onReady={handleCaptureReady}>
-                  <SynastryShareCard
-                    myName={myName || '我'}
-                    partnerName={selectedPartner.name || 'TA'}
-                    score={analysis?.scoreData.score ?? 70}
-                    headline="匿名合盤報告"
-                    myDayMaster={myChart.dayMaster}
-                    partnerDayMaster={selectedPartner.chart.dayMaster}
-                    myPillar={`${selectedPartner.chart.year ? myChart.day.gan : ''}${myChart.day.zhi}`}
-                    partnerPillar={`${selectedPartner.chart.day.gan}${selectedPartner.chart.day.zhi}`}
-                    details={sharePrivateDetails
-                      ? analysis?.scoreData.details.map((detail) => ({
+              )}
+              <ShareImage active={shareTarget} onReady={handleCaptureReady}>
+                <SynastryShareCard
+                  myName={myName || '我'}
+                  partnerName={selectedPartner.name || 'TA'}
+                  score={analysis?.scoreData.score ?? 70}
+                  headline="匿名合盤報告"
+                  myDayMaster={myChart.dayMaster}
+                  partnerDayMaster={selectedPartner.chart.dayMaster}
+                  myPillar={`${selectedPartner.chart.year ? myChart.day.gan : ''}${myChart.day.zhi}`}
+                  partnerPillar={`${selectedPartner.chart.day.gan}${selectedPartner.chart.day.zhi}`}
+                  details={
+                    sharePrivateDetails
+                      ? (analysis?.scoreData.details.map((detail) => ({
                           factor: detail.factor,
                           desc: detail.desc,
-                        })) ?? []
-                      : []}
-                    siteUrl={typeof window === 'undefined' ? '' : window.location.origin}
-                    showPrivateDetails={sharePrivateDetails}
-                  />
-                </ShareImage>
-                {lineShareUrl && (
-                  <button
-                    onClick={() => window.open(lineShareUrl, '_blank', 'noopener')}
-                    className="mt-3 w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-2 text-xs font-bold text-emerald-300 transition-colors"
-                  >
-                    圖片已下載 · 分享到 LINE
-                  </button>
-                )}
+                        })) ?? [])
+                      : []
+                  }
+                  siteUrl={
+                    typeof window === 'undefined' ? '' : window.location.origin
+                  }
+                  showPrivateDetails={sharePrivateDetails}
+                />
+              </ShareImage>
+              {lineShareUrl && (
+                <button
+                  onClick={() =>
+                    window.open(lineShareUrl, '_blank', 'noopener')
+                  }
+                  className="mt-3 w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-2 text-xs font-bold text-emerald-300 transition-colors"
+                >
+                  圖片已下載 · 分享到 LINE
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="h-full min-h-[300px] flex items-center justify-center border border-dashed border-zinc-800 rounded-2xl p-6 bg-black/20 text-center">
+              <div>
+                <Users size={32} className="text-zinc-700 mx-auto mb-3" />
+                <p className="text-zinc-500 text-sm">
+                  請從左側名單選擇一位夥伴進行觀測
+                </p>
               </div>
-            ) : (
-              <div className="h-full min-h-[300px] flex items-center justify-center border border-dashed border-zinc-800 rounded-2xl p-6 bg-black/20 text-center">
-                <div>
-                  <Users size={32} className="text-zinc-700 mx-auto mb-3" />
-                  <p className="text-zinc-500 text-sm">
-                    請從左側名單選擇一位夥伴進行觀測
-                  </p>
-                </div>
-              </div>
-            )
-          }
+            </div>
+          )}
         </div>
       </div>
     </div>
