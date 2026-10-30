@@ -3,9 +3,19 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { BaziChart } from '../paipan';
-import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
-import { DailyEnergy, getDailyEnergy, getUpcomingDatesForCategory } from '../dailyAnalysis';
+import {
+  PatternScores,
+  getPrimaryPattern,
+  determinePattern,
+  getFavorableElements,
+} from '../pattern';
+import {
+  DailyEnergy,
+  getDailyEnergy,
+  getUpcomingDatesForCategory,
+} from '../dailyAnalysis';
 import { DailyLog, saveDailyLog, getDailyLog } from '../storage';
+import { CATEGORY_LABELS } from '../calibration';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ==================== 型別定義 ====================
@@ -36,24 +46,47 @@ interface UpcomingDay {
 }
 
 // ==================== 六大領域定義 ====================
-
+// label 一律引用 calibration 的單一真實來源（CATEGORY_LABELS），emoji 用本表。
 const CATEGORIES = [
-  { key: 'health', label: '健康', emoji: '🏃', color: 'emerald' },
-  { key: 'career', label: '事業', emoji: '💼', color: 'blue' },
-  { key: 'romance', label: '感情', emoji: '❤️', color: 'rose' },
-  { key: 'wealth', label: '金錢', emoji: '💰', color: 'amber' },
-  { key: 'family', label: '家人', emoji: '🤝', color: 'violet' },
-  { key: 'friends', label: '人際', emoji: '🙌', color: 'cyan' },
+  {
+    key: 'health',
+    label: CATEGORY_LABELS.health,
+    emoji: '🏃',
+    color: 'emerald',
+  },
+  { key: 'career', label: CATEGORY_LABELS.career, emoji: '💼', color: 'blue' },
+  {
+    key: 'romance',
+    label: CATEGORY_LABELS.romance,
+    emoji: '❤️',
+    color: 'rose',
+  },
+  { key: 'wealth', label: CATEGORY_LABELS.wealth, emoji: '💰', color: 'amber' },
+  {
+    key: 'family',
+    label: CATEGORY_LABELS.family,
+    emoji: '🤝',
+    color: 'violet',
+  },
+  {
+    key: 'friends',
+    label: CATEGORY_LABELS.friends,
+    emoji: '🙌',
+    color: 'cyan',
+  },
 ] as const;
 
 // 領域對應的 getUpcomingDatesForCategory 類別
-const CATEGORY_TO_UPCOMING_KEY: Record<string, 'health_warning' | 'career' | 'romance' | 'wealth' | 'villain' | 'move_in'> = {
+const CATEGORY_TO_UPCOMING_KEY: Record<
+  string,
+  'health_warning' | 'career' | 'romance' | 'wealth' | 'villain' | 'move_in'
+> = {
   health: 'health_warning',
   career: 'career',
   romance: 'romance',
   wealth: 'wealth',
-  family: 'move_in',     // 家人以動土日替代（低耦合）
-  friends: 'villain',    // 人際以犯小人日替代（警示日）
+  family: 'move_in', // 家人以動土日替代（低耦合）
+  friends: 'villain', // 人際以犯小人日替代（警示日）
 };
 
 // ==================== 輔助函式 ====================
@@ -80,7 +113,8 @@ function getDayOfWeek(date: Date): string {
  * 取得分數對應的顏色 class
  */
 function getScoreColor(score: number): string {
-  if (score > 0) return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+  if (score > 0)
+    return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
   if (score < 0) return 'bg-red-500/20 text-red-400 border border-red-500/30';
   return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
 }
@@ -89,8 +123,10 @@ function getScoreColor(score: number): string {
  * 取得領域結果標籤
  */
 function getOutcomeLabel(outcome: string): '吉' | '凶' | '平' {
-  if (outcome === '順利' || outcome === '小吉' || outcome === '大好') return '吉';
-  if (outcome === '較差' || outcome === '不順' || outcome === '不佳') return '凶';
+  if (outcome === '順利' || outcome === '小吉' || outcome === '大好')
+    return '吉';
+  if (outcome === '較差' || outcome === '不順' || outcome === '不佳')
+    return '凶';
   return '平';
 }
 
@@ -118,7 +154,10 @@ function getOutcomeDescription(outcome: string, categoryLabel: string): string {
 
 // ==================== 主元件 ====================
 
-export default function DailyForecastMini({ chart, scores }: DailyForecastMiniProps) {
+export default function DailyForecastMini({
+  chart,
+  scores,
+}: DailyForecastMiniProps) {
   // ---- 狀態 ----
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
@@ -126,7 +165,9 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
   });
   const [dailyEnergy, setDailyEnergy] = useState<DailyEnergy | null>(null);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [categoryFeedback, setCategoryFeedback] = useState<Record<string, 'good' | 'bad' | null>>({
+  const [categoryFeedback, setCategoryFeedback] = useState<
+    Record<string, 'good' | 'bad' | null>
+  >({
     health: null,
     career: null,
     romance: null,
@@ -135,7 +176,9 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
     friends: null,
   });
   const [showCheckIn, setShowCheckIn] = useState(false);
-  const [upcomingMap, setUpcomingMap] = useState<Record<string, UpcomingDay[]>>({});
+  const [upcomingMap, setUpcomingMap] = useState<Record<string, UpcomingDay[]>>(
+    {}
+  );
 
   // ---- 預先計算格局資料（不隨日期變化） ----
   const primaryPattern = useMemo(() => getPrimaryPattern(scores), [scores]);
@@ -149,7 +192,14 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
   useEffect(() => {
     if (!chart) return;
 
-    const catKeys = ['health', 'career', 'romance', 'wealth', 'family', 'friends'] as const;
+    const catKeys = [
+      'health',
+      'career',
+      'romance',
+      'wealth',
+      'family',
+      'friends',
+    ] as const;
     const result: Record<string, UpcomingDay[]> = {};
 
     for (const cat of catKeys) {
@@ -188,7 +238,7 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
     // 檢查是否已記錄
     const dateStr = formatDateStr(selectedDate);
     getDailyLog(dateStr)
-      .then(log => {
+      .then((log) => {
         if (log) {
           setIsCheckedIn(true);
           setCategoryFeedback({
@@ -215,11 +265,19 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
         /* [AI MOD] 靜默處理 DB 錯誤 */
         setIsCheckedIn(false);
       });
-  }, [chart, scores, selectedDate, favorable, unfavorable, primaryPattern, patternResult.weakestElement]);
+  }, [
+    chart,
+    scores,
+    selectedDate,
+    favorable,
+    unfavorable,
+    primaryPattern,
+    patternResult.weakestElement,
+  ]);
 
   // ---- 日期導航 ----
   const goToPrevDay = useCallback(() => {
-    setSelectedDate(prev => {
+    setSelectedDate((prev) => {
       const d = new Date(prev);
       d.setDate(d.getDate() - 1);
       return d;
@@ -227,7 +285,7 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
   }, []);
 
   const goToNextDay = useCallback(() => {
-    setSelectedDate(prev => {
+    setSelectedDate((prev) => {
       const d = new Date(prev);
       d.setDate(d.getDate() + 1);
       return d;
@@ -241,10 +299,10 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
     const selectedDateStr = formatDateStr(selectedDate);
     const selectedMonthDay = `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日`;
 
-    return CATEGORIES.map(cat => {
+    return CATEGORIES.map((cat) => {
       // 從 upcomingMap 找出此日期是否為事件日
       const events = upcomingMap[cat.key] || [];
-      const isEventDay = events.some(e => e.date === selectedMonthDay);
+      const isEventDay = events.some((e) => e.date === selectedMonthDay);
 
       // 根據理論結果與是否為事件日推估分數
       let score = 0;
@@ -317,7 +375,7 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
 
   // ---- 心流記錄 ----
   const handleCheckIn = useCallback(async () => {
-    const hasAny = Object.values(categoryFeedback).some(v => v !== null);
+    const hasAny = Object.values(categoryFeedback).some((v) => v !== null);
     if (!hasAny) return;
 
     const dateStr = formatDateStr(selectedDate);
@@ -345,7 +403,7 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
 
   // ---- 領域 feedback 切換 ----
   const toggleFeedback = useCallback((key: string, value: 'good' | 'bad') => {
-    setCategoryFeedback(prev => ({
+    setCategoryFeedback((prev) => ({
       ...prev,
       [key]: prev[key] === value ? null : value,
     }));
@@ -384,7 +442,8 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
         </button>
         <div className="text-center">
           <span className="text-xs font-medium text-zen-text block">
-            {formatDateStr(selectedDate).slice(5)} ({getDayOfWeek(selectedDate)})
+            {formatDateStr(selectedDate).slice(5)} ({getDayOfWeek(selectedDate)}
+            )
           </span>
           {dailyEnergy && (
             <span className="text-[10px] text-zen-muted block">
@@ -404,12 +463,14 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
 
       {/* 整體評語 */}
       <div className="bg-zen-surface/40 border border-zen-border rounded-lg p-3">
-        <p className="text-xs text-zen-text leading-relaxed">{overallComment}</p>
+        <p className="text-xs text-zen-text leading-relaxed">
+          {overallComment}
+        </p>
       </div>
 
       {/* 六大領域能量 */}
       <div className="grid grid-cols-2 gap-2">
-        {categoryScores.map(cat => (
+        {categoryScores.map((cat) => (
           <div
             key={cat.key}
             className="bg-zen-surface/40 border border-zen-border rounded-lg p-2 space-y-1"
@@ -429,7 +490,9 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
 
             {/* 吉/凶/平標籤 */}
             <div className="flex items-center justify-between">
-              <span className={`text-[10px] font-medium ${getCategoryColorClass(cat.outcome)}`}>
+              <span
+                className={`text-[10px] font-medium ${getCategoryColorClass(cat.outcome)}`}
+              >
                 {cat.outcome}
               </span>
             </div>
@@ -458,7 +521,7 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
         <div className="bg-zen-surface/40 border border-zen-border rounded-lg p-3 space-y-2">
           <p className="text-xs text-zen-muted">回顧今天各領域感受：</p>
           <div className="grid grid-cols-2 gap-1.5">
-            {CATEGORIES.map(cat => (
+            {CATEGORIES.map((cat) => (
               <div key={cat.key} className="flex items-center gap-1">
                 <span className="text-xs text-zen-muted shrink-0 w-6">
                   {cat.emoji}
@@ -499,7 +562,9 @@ export default function DailyForecastMini({ chart, scores }: DailyForecastMiniPr
             <button
               type="button"
               onClick={handleCheckIn}
-              disabled={!Object.values(categoryFeedback).some(v => v !== null)}
+              disabled={
+                !Object.values(categoryFeedback).some((v) => v !== null)
+              }
               className="flex-1 py-1.5 bg-zen-gold/20 hover:bg-zen-gold/30 text-zen-gold text-xs rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               儲存

@@ -12,7 +12,7 @@ const ADJUST = {
 
 /**
  * 根据一天的打卡记录，调整格局分数
- * 
+ *
  * 核心逻辑：
  * - 财星日 → 只看 wealth 回馈
  * - 官杀日 → 只看 career 回馈
@@ -20,7 +20,11 @@ const ADJUST = {
  * - 比劫日 → 关联 wealth（比劫克财）/ romance（竞争）
  * - 印星日 → 关联 career（印星为贵人、学习）
  */
-export function adjustScores(scores: PatternScores, log: DailyLog, dayTenGodType?: string): PatternScores {
+export function adjustScores(
+  scores: PatternScores,
+  log: DailyLog,
+  dayTenGodType?: string
+): PatternScores {
   const newScores = { ...scores };
   const primary = getPrimaryPattern(scores);
 
@@ -36,22 +40,31 @@ export function adjustScores(scores: PatternScores, log: DailyLog, dayTenGodType
   const wealthBad = log.wealth === 'bad';
 
   // Maps each day type to the relevant feedback fields: [goodField, badField]
-  const dayTypeFields: Record<string, ('wealth' | 'career' | 'romance' | 'health')[]> = {
-    '財星': ['wealth', 'wealth'],
-    '官殺': ['career', 'career'],
-    '食傷': ['romance', 'romance'],
-    '比劫': ['wealth', 'wealth'],
-    '印星': ['career', 'career'],
+  const dayTypeFields: Record<
+    string,
+    ('wealth' | 'career' | 'romance' | 'health')[]
+  > = {
+    財星: ['wealth', 'wealth'],
+    官殺: ['career', 'career'],
+    食傷: ['romance', 'romance'],
+    比劫: ['wealth', 'wealth'],
+    印星: ['career', 'career'],
   };
 
   // Secondary fields for types that span multiple categories
-  const secondaryGood: Record<string, ('wealth' | 'career' | 'romance' | 'health')[]> = {
-    '食傷': ['health'],
-    '比劫': ['romance'],
+  const secondaryGood: Record<
+    string,
+    ('wealth' | 'career' | 'romance' | 'health')[]
+  > = {
+    食傷: ['health'],
+    比劫: ['romance'],
   };
-  const secondaryBad: Record<string, ('wealth' | 'career' | 'romance' | 'health')[]> = {
-    '食傷': ['health'],
-    '比劫': ['romance'],
+  const secondaryBad: Record<
+    string,
+    ('wealth' | 'career' | 'romance' | 'health')[]
+  > = {
+    食傷: ['health'],
+    比劫: ['romance'],
   };
 
   let totalAdjust = 0;
@@ -70,14 +83,24 @@ export function adjustScores(scores: PatternScores, log: DailyLog, dayTenGodType
 
   const isPrimaryFrom = primary === '從強' || primary === '從弱';
   if (isPrimaryFrom) {
-    totalAdjust = totalAdjust > 0 ? ADJUST.FOLLOW_MATCH : totalAdjust < 0 ? ADJUST.FOLLOW_MISMATCH : 0;
+    totalAdjust =
+      totalAdjust > 0
+        ? ADJUST.FOLLOW_MATCH
+        : totalAdjust < 0
+          ? ADJUST.FOLLOW_MISMATCH
+          : 0;
   }
 
   if (totalAdjust !== 0) {
     adjustByPattern(newScores, primary, totalAdjust);
   }
 
-  const keys: (keyof PatternScores)[] = ['strong', 'weak', 'followStrong', 'followWeak'];
+  const keys: (keyof PatternScores)[] = [
+    'strong',
+    'weak',
+    'followStrong',
+    'followWeak',
+  ];
   for (const key of keys) {
     newScores[key] = Math.max(0, Math.min(100, newScores[key]));
   }
@@ -85,12 +108,19 @@ export function adjustScores(scores: PatternScores, log: DailyLog, dayTenGodType
   return newScores;
 }
 
-function adjustByPattern(scores: PatternScores, pattern: string, amount: number): void {
-  const map: Record<string, { inc: keyof PatternScores, dec: keyof PatternScores }> = {
-    '身強': { inc: 'strong', dec: 'weak' },
-    '身弱': { inc: 'weak', dec: 'strong' },
-    '從強': { inc: 'followStrong', dec: 'followWeak' },
-    '從弱': { inc: 'followWeak', dec: 'followStrong' }
+function adjustByPattern(
+  scores: PatternScores,
+  pattern: string,
+  amount: number
+): void {
+  const map: Record<
+    string,
+    { inc: keyof PatternScores; dec: keyof PatternScores }
+  > = {
+    身強: { inc: 'strong', dec: 'weak' },
+    身弱: { inc: 'weak', dec: 'strong' },
+    從強: { inc: 'followStrong', dec: 'followWeak' },
+    從弱: { inc: 'followWeak', dec: 'followStrong' },
   };
   const target = map[pattern];
   if (!target) return;
@@ -102,21 +132,24 @@ export function checkAutoSwitch(scores: PatternScores): string | null {
   const primary = getPrimaryPattern(scores);
   const patterns = ['身強', '身弱', '從強', '從弱'];
   const currentScore = getScoreByPattern(scores, primary);
-  
+
   const best = patterns
-    .filter(p => p !== primary)
-    .map(p => ({ pattern: p, score: getScoreByPattern(scores, p) }))
-    .reduce((max, cur) => cur.score > max.score ? cur : max, { pattern: '', score: -1 });
+    .filter((p) => p !== primary)
+    .map((p) => ({ pattern: p, score: getScoreByPattern(scores, p) }))
+    .reduce((max, cur) => (cur.score > max.score ? cur : max), {
+      pattern: '',
+      score: -1,
+    });
 
   return best.score > currentScore + 5 ? best.pattern : null;
 }
 
 function getScoreByPattern(scores: PatternScores, pattern: string): number {
   const map: Record<string, keyof PatternScores> = {
-    '身強': 'strong',
-    '身弱': 'weak',
-    '從強': 'followStrong',
-    '從弱': 'followWeak'
+    身強: 'strong',
+    身弱: 'weak',
+    從強: 'followStrong',
+    從弱: 'followWeak',
   };
   const key = map[pattern];
   return key ? scores[key] : 0;
@@ -127,18 +160,21 @@ function getScoreByPattern(scores: PatternScores, pattern: string): number {
 // 應推往弱方；過得不順 = 支持年照實辛苦，確認強方。
 // 身強 45% 區間「順利」時，從強（>80% 成勢）與身弱（45% 以下）並推，不預設答案，由打卡證據累積決勝負。
 // 舊表 bug：「身強+順利」原為 strong+10/weak-5，使格局卡死身強、從強（初值30）永遠追不上。
-const CALIBRATION_DELTAS: Record<string, Record<string, Partial<PatternScores>>> = {
-  '順利': {
-    '身強': { strong: -20, weak: 10, followStrong: 10 },
-    '從強': { followStrong: 10, strong: -5 },
-    '從弱': { followWeak: 10, weak: -5 },
-    '身弱': { weak: 10, strong: -5 },
+const CALIBRATION_DELTAS: Record<
+  string,
+  Record<string, Partial<PatternScores>>
+> = {
+  順利: {
+    身強: { strong: -20, weak: 10, followStrong: 10 },
+    從強: { followStrong: 10, strong: -5 },
+    從弱: { followWeak: 10, weak: -5 },
+    身弱: { weak: 10, strong: -5 },
   },
-  '不順': {
-    '身強': { strong: 10 },
-    '從強': { followStrong: -15, strong: 15 },
-    '從弱': { followWeak: -15, weak: 15 },
-    '身弱': { weak: -10, strong: 10 },
+  不順: {
+    身強: { strong: 10 },
+    從強: { followStrong: -15, strong: 15 },
+    從弱: { followWeak: -15, weak: 15 },
+    身弱: { weak: -10, strong: 10 },
   },
 };
 
@@ -146,28 +182,32 @@ const CALIBRATION_DELTAS: Record<string, Record<string, Partial<PatternScores>>>
 export function applyCalibrationDelta(
   scores: PatternScores,
   outcome: '順利' | '不順' | '平穩',
-  pattern: string,
+  pattern: string
 ): PatternScores {
   if (outcome === '平穩') return scores;
   const delta = CALIBRATION_DELTAS[outcome]?.[pattern];
   if (!delta) return scores;
   const next = { ...scores };
   for (const [k, v] of Object.entries(delta)) {
-    next[k as keyof PatternScores] = Math.max(0, Math.min(100, (next[k as keyof PatternScores] || 0) + v));
+    next[k as keyof PatternScores] = Math.max(
+      0,
+      Math.min(100, (next[k as keyof PatternScores] || 0) + v)
+    );
   }
   return next;
 }
 
 // [AI MOD] 十神日型 → 可評估領域（單一真實來源，供整體與分領域準確率共用）
 export const DAY_TYPE_FIELDS: Record<string, CategoryKey[]> = {
-  '財星': ['wealth'],
-  '官殺': ['career'],
-  '食傷': ['romance', 'health'],
-  '比劫': ['wealth', 'romance', 'friends', 'family'],
-  '印星': ['career'],
+  財星: ['wealth'],
+  官殺: ['career'],
+  食傷: ['romance', 'health'],
+  比劫: ['wealth', 'romance', 'friends', 'family'],
+  印星: ['career'],
 };
 
-export type CategoryKey = 'health' | 'career' | 'romance' | 'wealth' | 'family' | 'friends';
+export type CategoryKey =
+  'health' | 'career' | 'romance' | 'wealth' | 'family' | 'friends';
 
 export const CATEGORY_LABELS: Record<CategoryKey, string> = {
   health: '健康',
@@ -178,7 +218,24 @@ export const CATEGORY_LABELS: Record<CategoryKey, string> = {
   friends: '人際',
 };
 
-export const CATEGORY_ORDER: CategoryKey[] = ['wealth', 'career', 'romance', 'health', 'family', 'friends'];
+// 各領域顯示 emoji（與 CATEGORY_LABELS 配套；label 一律用 CATEGORY_LABELS，emoji 用此表）
+export const CATEGORY_EMOJIS: Record<CategoryKey, string> = {
+  health: '🏃',
+  career: '💼',
+  romance: '❤️',
+  wealth: '💰',
+  family: '🤝',
+  friends: '🙌',
+};
+
+export const CATEGORY_ORDER: CategoryKey[] = [
+  'wealth',
+  'career',
+  'romance',
+  'health',
+  'family',
+  'friends',
+];
 
 /** 理論好壞判定（單一真實來源） */
 export function isGoodOutcome(outcome: string): boolean {
@@ -186,11 +243,13 @@ export function isGoodOutcome(outcome: string): boolean {
 }
 
 export function isBadOutcome(outcome: string): boolean {
-  return outcome === '不順'
-    || outcome === '較差'
-    || outcome === '不佳'
-    || outcome.includes('凶')
-    || outcome.includes('壞');
+  return (
+    outcome === '不順' ||
+    outcome === '較差' ||
+    outcome === '不佳' ||
+    outcome.includes('凶') ||
+    outcome.includes('壞')
+  );
 }
 
 export interface CategoryAccuracy {
@@ -202,7 +261,9 @@ export interface CategoryAccuracy {
 }
 
 /** 分領域準確率：依十神日型評估對應領域的實際回饋 */
-export function calculateCategoryAccuracy(logs: DailyLog[]): CategoryAccuracy[] {
+export function calculateCategoryAccuracy(
+  logs: DailyLog[]
+): CategoryAccuracy[] {
   const acc: Record<string, { match: number; total: number }> = {};
 
   for (const log of logs) {
@@ -217,18 +278,20 @@ export function calculateCategoryAccuracy(logs: DailyLog[]): CategoryAccuracy[] 
       if (!actual) continue;
       if (!acc[field]) acc[field] = { match: 0, total: 0 };
       acc[field].total += 1;
-      if ((actual === 'good' && good) || (actual === 'bad' && bad)) acc[field].match += 1;
+      if ((actual === 'good' && good) || (actual === 'bad' && bad))
+        acc[field].match += 1;
     }
   }
 
-  return CATEGORY_ORDER.map(key => {
+  return CATEGORY_ORDER.map((key) => {
     const stat = acc[key] || { match: 0, total: 0 };
     return {
       key,
       label: CATEGORY_LABELS[key],
       match: stat.match,
       total: stat.total,
-      accuracy: stat.total > 0 ? Math.round((stat.match / stat.total) * 100) : 0,
+      accuracy:
+        stat.total > 0 ? Math.round((stat.match / stat.total) * 100) : 0,
     };
   });
 }

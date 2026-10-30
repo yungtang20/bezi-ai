@@ -217,18 +217,10 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
   ).toBeVisible();
 
   // 打卡：依當日十神日型選「順利」。
-  // 理論方向可評估的日期，banner 會列出計入吻合度的領域（用 CATEGORY_LABELS，如「財運」「家庭」）；
-  // 但打卡表單卡片用 CATEGORY_OPTIONS 名稱（如「金錢」「家人」），兩者名稱不一致，需做映射。
-  // 點 banner 點名的第一個領域對應的卡片「😊 順利」，該領域才會計入樣本；
+  // 理論方向可評估的日期，banner 會列出計入吻合度的領域（banner 與表單卡片
+  // 同用 calibration 的 CATEGORY_LABELS，名稱一致），點 banner 點名的第一個
+  // 領域對應的卡片「😊 順利」，該領域才會計入樣本；
   // 平穩日沒有領域可評估（calibration.ts 設計上二元感受不計入）。
-  const BANNER_TO_CARD: Record<string, string> = {
-    健康: '健康',
-    事業: '事業',
-    感情: '感情',
-    財運: '金錢',
-    家庭: '家人',
-    人際: '人際',
-  };
   const banner = page.getByText(/會以「[^」]+」計入近期紀錄吻合度/);
   let evaluableDay = false;
   try {
@@ -236,15 +228,11 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
     evaluableDay = true;
     const bannerText = (await banner.textContent()) ?? '';
     const firstField = /會以「([^、」]+)/.exec(bannerText)?.[1] ?? '';
-    const cardLabel = BANNER_TO_CARD[firstField];
-    expect(
-      cardLabel,
-      `banner 領域「${firstField}」無對應表單卡片`
-    ).toBeTruthy();
+    expect(firstField, 'banner 未解析出可評估領域').toBeTruthy();
     // 表單卡片固定為 grid 內的 6 個 div，依名稱筛出該領域卡片再點其「順利」
     const cards = page.locator('.grid.grid-cols-2 > div');
     await cards
-      .filter({ hasText: cardLabel })
+      .filter({ hasText: firstField })
       .first()
       .getByRole('button', { name: '😊 順利', exact: true })
       .click();
