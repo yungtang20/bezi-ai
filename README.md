@@ -69,7 +69,7 @@ flowchart LR
 | API      | Express、短期授權、輸入驗證、限流、SSE 串流                                                                                 |
 | AI 安全  | Server-side Evidence Bundle、輸出引用驗證、缺資料時 fail closed                                                             |
 | 儲存     | 瀏覽器 LocalStorage／IndexedDB；伺服器 SQLite 範例 Evidence                                                                 |
-| 品質     | TypeScript、Vitest 187 測試、Node API tests 26 項、Playwright 30 案（onboarding/chat/stress/prod-smoke）、GitHub Actions CI |
+| 品質     | TypeScript、Vitest 195 測試、Node API tests 26 項、Playwright 30 案（onboarding/chat/stress/prod-smoke）、GitHub Actions CI |
 
 ## 本機執行
 
@@ -182,7 +182,7 @@ bezi-ai/
 ├─ src/ai/              # Prompt、知識管線（分類→檢索）、Evidence 與 AI 輸出驗證
 ├─ src/hooks/           # useAppStep、useBirthChart、useCalibration 等狀態機
 ├─ src/lib/             # 儲存、安全、分享、準確率報告與產品事件工具
-├─ tests/               # Vitest 單元（23 檔）、API 整合（5 檔）、Playwright E2E（4 套）
+├─ tests/               # Vitest 單元（24 檔）、API 整合（5 檔）、Playwright E2E（4 套）
 ├─ server.ts            # Express API、授權、限流、知識管線與 Agnes SSE proxy
 ├─ LLM_WIKI.md          # 命理知識來源與規則索引（domain rule provenance）
 ├─ Dockerfile / render.yaml  # 單一 image 部署（Render）
@@ -199,7 +199,8 @@ Bezi 的命理斷法**不是泛泛的網路八字**，而是對齊徐玉蘭 Mast
 - **格局加權**：年干 5%、年支 20%、月干 35%、日支 20%、時支 10%（七字計分，日干不計）；含貪生忘剋（限日柱旁）、透干成庫、40–55% 連續體不硬貼標籤。
 - **定盤**：分數只是工具，定盤（流年體感回測）才是裁判——app 內「兩個年份校準題」與打卡回饋就是這一步的產品化。
 - **用神與補運**：一般格局求平衡、從格求順勢；大運前五年走天干、後五年走地支；起運歲數不採計。
-- **知識內容**（`src/data/`）：核心表格、規則與講義知識的 provenance 逐條記錄於 [LLM_WIKI.md](./LLM_WIKI.md)。
+- **寵物與五行**：寵物在八字當「食神傷官」看，挑選以命盤所需五行對應動物屬性（貓兔木火、狗火土、缺金水選鳥倉鼠蛇魚龜）；責任心永遠比開運更重要。
+- **知識內容**（`src/data/`）：核心表格、規則與講義知識的 provenance 逐條記錄於 [LLM_WIKI.md](./LLM_WIKI.md)；徐玉蘭推薦的古籍（《三命通會》《窮通寶鑑》《滴天髓》《命理探源》）僅為延伸書單，不作口徑來源。
 
 > 本專案為獨立實作，口徑以徐玉蘭老師的公開教學框架為準；與市售排盤軟體的差異見下方學派說明。
 

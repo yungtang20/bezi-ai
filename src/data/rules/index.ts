@@ -6,5 +6,6 @@ export * from './dailyFlowDays';
 // 動態補運分支的單一來源在 src/data/core/fiveElementsBalance.ts getLiunianAndRemedy）
 export * from './partnerMatching';
 export * from './peachBlossomTiming';
+export * from './petFiveElements';
 export * from './taiSui';
 export * from './timelineGuidelines';
