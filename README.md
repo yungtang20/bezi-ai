@@ -1,6 +1,6 @@
 # 八字能量日誌 Bezi
 
-[![CI Pipeline](https://github.com/yungtang20/bezi/actions/workflows/ci.yml/badge.svg)](https://github.com/yungtang20/bezi/actions/workflows/ci.yml)
+[![CI Pipeline](https://github.com/yungtang20/bezi-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/yungtang20/bezi-ai/actions/workflows/ci.yml)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)
@@ -9,7 +9,7 @@
 
 Bezi 不只產生一張命盤。它把先天命局、大運流年、流月流日、合盤與 AI 問答整合在同一個介面，並透過校準、每日打卡和分享功能，讓使用者能持續對照自己的真實生活。
 
-[立即體驗 Bezi](https://bezi-ai-api.onrender.com/) · [回報問題](https://github.com/yungtang20/bezi/issues)
+[立即體驗 Bezi](https://bezi-ai-api.onrender.com/) · [回報問題](https://github.com/yungtang20/bezi-ai/issues)
 
 > Render 免費服務休眠後，第一次開啟可能需要稍候片刻。
 
@@ -22,7 +22,9 @@ Bezi 不只產生一張命盤。它把先天命局、大運流年、流月流日
 - **進行合盤分析**：比較雙方五行、十神與互動傾向，並產生可分享的合盤摘要。
 - **詢問 AI 命理助手**：AI 只能根據伺服器驗證過的命盤 Evidence 回答，資料不足時會拒絕猜測。
 - **建立每日回訪習慣**：查看今日能量、完成打卡、追蹤連續天數，並用實際感受回饋命理結果。
+- **越用越準**：打卡與校準結果會累積成分數，格局標籤可能隨證據自動修正（切換時明確告知因果）。
 - **安全分享結果**：分享前先預覽內容；預設不包含姓名、日主、喜用神或最弱五行。
+- **手機可安裝**：PWA 支援，加入主畫面即可離線開啟已載入的頁面（AI 問答仍需網路）。
 
 ## 使用流程
 
@@ -60,14 +62,14 @@ flowchart LR
 
 ### 技術組成
 
-| 區域 | 技術與責任 |
-| --- | --- |
-| Web UI | React 19、TypeScript、Vite、Tailwind CSS、Motion、Recharts |
-| 命理核心 | `@bezi/core`、`lunar-javascript`；排盤、格局、大運、流年與圖表轉換 |
-| API | Express、短期授權、輸入驗證、限流、SSE 串流 |
-| AI 安全 | Server-side Evidence Bundle、輸出引用驗證、缺資料時 fail closed |
-| 儲存 | 瀏覽器 LocalStorage／IndexedDB；伺服器 SQLite 範例 Evidence |
-| 品質 | TypeScript、Vitest、Node API tests、Playwright production smoke |
+| 區域     | 技術與責任                                                                                                                  |
+| -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Web UI   | React 19、TypeScript、Vite、Tailwind CSS、Motion、Recharts                                                                  |
+| 命理核心 | `@bezi/core`、`lunar-javascript`；排盤、格局、大運、流年與圖表轉換                                                          |
+| API      | Express、短期授權、輸入驗證、限流、SSE 串流                                                                                 |
+| AI 安全  | Server-side Evidence Bundle、輸出引用驗證、缺資料時 fail closed                                                             |
+| 儲存     | 瀏覽器 LocalStorage／IndexedDB；伺服器 SQLite 範例 Evidence                                                                 |
+| 品質     | TypeScript、Vitest 187 測試、Node API tests 26 項、Playwright 30 案（onboarding/chat/stress/prod-smoke）、GitHub Actions CI |
 
 ## 本機執行
 
@@ -79,8 +81,8 @@ flowchart LR
 ### 安裝與設定
 
 ```bash
-git clone https://github.com/yungtang20/bezi.git
-cd bezi
+git clone https://github.com/yungtang20/bezi-ai.git
+cd bezi-ai
 npm ci
 ```
 
@@ -126,14 +128,14 @@ npm start
 
 ## API 概覽
 
-| Method | Endpoint | 用途 |
-| --- | --- | --- |
-| `POST` | `/api/auth/token` | 建立短期聊天工作階段 |
-| `GET` | `/api/records` | 取得可用命盤 Evidence 摘要 |
+| Method | Endpoint                | 用途                                       |
+| ------ | ----------------------- | ------------------------------------------ |
+| `POST` | `/api/auth/token`       | 建立短期聊天工作階段                       |
+| `GET`  | `/api/records`          | 取得可用命盤 Evidence 摘要                 |
 | `POST` | `/api/evidence/current` | 由目前出生資料建立 session-scoped Evidence |
-| `POST` | `/api/chat` | 一般八字 AI 問答（SSE） |
-| `POST` | `/api/chat/dayun` | 大運流年 AI 問答（SSE） |
-| `POST` | `/api/chat/synastry` | 合盤 AI 問答（SSE） |
+| `POST` | `/api/chat`             | 一般八字 AI 問答（SSE）                    |
+| `POST` | `/api/chat/dayun`       | 大運流年 AI 問答（SSE）                    |
+| `POST` | `/api/chat/synastry`    | 合盤 AI 問答（SSE）                        |
 
 聊天端點必須攜帶 Bearer Session Token 與有效的 `record_id`。前端不能直接提交或偽造 Evidence Bundle。
 
@@ -146,13 +148,22 @@ npm run lint
 # Vitest 單元測試
 npm test
 
-# API validation tests
-node --test tests/api-chat-validation.test.mjs
+# API integration tests（5 檔、26 測試：chat 驗證、CORS、dev-auth、evidence/knowledge pipeline）
+npm run test:api
 
-# 建置後執行完整瀏覽器流程與 production smoke
+# 建置後執行完整瀏覽器流程（onboarding/chat/stress 30 案）與 production smoke
 npm run build
 npm run test:e2e
 ```
+
+E2E 有四套 spec：
+
+| Spec                 | 覆蓋                                                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onboarding.spec.ts` | 範例建盤、校準閉環、reload 還原、真太陽時城市快選                                                                                                       |
+| `chat-flow.spec.ts`  | 匿名授權、SSE 渲染 term tooltip、打卡吻合度、四區導覽、多視窗                                                                                           |
+| `prod-smoke.spec.ts` | production bundle 掛載與同源資源 CORS                                                                                                                   |
+| `stress.spec.ts`     | 5 格局種子 onboarding、全頁面走查、快速跨頁切換、reload/deep-link 持久化、三日連續打卡、合盤分享圖、AI 問答、手機導覽、錯誤輸入驗證（全案 pageerror=0） |
 
 修改 `packages/core` 後，另執行：
 
@@ -163,19 +174,36 @@ npx tsc -p packages/core/tsconfig.json --noEmit
 ## 專案結構
 
 ```text
-bezi/
-├─ packages/core/       # 排盤、格局、大運、流年等共用核心
-├─ src/components/      # 命局、歲運、專項、合盤、AI 與分享介面
-├─ src/data/            # 核心表格、規則與課程知識資料
-├─ src/ai/              # Prompt、Evidence 與 AI 輸出驗證
-├─ src/lib/             # 儲存、安全、分享與產品事件工具
-├─ tests/               # 單元、API 與 Playwright E2E
-├─ server.ts            # Express API、授權、限流與 Agnes SSE proxy
-├─ LLM_WIKI.md          # 命理知識來源與規則索引
-└─ render.yaml          # Render Blueprint
+bezi-ai/
+├─ packages/core/       # 排盤、格局、大運、流年等共用核心（子平法引擎）
+├─ src/components/      # 命局、歲運、專項、合盤、AI 與分享介面（41 頁面組件）
+├─ src/components/*/sections/  # 各專項頁 ContentSection 內容區塊（講義文法：結論→依據→時間窗→動作）
+├─ src/data/            # 核心表格、規則與課程知識資料（charts/rules/lecture/core）
+├─ src/ai/              # Prompt、知識管線（分類→檢索）、Evidence 與 AI 輸出驗證
+├─ src/hooks/           # useAppStep、useBirthChart、useCalibration 等狀態機
+├─ src/lib/             # 儲存、安全、分享、準確率報告與產品事件工具
+├─ tests/               # Vitest 單元（23 檔）、API 整合（5 檔）、Playwright E2E（4 套）
+├─ server.ts            # Express API、授權、限流、知識管線與 Agnes SSE proxy
+├─ LLM_WIKI.md          # 命理知識來源與規則索引（domain rule provenance）
+├─ Dockerfile / render.yaml  # 單一 image 部署（Render）
+└─ .github/workflows/ci.yml  # lint + test + test:api + build + prod-smoke
 ```
 
 ## 排盤方法與正確性證據
+
+### 命理口徑來源：徐玉蘭老師教學框架
+
+Bezi 的命理斷法**不是泛泛的網路八字**，而是對齊徐玉蘭 Master Hsu 的教學體系（官方網站 [masterhsu.com.tw](https://www.masterhsu.com.tw/)、知識衛星課程「人生八字應用課」與「風水磁場順心術」、YouTube 頻道 [@masterhsutalk](https://www.youtube.com/@masterhsutalk)）：
+
+- **四層讀盤序**：找日主 → 定格局 → 抓用神 → 疊大運流年，UI 流程即按此設計。
+- **格局加權**：年干 5%、年支 20%、月干 35%、日支 20%、時支 10%（七字計分，日干不計）；含貪生忘剋（限日柱旁）、透干成庫、40–55% 連續體不硬貼標籤。
+- **定盤**：分數只是工具，定盤（流年體感回測）才是裁判——app 內「兩個年份校準題」與打卡回饋就是這一步的產品化。
+- **用神與補運**：一般格局求平衡、從格求順勢；大運前五年走天干、後五年走地支；起運歲數不採計。
+- **知識內容**（`src/data/`）：核心表格、規則與講義知識的 provenance 逐條記錄於 [LLM_WIKI.md](./LLM_WIKI.md)。
+
+> 本專案為獨立實作，口徑以徐玉蘭老師的公開教學框架為準；與市售排盤軟體的差異見下方學派說明。
+
+### 排盤學派
 
 排盤引擎（`packages/core/src/paipan.ts`）採用**子平法／立春學派**：
 
@@ -189,7 +217,7 @@ bezi/
 
 1. 節氣時刻以 Meeus 低精度太陽黃經獨立計算交叉驗證（立春 1995 = 02-04 07:19 UTC、立春 2000 = 02-04 12:36 UTC、清明 1984 = 04-04 14:28 UTC 等）。
 2. 日柱以 JDN 六十週期公式（錨點 1949-10-01 = 甲子）獨立驗證。
-3. `tests/unit/paipan.test.ts`、`tests/unit/dayun.test.ts` 為 golden 回歸測試：四柱、起運年齡（節氣日數 ÷ 3）、流年干支與十神皆硬編碼獨立驗證值，含立春前/後邊界案例。
+3. `tests/unit/paipan.test.ts`、`tests/unit/dayun.test.ts` 為 golden 回歸測試：四柱、起運年齡、流年干支與十神皆硬編碼獨立驗證值，含立春前/後邊界案例。（依徐玉蘭口徑，起運歲數僅供顯示區間、不作為判定因素。）
 
 > 注意：立春學派與農曆正月初一學派在每年 1 月中～2 月中（約 2-3 週窗口）的出生者年柱不同。引擎與市售八字排盤軟體一致採立春學派；若需對照另一學派，請以該窗口的年柱差異自行判斷。
 
