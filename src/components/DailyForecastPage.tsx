@@ -301,6 +301,7 @@ export default function DailyForecastPage({
                   d.setDate(d.getDate() - 1);
                   setSelectedDateStr(d.toISOString().split('T')[0]);
                 }}
+                aria-label="前一天"
                 className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
               >
                 ◀
@@ -314,6 +315,7 @@ export default function DailyForecastPage({
                   d.setDate(d.getDate() + 1);
                   setSelectedDateStr(d.toISOString().split('T')[0]);
                 }}
+                aria-label="後一天"
                 className="p-1 hover:bg-white/10 rounded transition text-zen-muted text-xs"
               >
                 ▶

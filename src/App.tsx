@@ -135,18 +135,11 @@ export default function App() {
         const savedScores = await getPatternScores();
         if (savedScores) {
           setScores(savedScores);
-          // sessionStorage 有步驟（deep-link / 回退）則尊重之；無則進 dashboard。
-          if (
-            !sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)
-          ) {
-            handleNavigate(4);
-          }
-        } else {
-          if (
-            !sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)
-          ) {
-            handleNavigate(3);
-          }
+        }
+        // 有存檔命盤即進 dashboard（分數可為 null，由校準重算）；
+        // sessionStorage 有步驟（deep-link / 回退）則尊重之。
+        if (!sessionStorage.getItem(CLIENT_CONFIG.STORAGE_KEYS.CURRENT_STEP)) {
+          handleNavigate(savedScores ? 4 : 3);
         }
       } catch {
         // DB 錯誤不擋 UI：分數留空由校準重算。

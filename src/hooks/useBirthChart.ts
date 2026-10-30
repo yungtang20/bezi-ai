@@ -16,6 +16,7 @@ import { cityLongitude } from '../lib/trueSolarCities';
 import { validateBirthInput } from '../utils/validation';
 import { trackProductEvent } from '../lib/productEvents';
 import { CLIENT_CONFIG } from '../config';
+import { savePatternScores } from '../storage';
 
 interface BirthFormState {
   name: string;
@@ -221,6 +222,12 @@ export function useBirthChart(
         setBazi(chartDisplay);
         setPattern(patternResult);
         setBirthTime(dBirthTime);
+
+        // 首次建盤即持久化初始分數：否則 reload/deep-link 時 getPatternScores() 為 null，
+        // 還原邏輯會把使用者丟回校準頁（step 3）而不是 dashboard（step 4）。
+        void savePatternScores(scores).catch(() => {
+          // 持久化失敗不擋 UI：下次進站由校準重算。
+        });
 
         trackProductEvent('chart_created');
 
