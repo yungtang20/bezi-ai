@@ -1,13 +1,13 @@
 // useCalibration — quick calibration (2 years) + scores persistence.
 // 快速校準：兩題 + 得分持久化，與 App 副作用分離。
-import { useCallback, useState } from "react";
-import { applyCalibrationDelta } from "../calibration";
-import { getPatternScores, savePatternScores } from "../storage";
-import { PatternScores, PatternResult } from "../pattern";
-import { stepToHash } from "../lib/router";
-import type { Step } from "../App";
+import { useCallback, useState } from 'react';
+import { applyCalibrationDelta } from '../calibration';
+import { getPatternScores, savePatternScores } from '../storage';
+import { PatternScores, PatternResult } from '../pattern';
+import { stepToHash } from '../lib/router';
+import type { Step } from '../App';
 
-const RETURN_AFTER_EDIT_KEY = "bezi:return-after-edit";
+const RETURN_AFTER_EDIT_KEY = 'bezi:return-after-edit';
 
 interface UseCalibrationReturn {
   scores: PatternScores | null;
@@ -23,8 +23,12 @@ export function useCalibration(
   initialScores: PatternScores | null,
   initialPattern: PatternResult | null
 ): UseCalibrationReturn {
-  const [scores, setScoresState] = useState<PatternScores | null>(initialScores);
-  const [calibrations, setCalibrationsState] = useState<Record<string, string>>({});
+  const [scores, setScoresState] = useState<PatternScores | null>(
+    initialScores
+  );
+  const [calibrations, setCalibrationsState] = useState<Record<string, string>>(
+    {}
+  );
 
   const loadScores = useCallback(async () => {
     try {
@@ -45,8 +49,12 @@ export function useCalibration(
     (year: string, value: string) => {
       if (!scores || !initialPattern) return;
 
-      if (value === "順利" || value === "不順") {
-        const nextScores = applyCalibrationDelta(scores, value, initialPattern.pattern);
+      if (value === '順利' || value === '不順') {
+        const nextScores = applyCalibrationDelta(
+          scores,
+          value,
+          initialPattern.pattern
+        );
         setScoresState(nextScores);
         void savePatternScores(nextScores).catch(() => {
           // silent
@@ -56,10 +64,12 @@ export function useCalibration(
       setCalibrationsState((prev) => {
         const next = { ...prev, [year]: value };
         if (Object.keys(next).length === 2) {
-          const returnStep = (sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === "12" ? 12 : 4) as Step;
+          const returnStep = (
+            sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === '12' ? 12 : 4
+          ) as Step;
           sessionStorage.removeItem(RETURN_AFTER_EDIT_KEY);
           window.location.hash = stepToHash(returnStep);
-          window.scrollTo({ top: 0, behavior: "smooth" });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         return next;
       });
@@ -68,10 +78,12 @@ export function useCalibration(
   );
 
   const skipCalibration = useCallback(() => {
-    const returnStep = (sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === "12" ? 12 : 4) as Step;
+    const returnStep = (
+      sessionStorage.getItem(RETURN_AFTER_EDIT_KEY) === '12' ? 12 : 4
+    ) as Step;
     sessionStorage.removeItem(RETURN_AFTER_EDIT_KEY);
     window.location.hash = stepToHash(returnStep);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   return {
