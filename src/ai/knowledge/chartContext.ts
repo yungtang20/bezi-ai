@@ -5,7 +5,7 @@
 
 import type { EvidenceData } from '../../lib/evidence/provider';
 import { determinePattern, type BaziChart } from '../../../packages/core/src/index';
-import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, getTenGod } from '../../../packages/core/src/constants';
+import { GAN_TO_ELEMENT, getTenGod } from '../../../packages/core/src/constants';
 import { ZHI_HIDE_GAN } from '../../../packages/core/src/paipan';
 import type { ChartContext } from './types';
 
