@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { BaziChart } from "../../paipan";
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT } from "../../constants";
 import { calculateDaYun, getLiuNian, type DaYun, type LiuNian } from "../../dayun";
-import { getHealthRemedy, HEALTH_DATA, HEALTH_PRESERVATION_GUIDE } from "../../data";
+import { HEALTH_DATA } from "../../data";
 import { Solar } from "lunar-javascript";
 import { PartnerInfo } from "../../types";
 
@@ -49,12 +49,12 @@ export interface HealthLogicResult {
 
 export function useHealthLogic({
   chart,
-  primaryPattern,
-  favorable,
-  unfavorable,
-  weakestElement,
+  primaryPattern: _primaryPattern,
+  favorable: _favorable,
+  unfavorable: _unfavorable,
+  weakestElement: _weakestElement,
   weakestElements,
-  partners,
+  partners: _partners,
 }: {
   chart: BaziChart;
   primaryPattern: string;
