@@ -1,7 +1,6 @@
 // src/components/health/sections/StrongSection.tsx
 // 能量過旺觀察 — 健康頁第五區塊。
 // 內容僅用 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import { Inbox } from 'lucide-react';
 import { getHealthRemedy } from '../../../data';
 

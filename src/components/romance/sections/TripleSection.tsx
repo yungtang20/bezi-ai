@@ -1,7 +1,6 @@
 // src/components/romance/sections/TripleSection.tsx
 // 流年生肖三合桃花旺年 — 判斷當前流年是否為命盤生肖的三合旺年。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

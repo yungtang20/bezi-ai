@@ -1,7 +1,6 @@
 // src/components/health/sections/ExtremeSection.tsx
 // 極端能量流日 — 健康頁第七區塊。
 // 內容僅用 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import { Info } from 'lucide-react';
 
 interface ExtremeSectionProps {

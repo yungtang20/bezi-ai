@@ -1,7 +1,6 @@
 // src/components/wealth/sections/InherentSection.tsx
 // 先天財富特質 — 命盤十神分布與日主強弱判斷（不論身強身弱，僅呈現命盤原始特質）。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

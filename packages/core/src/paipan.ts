@@ -1,10 +1,5 @@
 import { Solar } from 'lunar-javascript';
-import {
-  GAN_TO_ELEMENT,
-  getTenGod,
-  YANG_GANS,
-  isSameYinYang,
-} from './constants';
+import { getTenGod } from './constants';
 import { toTrueSolarTime } from './trueSolarTime';
 import { ZHI_HIDDEN } from './pattern';
 

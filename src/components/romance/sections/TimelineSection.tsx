@@ -1,7 +1,6 @@
 // src/components/romance/sections/TimelineSection.tsx
 // 歲運推與化解 — 大運流年感情好壞與化解建議。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import type { DaYun, LiuNian, PatternResult } from '@bezi/core';
 import {
   ContentSection,

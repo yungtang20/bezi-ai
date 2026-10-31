@@ -1,4 +1,3 @@
-import React from 'react';
 import { BookOpen, Compass, Home, UserRound } from 'lucide-react';
 import NavButton from './NavButton';
 import { getTopArea, type TopArea } from '../lib/navigation';

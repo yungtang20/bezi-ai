@@ -1,6 +1,5 @@
 // JobsSection.tsx — 專屬十神合適工作
 // 內容區塊：固定文法「結論先行 → 依據 → 時間窗 → 動作 → 不確定處」。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

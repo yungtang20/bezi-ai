@@ -1,7 +1,6 @@
 import { Solar } from 'lunar-javascript';
 import { BaziChart, translateGanZhi } from './paipan';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, getTenGod } from './constants';
-import { checkTaiSui } from './data/rules/taiSui';
 export { checkTaiSui } from './data/rules/taiSui';
 export { getTenGod as getTenGodForDaYun } from './constants';
 

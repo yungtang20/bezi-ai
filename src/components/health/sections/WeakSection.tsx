@@ -1,7 +1,6 @@
 // src/components/health/sections/WeakSection.tsx
 // 能量偏弱觀察 — 健康頁第四區塊。
 // 內容僅用 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import { Inbox } from 'lucide-react';
 import { getHealthRemedy, HEALTH_PRESERVATION_GUIDE } from '../../../data';
 

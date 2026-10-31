@@ -1,4 +1,4 @@
-import type { HeavenlyStem, EarthlyBranch, FiveElement } from '../core/types';
+import type { FiveElement } from '../core/types';
 
 export interface WealthGuide {
   dayMaster: FiveElement;

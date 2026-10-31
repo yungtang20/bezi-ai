@@ -1,6 +1,5 @@
 // src/components/career/sections/RemedySection.tsx
 // 個人事業五行補運 — ElementRemedyCard 包裝。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

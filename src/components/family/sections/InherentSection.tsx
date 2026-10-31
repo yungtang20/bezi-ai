@@ -1,7 +1,6 @@
 // src/components/family/sections/InherentSection.tsx
 // 先天命盤特質 — 家族宮位刑沖與子息緣分（家人篇）。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import { AlertTriangle, Baby, ShieldCheck } from 'lucide-react';
 import {
   ContentSection,

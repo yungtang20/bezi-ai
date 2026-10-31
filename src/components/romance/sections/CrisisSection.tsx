@@ -1,7 +1,6 @@
 // src/components/romance/sections/CrisisSection.tsx
 // 桃花危機與預警 — 夫妻星坐比劫與大運流年危機診斷（依命盤原始特質與當前大運/流年，不改動邏輯）。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

@@ -1,7 +1,6 @@
 // src/components/wealth/sections/DatesSection.tsx
 // 專屬得財日預報 — 判斷依據（命盤十神分布）。
 // 使用 ContentSection 固定文法：結論先行 → 依據 → 時間窗 → 3 個可執行動作 → 不確定處。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

@@ -1,7 +1,6 @@
 // src/components/health/sections/InherentSection.tsx
 // 先天健康弱項 — 健康頁第二區塊。
 // 內容僅用 src/data 僅讀引用，不改動邏輯。
-import React from "react";
 import { ShieldAlert } from "lucide-react";
 import { getHealthRemedy, HEALTH_DATA } from "../../../data";
 

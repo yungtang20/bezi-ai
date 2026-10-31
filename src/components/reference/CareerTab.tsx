@@ -1,6 +1,5 @@
 // CareerTab — 事業 tab. 職業適配、轉職與職場互動。
 // Same data values as src/data; no logic changes.
-import React from "react";
 import { ContentSection, ReasoningCard, UncertaintyNotice, SectionGrammar } from "../shared";
 import {
   CAREER_GUIDELINES,

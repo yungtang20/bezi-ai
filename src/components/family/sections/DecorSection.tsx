@@ -1,7 +1,6 @@
 // src/components/family/sections/DecorSection.tsx
 // 2026年子息宮催旺及佈置指南。
 // 單一數據來源：src/data/charts/homeDecorGuide.ts 的 GENDER_PALACE_DECOR；不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   SectionGrammar,

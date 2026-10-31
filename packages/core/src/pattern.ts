@@ -3,7 +3,7 @@
 // 來源講義：定格局.pdf（10頁）、天干地支合化條件.pdf（2頁）、天干地支含刑沖破害.pdf（10頁）
 
 import { BaziChart } from './paipan';
-import { GAN_TO_ELEMENT, YANG_GANS, getYinYang, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
+import { GAN_TO_ELEMENT, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
 
 // ==================== 基礎對應表 ====================
 
