@@ -47,7 +47,6 @@ export const ZHI_HIDDEN: Record<string, string[]> = Object.fromEntries(
 // 來源：定格局.pdf P4 — 濕土：丑、辰（會生金）；燥土：未、戌
 
 const WET_SOIL = ['丑', '辰'];
-const DRY_SOIL = ['未', '戌'];
 
 function isWetSoil(zhi: string): boolean {
   return WET_SOIL.includes(zhi);

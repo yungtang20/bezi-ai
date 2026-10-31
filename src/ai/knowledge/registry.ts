@@ -3,12 +3,10 @@
 // builder 只讀 src/data/** 既有匯出，不改知識內容；每條輸出附 sourceId 與 matchedWhy。
 // sourceId 命名固定 kb:<來源模組>:<鍵>，用 kbId() 產生避免手寫拼錯。
 
-import { GAN_TO_ELEMENT } from '../../../packages/core/src/constants';
 import {
   WEALTH_GUIDELINES,
   WEALTH_LOST_TIMING,
   CAREER_GUIDELINES,
-  SPOUSE_TRAITS_MAPPING,
   SPOUSE_STAR_POSITION,
   healthRemedies,
 } from '../../data/charts/index';

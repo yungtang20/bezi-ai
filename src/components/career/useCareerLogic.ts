@@ -57,8 +57,8 @@ export interface CareerLogicResult {
 export function useCareerLogic({
   chart,
   primaryPattern,
-  favorable,
-  unfavorable,
+  favorable: _favorable,
+  unfavorable: _unfavorable,
   weakestElements,
 }: {
   chart: BaziChart;
