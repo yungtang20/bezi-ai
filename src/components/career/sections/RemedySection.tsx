@@ -8,7 +8,7 @@ import {
   makeSection,
 } from '../../../components/shared';
 import ElementRemedyCard from '../../ElementRemedyCard';
-import { CAREER_REMEDIES_DATA } from '../../../data';
+
 import type { BaziChart } from '../../../paipan';
 
 const MAX_ACTIONS = 3;
