@@ -12,7 +12,8 @@ coverage/
 .idea/
 
 # Playwright / test artifacts
-tests/e2e/reports/
+tests/e2e/reports/*
+!tests/e2e/reports/verify/
 test-results/
 playwright-report/
 

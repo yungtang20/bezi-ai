@@ -171,6 +171,19 @@ E2E 有四套 spec：
 npx tsc -p packages/core/tsconfig.json --noEmit
 ```
 
+### 驗證 CLI（Control Glass）
+
+宣告完成前，使用可重現的 verify 管線（`scripts/agent/verify.mjs`）產生證據：
+
+```bash
+npm run verify          # logic + ui 全套
+npm run verify:logic    # lint + unit + api
+npm run verify:ui       # build + prod-smoke + stress
+npm run verify:ai       # api integration
+```
+
+證據輸出至 `tests/e2e/reports/verify/`（請保留，勿刪除）。
+
 ## 專案結構
 
 ```text

@@ -1,14 +1,21 @@
 // src/components/career/sections/RemedySection.tsx
 // 個人事業五行補運 — ElementRemedyCard 包裝。
-import React from "react";
-import { ContentSection, ReasoningCard, UncertaintyNotice, type SectionGrammar, makeSection } from "../../../components/shared";
-import ElementRemedyCard from "../../ElementRemedyCard";
-import { CAREER_REMEDIES_DATA } from "../../../data";
+import React from 'react';
+import {
+  ContentSection,
+  ReasoningCard,
+  UncertaintyNotice,
+  type SectionGrammar,
+  makeSection,
+} from '../../../components/shared';
+import ElementRemedyCard from '../../ElementRemedyCard';
+import { CAREER_REMEDIES_DATA } from '../../../data';
+import type { BaziChart } from '../../../paipan';
 
 const MAX_ACTIONS = 3;
 
 interface RemedySectionProps {
-  chart: { dayMaster: string };
+  chart: BaziChart;
   primaryPattern: string;
   weakestElements: string[];
   dmElement: string;
@@ -24,22 +31,28 @@ export function RemedySection({
 
   const sections: SectionGrammar[] = [
     makeSection(
-      "個人事業五行補運",
+      '個人事業五行補運',
       2,
       `依據日主「${chart.dayMaster}」(${dmElement}) 與最弱五行「${primaryWeak}」，針對事業宮位（官殺方位）進行補運。`,
       {
         evidence: (
           <ReasoningCard label="命盤依據">
-            <p>日主五行：{chart.dayMaster}（{dmElement}）</p>
+            <p>
+              日主五行：{chart.dayMaster}（{dmElement}）
+            </p>
             <p>首要補足五行：{primaryWeak}</p>
             <p>補運類別：事業（官殺方位補運）</p>
           </ReasoningCard>
         ),
-        timeWindow: "以當前大運與流年為主，建議每三年複盤一次強弱變化。",
-        actions: ["確認日主五行屬性", "對照最弱五行補強方向", "佈置事業官殺方位"].slice(0, MAX_ACTIONS),
+        timeWindow: '以當前大運與流年為主，建議每三年複盤一次強弱變化。',
+        actions: [
+          '確認日主五行屬性',
+          '對照最弱五行補強方向',
+          '佈置事業官殺方位',
+        ].slice(0, MAX_ACTIONS),
         uncertainty:
-          "補運為參考建議，實際效果仍隨大運、流年與個人行為而異；不構成絕對財務或人生指導。",
-      },
+          '補運為參考建議，實際效果仍隨大運、流年與個人行為而異；不構成絕對財務或人生指導。',
+      }
     ),
   ];
 
@@ -54,7 +67,7 @@ export function RemedySection({
         <ContentSection key={s.title} grammar={s} defaultOpen={s.level === 2} />
       ))}
       <ElementRemedyCard
-        chart={chart as any}
+        chart={chart}
         primaryPattern={primaryPattern}
         weakestElements={weakestElements}
         category="career"

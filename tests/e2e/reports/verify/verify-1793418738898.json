@@ -1,0 +1,29 @@
+{
+  "mode": "logic",
+  "startedAt": "2026-10-31T03:51:37.384Z",
+  "steps": [
+    {
+      "name": "lint",
+      "ok": true,
+      "durationSec": 19.9,
+      "exitCode": 0,
+      "tail": ""
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "durationSec": 3.9,
+      "exitCode": 0,
+      "tail": "\n RUN  v4.1.11 D:/徐玉蘭/bezi\n\n\n Test Files  24 passed (24)\n      Tests  195 passed (195)\n   Start at  11:51:59\n   Duration  1.96s (transform 5.05s, setup 0ms, import 7.68s, tests 648ms, environment 7ms)\n\n"
+    },
+    {
+      "name": "api",
+      "ok": true,
+      "durationSec": 17.7,
+      "exitCode": 0,
+      "tail": "\n> bezi-ai@0.0.0 test:api\n> node --test --test-concurrency=1 tests/api-chat-validation.test.mjs tests/api-cors.test.mjs tests/api-dev-auth-bypass.test.mjs tests/api-evidence-pipeline.test.mjs tests/api-knowledge-pipeline.test.mjs\n\n✔ rejects non-string apiKey before provider selection (2955.6568ms)\n✔ rejects non-string customPrompt before provider selection (5.206ms)\n✔ sets CORS headers on /api/chat OPTIONS preflight (7.9806ms)\n✔ creates session-scoped current-chart evidence from validated birth input (46.824ms)\n✔ marks unknown birth hour and still creates bounded three-pillar evidence (13.1273ms)\n✔ rejects invalid birth input before creating current-chart evidence (3.5852ms)\n✔ rejects oversized request body (47.7225ms)\n✔ 同源請求（含 Origin header）不被阻擋 (2663.0368ms)\n✔ 外來 origin 仍被阻擋 (4.1975ms)\n✔ 允許清單內的 origin 通過 (2.7798ms)\n✔ 無 Origin header 的請求（server-to-server）通過 (2.6489ms)\n✔ development-only auth bypass issues a token without a secret (4506.0817ms)\n✔ rejects missing authorization before querying evidence (2698.3939ms)\n✔ records endpoint requires authorization and returns summaries (26.6875ms)\n✔ rejects an invalid client secret (3.3787ms)\n✔ issues a session token that authorizes chat (63.4769ms)\n✔ valid record_id passes the gate and calls the provider (22.3515ms)\n✔ invalid record_id returns needs_data without calling the provider (5.4401ms)\n✔ missing record_id returns needs_data without calling the provider (4.6238ms)\n✔ knowledge prompt is attached after evidence and before user messages (3025.8202ms)\n✔ valid kb sourceIds pass the fabricated-citation gate (15.5835ms)\n✔ fabricated kb sourceIds are rejected with refusal (18.0549ms)\n✔ first attempt invalid triggers one honest retry with correction, second attempt passes (43.6365ms)\n✔ two consecutive invalid attempts end in honest refusal (32.2419ms)\n✔ unclassifiable query degrades to general_bazi knowledge, chat still works (16.7753ms)\n✔ record with full pillars completes pipeline with pattern-dependent items (15.8597ms)\nℹ tests 26\nℹ suites 0\nℹ pass 26\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 17038.2071\n"
+    }
+  ],
+  "finishedAt": "2026-10-31T03:52:18.898Z",
+  "passed": true
+}
