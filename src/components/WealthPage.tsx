@@ -32,10 +32,7 @@ export default function WealthPage({
   primaryPattern,
   favorable,
   unfavorable,
-  weakestElement,
   weakestElements,
-  partners,
-  onNavigate,
 }: Props) {
   const {
     tenGodCounts,
@@ -44,25 +41,12 @@ export default function WealthPage({
     topCount1,
     topGod2,
     topCount2,
-    wealthLocations,
-    isNoWealth,
     isStrong,
     isWeak,
-    patternResult,
     patternLabel,
     isContinuum,
-    currentYear,
-    currentAge,
-    allDaYun,
-    currentDaYun,
-    currentLiuNian,
-    daYunWealthDetails,
-    combinedWealthAnalysis,
-    customWealthGuide,
-    scannedDates,
     zhiCount,
     dominantZhiType,
-    baziLossDetails,
   } = useWealthLogic({ chart, primaryPattern, favorable, unfavorable, weakestElements });
 
   const menuItems = [
