@@ -16,6 +16,10 @@
     "test:api": "node --test --test-concurrency=1 tests/api-chat-validation.test.mjs tests/api-cors.test.mjs tests/api-dev-auth-bypass.test.mjs tests/api-evidence-pipeline.test.mjs tests/api-knowledge-pipeline.test.mjs",
     "eval:ai-factual": "node scripts/eval-ai-factual.mjs",
     "test:e2e": "playwright test",
+    "verify": "node scripts/agent/verify.mjs",
+    "verify:logic": "node scripts/agent/verify.mjs logic",
+    "verify:ui": "node scripts/agent/verify.mjs ui",
+    "verify:ai": "node scripts/agent/verify.mjs ai",
     "prepare": "husky install"
   },
   "dependencies": {
