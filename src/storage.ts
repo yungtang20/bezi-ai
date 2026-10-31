@@ -91,12 +91,14 @@ function txComplete(tx: IDBTransaction): Promise<void> {
 // 儲存打卡記錄
 export async function saveDailyLog(log: DailyLog): Promise<void> {
   const db = await openDB();
-  const store = db
-    .transaction('dailyLogs', 'readwrite')
-    .objectStore('dailyLogs');
-  const existing = await storeGet<DailyLog>(store.index('date'), log.date);
-  const saved = { ...existing, ...log };
-  await storePut(store, saved);
+  // 讀取與寫入分開 transaction，避免 await 期間 transaction 自動提交。
+  const existing = await (async () => {
+    const s = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
+    return storeGet<DailyLog>(s.index('date'), log.date);
+  })();
+  const saved = { ...existing, ...log, id: log.id ?? existing?.id };
+  const wStore = db.transaction('dailyLogs', 'readwrite').objectStore('dailyLogs');
+  await storePut(wStore, saved);
 }
 
 // 取得特定日期的打卡記錄
@@ -197,11 +199,14 @@ export async function getAllNotifications(): Promise<AppNotification[]> {
 
 export async function markNotificationRead(createdAt: string): Promise<void> {
   const db = await openDB();
-  const tx = db.transaction('notifications', 'readwrite');
-  const store = tx.objectStore('notifications');
-  const all = await storeGetAll<AppNotification>(store);
+  const all = await (async () => {
+    const s = db.transaction('notifications', 'readonly').objectStore('notifications');
+    return storeGetAll<AppNotification>(s);
+  })();
   const target = all.find((n) => n.createdAt === createdAt);
   if (!target) return;
+  const tx = db.transaction('notifications', 'readwrite');
+  const store = tx.objectStore('notifications');
   await storePut(store, { ...target, read: true });
   await txComplete(tx);
 }

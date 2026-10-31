@@ -41,8 +41,9 @@ export function formatErrorResponse(err: unknown): ErrorResponse {
     };
   }
   if (err instanceof Error) {
+    const isProd = process.env.NODE_ENV === 'production';
     return {
-      error: err.message || '發生未知錯誤',
+      error: isProd ? '發生未知錯誤' : (err.message || '發生未知錯誤'),
       code: 'UNEXPECTED_ERROR',
       timestamp: Date.now(),
     };

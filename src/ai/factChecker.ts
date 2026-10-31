@@ -120,7 +120,8 @@ export function checkFactualClaims(answer: string, record: FactualBaziRecord): F
   // 3. 生肖（「屬鼠」緊鄰句式，真值 = 年支）
   const zodiacMatch = plain.match(new RegExp(`屬([${ZODIACS}])`));
   if (zodiacMatch) {
-    const actual = ZHI_TO_ZODIAC[record.bazi.year[1]] || null;
+    const yearZhi = record.bazi?.year?.length >= 2 ? record.bazi.year[1] : null;
+    const actual = yearZhi ? (ZHI_TO_ZODIAC[yearZhi] || null) : null;
     add({ type: 'zodiac', claimed: zodiacMatch[1], actual, verdict: actual && actual === zodiacMatch[1] ? 'correct' : 'wrong' });
   }
 
