@@ -6,5 +6,5 @@ export function sanitizeTermMarkup(value: string): string {
     return purifier.sanitize(value, { ALLOWED_TAGS: ['term'], ALLOWED_ATTR: [] });
   }
   // Node test fallback: the browser path above remains the authoritative sanitizer.
-  return value.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<(?!\/?term\b)[^>]*>/gi, '');
+  return value.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<(?!\/?term\b)[^>]*>/gi, '').replace(/<term\b[^>]*>/gi, '<term>');
 }

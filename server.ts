@@ -38,7 +38,12 @@ function corsMiddleware(req: express.Request, res: express.Response, next: expre
     res.status(403).json({ error: "Origin not allowed" });
     return;
   }
-  res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  // 只回應已驗證的 origin；空 allow-list 時不反射任意 origin，避免 permissive-by-default。
+  if (origin && (sameOrigin || ALLOWED_ORIGINS.includes(origin))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else if (ALLOWED_ORIGINS.length > 0) {
+    res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGINS[0]);
+  }
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key");
   if (req.method === "OPTIONS") {
@@ -170,6 +175,10 @@ function rateLimit(bucket: string = "chat") {
     if (!entry || now > entry.resetAt) {
       entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
       ipHits.set(key, entry);
+    }
+    // 避免 ipHits 無限增長：超過閾值時清理過期項目。
+    if (ipHits.size > 10000) {
+      for (const [k, v] of ipHits) if (now > v.resetAt) ipHits.delete(k);
     }
     entry.count++;
     if (entry.count > RATE_LIMIT_MAX) {
