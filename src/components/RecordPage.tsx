@@ -22,7 +22,6 @@ import {
   checkAutoSwitch,
   calculateAccuracy,
   CATEGORY_LABELS,
-  CATEGORY_EMOJIS,
   type CategoryKey,
 } from '../calibration';
 import { getPrimaryPattern, PatternScores } from '../pattern';
@@ -44,7 +43,7 @@ const RECORD_CATEGORY_OPTIONS: { key: CategoryKey; label: string }[] = (
   ] as CategoryKey[]
 ).map((key) => ({
   key,
-  label: `${CATEGORY_EMOJIS[key]} ${CATEGORY_LABELS[key]}`,
+  label: CATEGORY_LABELS[key],
 }));
 
 export default function RecordPage({
@@ -326,7 +325,7 @@ export default function RecordPage({
                                 : 'bg-white/5 border border-white/10 text-zen-muted hover:bg-green-500/10'
                             }`}
                           >
-                            😊 順利
+                            順利
                           </button>
                           <button
                             onClick={() =>
@@ -342,7 +341,7 @@ export default function RecordPage({
                                 : 'bg-white/5 border border-white/10 text-zen-muted hover:bg-red-500/10'
                             }`}
                           >
-                            😞 不順
+                            不順
                           </button>
                         </div>
                       </div>
@@ -442,10 +441,10 @@ export default function RecordPage({
                     dateStr: dStr,
                     emoji: log
                       ? Object.values(log).some((v) => v === 'good')
-                        ? '😊'
+                        ? '順'
                         : Object.values(log).some((v) => v === 'bad')
-                          ? '😞'
-                          : '😐'
+                          ? '不順'
+                          : '平'
                       : '',
                     active: i === 0,
                   });
@@ -557,7 +556,6 @@ export default function RecordPage({
                     ? '順利'
                     : editOutcome}
                 </span>
-                <span className="text-xs opacity-70">✏️</span>
               </button>
             </div>
             <label className="block text-xs font-medium text-zen-muted mb-3">

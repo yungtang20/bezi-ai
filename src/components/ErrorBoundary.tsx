@@ -22,10 +22,10 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
   public static getDerivedStateFromError(error: Error): State {
     const message = error.message || '';
-    const isChunkLoadFail = 
-      message.includes('Failed to fetch') || 
-      message.includes('dynamically imported') || 
-      message.includes('loading chunk') || 
+    const isChunkLoadFail =
+      message.includes('Failed to fetch') ||
+      message.includes('dynamically imported') ||
+      message.includes('loading chunk') ||
       message.includes('Loading CSS chunk');
 
     return {
@@ -56,17 +56,19 @@ export default class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="min-h-screen bg-zen-bg text-zen-text flex flex-col items-center justify-center p-6 text-center">
           <div className="max-w-md w-full bg-zen-card border border-white/10 rounded-[2rem] p-8 md:p-10 shadow-2xl space-y-6">
-            <div className="w-16 h-16 bg-zen-accent/10 text-zen-accent rounded-full flex items-center justify-center mx-auto text-3xl">
-              ⚠️
+            <div className="w-16 h-16 bg-zen-accent/10 text-zen-accent rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+              !
             </div>
-            
+
             <div className="space-y-2">
               <h1 className="text-xl md:text-2xl font-serif font-bold text-white">
-                {this.state.errorType === 'chunk_load' ? '系統檢測到版本更新' : '系統暫時出現異常'}
+                {this.state.errorType === 'chunk_load'
+                  ? '系統檢測到版本更新'
+                  : '系統暫時出現異常'}
               </h1>
               <p className="text-sm text-zinc-400">
-                {this.state.errorType === 'chunk_load' 
-                  ? '為了載入最新的系統功能與排盤特性，請重新整理頁面。' 
+                {this.state.errorType === 'chunk_load'
+                  ? '為了載入最新的系統功能與排盤特性，請重新整理頁面。'
                   : '排盤模組或介面元件載入時遭遇問題，您可以嘗試重新整理或重設快取。'}
               </p>
             </div>

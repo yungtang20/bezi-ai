@@ -1,15 +1,17 @@
 // src/components/dashboard/PatternSwitchNotice.tsx
 // 打卡導致格局切換時的因果鏈提示。
 // 顯示：哪一天打卡、什麼回饋、哪個分數變動、從哪個格局切到哪一個。
-import { useMemo, useState } from "react";
-import type { AppNotification } from "../../storage";
-import { getAllNotifications, markNotificationRead } from "../../storage";
+import { useMemo, useState } from 'react';
+import type { AppNotification } from '../../storage';
+import { getAllNotifications, markNotificationRead } from '../../storage';
 
 interface PatternSwitchNoticeProps {
   onDismiss?: () => void;
 }
 
-export default function PatternSwitchNotice({ onDismiss }: PatternSwitchNoticeProps) {
+export default function PatternSwitchNotice({
+  onDismiss,
+}: PatternSwitchNoticeProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,7 +23,7 @@ export default function PatternSwitchNotice({ onDismiss }: PatternSwitchNoticePr
   (async () => {
     try {
       const all = await getAllNotifications();
-      setNotifications(all.filter((n) => n.type === "pattern_switch"));
+      setNotifications(all.filter((n) => n.type === 'pattern_switch'));
     } catch {
       setNotifications([]);
     } finally {
@@ -48,7 +50,7 @@ export default function PatternSwitchNotice({ onDismiss }: PatternSwitchNoticePr
         </span>
         <div>
           <h4 className="text-xs font-bold text-amber-300 mb-0.5 flex items-center gap-1">
-            <span>📈</span> 格局自動調整
+            格局自動調整
           </h4>
           <p className="text-[10px] text-zinc-400 leading-relaxed">
             {latest.message}
@@ -69,7 +71,9 @@ export default function PatternSwitchNotice({ onDismiss }: PatternSwitchNoticePr
         </div>
         <div className="flex items-start gap-1.5 text-[10px]">
           <span className="text-zinc-500">切至格局：</span>
-          <span className="text-emerald-400 font-bold">{latest.newPattern}</span>
+          <span className="text-emerald-400 font-bold">
+            {latest.newPattern}
+          </span>
         </div>
         <p className="text-[10px] text-zinc-500 mt-1">
           系統依你近期打卡的實際感受（順利／不順），累積格局分數後自動切換。這是「越用越準」的回饋：你的生活體驗越準，命盤越貼近你。

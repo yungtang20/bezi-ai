@@ -44,16 +44,66 @@ const DI_ZHI = [
 
 // 十神系統
 const SHI_SHEN = [
-  { name: '比肩', relation: '同五行同陰陽', trait: '獨立、自信、競爭、自尊心強', category: '同我' },
-  { name: '劫財', relation: '同五行異陰陽', trait: '外向、冒險、不服輸、講義氣', category: '同我' },
-  { name: '食神', relation: '我生者同陰陽', trait: '溫和、才華、享受、口才佳', category: '我生' },
-  { name: '傷官', relation: '我生者異陰陽', trait: '聰明、叛逆、表現慾、創意強', category: '我生' },
-  { name: '偏財', relation: '我剋者同陰陽', trait: '大方、交際、投機、善理財', category: '我剋' },
-  { name: '正財', relation: '我剋者異陰陽', trait: '勤儉、保守、踏實、重信用', category: '我剋' },
-  { name: '七殺', relation: '剋我者同陰陽', trait: '果斷、威嚴、壓力、魄力', category: '剋我' },
-  { name: '正官', relation: '剋我者異陰陽', trait: '正直、責任、規矩、穩重', category: '剋我' },
-  { name: '偏印', relation: '生我者同陰陽', trait: '內直、多學、孤僻、直覺強', category: '生我' },
-  { name: '正印', relation: '生我者異陰陽', trait: '慈悲、智慧、依賴、有耐心', category: '生我' },
+  {
+    name: '比肩',
+    relation: '同五行同陰陽',
+    trait: '獨立、自信、競爭、自尊心強',
+    category: '同我',
+  },
+  {
+    name: '劫財',
+    relation: '同五行異陰陽',
+    trait: '外向、冒險、不服輸、講義氣',
+    category: '同我',
+  },
+  {
+    name: '食神',
+    relation: '我生者同陰陽',
+    trait: '溫和、才華、享受、口才佳',
+    category: '我生',
+  },
+  {
+    name: '傷官',
+    relation: '我生者異陰陽',
+    trait: '聰明、叛逆、表現慾、創意強',
+    category: '我生',
+  },
+  {
+    name: '偏財',
+    relation: '我剋者同陰陽',
+    trait: '大方、交際、投機、善理財',
+    category: '我剋',
+  },
+  {
+    name: '正財',
+    relation: '我剋者異陰陽',
+    trait: '勤儉、保守、踏實、重信用',
+    category: '我剋',
+  },
+  {
+    name: '七殺',
+    relation: '剋我者同陰陽',
+    trait: '果斷、威嚴、壓力、魄力',
+    category: '剋我',
+  },
+  {
+    name: '正官',
+    relation: '剋我者異陰陽',
+    trait: '正直、責任、規矩、穩重',
+    category: '剋我',
+  },
+  {
+    name: '偏印',
+    relation: '生我者同陰陽',
+    trait: '內直、多學、孤僻、直覺強',
+    category: '生我',
+  },
+  {
+    name: '正印',
+    relation: '生我者異陰陽',
+    trait: '慈悲、智慧、依賴、有耐心',
+    category: '生我',
+  },
 ];
 
 // 地支互動
@@ -160,46 +210,59 @@ const PATTERNS = [
 
 // 五行顏色映射
 const WX_COLORS: Record<string, string> = {
-  '木': '#22C55E',
-  '火': '#EF4444',
-  '土': '#F59E0B',
-  '金': '#94A3B8',
-  '水': '#3B82F6',
+  木: '#22C55E',
+  火: '#EF4444',
+  土: '#F59E0B',
+  金: '#94A3B8',
+  水: '#3B82F6',
 };
 
 // 十神分類顏色
 const SHI_SHEN_CATEGORY: Record<string, string> = {
-  '同我': 'text-cyan-400',
-  '我生': 'text-green-400',
-  '我剋': 'text-yellow-400',
-  '剋我': 'text-red-400',
-  '生我': 'text-purple-400',
+  同我: 'text-cyan-400',
+  我生: 'text-green-400',
+  我剋: 'text-yellow-400',
+  剋我: 'text-red-400',
+  生我: 'text-purple-400',
 };
 
-export default function FoundationPage({ primaryPattern, favorable, unfavorable }: Props) {
+export default function FoundationPage({
+  primaryPattern,
+  favorable,
+  unfavorable,
+}: Props) {
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
       {/* 頁面標題 */}
       <div className="text-center">
-        <h1 className="text-3xl font-serif font-bold display-title mb-3">八字基礎理論</h1>
-        <p className="text-sm text-zen-muted font-sans">天干地支、十神、格局、用神的完整知識體系</p>
-        <div className="gold-divider mt-4 mx-auto max-w-[200px]"></div>
+        <h1 className="text-3xl font-serif font-bold display-title mb-3">
+          八字基礎理論
+        </h1>
+        <p className="text-sm text-zen-muted font-sans">
+          天干地支、十神、格局、用神的完整知識體系
+        </p>
       </div>
 
       {/* 當前命盤格局資訊 */}
       {primaryPattern && (
         <div className="glass-card">
           <h3 className="text-lg font-serif font-bold text-zen-text mb-4 flex items-center gap-2">
-            <span>📊</span> 當前命盤格局
+            當前命盤格局
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-zen-surface/60 rounded-xl p-5 text-center border border-zen-border">
-              <span className="text-xs text-zen-muted block mb-2 font-sans">主要格局</span>
-              <span className="text-2xl font-bold text-zen-gold font-serif">{primaryPattern}</span>
+              <span className="text-xs text-zen-muted block mb-2 font-sans">
+                主要格局
+              </span>
+              <span className="text-2xl font-bold text-zen-gold font-serif">
+                {primaryPattern}
+              </span>
             </div>
             {favorable && favorable.length > 0 && (
               <div className="bg-zen-surface/60 rounded-xl p-5 text-center border border-zen-border">
-                <span className="text-xs text-zen-muted block mb-2 font-sans">喜用五行</span>
+                <span className="text-xs text-zen-muted block mb-2 font-sans">
+                  喜用五行
+                </span>
                 <div className="flex justify-center gap-3">
                   {favorable.map((el, i) => (
                     <span
@@ -215,7 +278,9 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
             )}
             {unfavorable && unfavorable.length > 0 && (
               <div className="bg-zen-surface/60 rounded-xl p-5 text-center border border-zen-border">
-                <span className="text-xs text-zen-muted block mb-2 font-sans">忌神五行</span>
+                <span className="text-xs text-zen-muted block mb-2 font-sans">
+                  忌神五行
+                </span>
                 <div className="flex justify-center gap-3">
                   {unfavorable.map((el, i) => (
                     <span
@@ -236,12 +301,14 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
       {/* 一、天干地支系統 */}
       <section className="glass-card">
         <h3 className="text-xl font-serif font-bold text-zen-text mb-6 flex items-center gap-2">
-          <span className="text-2xl">🌟</span> 天干地支系統
+          天干地支系統
         </h3>
 
         {/* 十天干 */}
         <div className="mb-8">
-          <h4 className="text-base font-serif font-bold text-zen-gold mb-4">十天干</h4>
+          <h4 className="text-base font-serif font-bold text-zen-gold mb-4">
+            十天干
+          </h4>
           <div className="overflow-x-auto">
             <table className="zebra-table text-sm">
               <thead>
@@ -255,14 +322,22 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
               <tbody>
                 {TIAN_GAN.map((item, idx) => (
                   <tr key={idx}>
-                    <td className="px-4 py-3 font-bold text-lg font-serif" style={{ color: WX_COLORS[item.element] }}>
+                    <td
+                      className="px-4 py-3 font-bold text-lg font-serif"
+                      style={{ color: WX_COLORS[item.element] }}
+                    >
                       {item.gan}
                     </td>
-                    <td className="px-4 py-3 font-sans" style={{ color: WX_COLORS[item.element] }}>
+                    <td
+                      className="px-4 py-3 font-sans"
+                      style={{ color: WX_COLORS[item.element] }}
+                    >
                       {item.element}
                     </td>
                     <td className="px-4 py-3 font-sans">{item.yinYang}</td>
-                    <td className="px-4 py-3 text-zen-muted font-sans">{item.desc}</td>
+                    <td className="px-4 py-3 text-zen-muted font-sans">
+                      {item.desc}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -272,7 +347,9 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
 
         {/* 十二地支 */}
         <div>
-          <h4 className="text-base font-serif font-bold text-zen-gold mb-4">十二地支</h4>
+          <h4 className="text-base font-serif font-bold text-zen-gold mb-4">
+            十二地支
+          </h4>
           <div className="overflow-x-auto">
             <table className="zebra-table text-sm">
               <thead>
@@ -287,15 +364,23 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
               <tbody>
                 {DI_ZHI.map((item, idx) => (
                   <tr key={idx}>
-                    <td className="px-4 py-3 font-bold text-lg font-serif" style={{ color: WX_COLORS[item.element] }}>
+                    <td
+                      className="px-4 py-3 font-bold text-lg font-serif"
+                      style={{ color: WX_COLORS[item.element] }}
+                    >
                       {item.zhi}
                     </td>
                     <td className="px-4 py-3 font-sans">{item.animal}</td>
-                    <td className="px-4 py-3 font-sans" style={{ color: WX_COLORS[item.element] }}>
+                    <td
+                      className="px-4 py-3 font-sans"
+                      style={{ color: WX_COLORS[item.element] }}
+                    >
                       {item.element}
                     </td>
                     <td className="px-4 py-3 font-sans">{item.yinYang}</td>
-                    <td className="px-4 py-3 text-zen-muted font-sans">{item.hour}</td>
+                    <td className="px-4 py-3 text-zen-muted font-sans">
+                      {item.hour}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -307,7 +392,7 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
       {/* 二、十神系統 */}
       <section className="glass-card">
         <h3 className="text-xl font-serif font-bold text-zen-text mb-3 flex items-center gap-2">
-          <span className="text-2xl">🔮</span> 十神系統
+          十神系統
         </h3>
         <p className="text-sm text-zen-muted mb-6 font-sans leading-relaxed">
           十神是日主（天干）與其他干支的關係，依「生剋」原則分為五類
@@ -327,13 +412,19 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
               {SHI_SHEN.map((item, idx) => (
                 <tr key={idx}>
                   <td className="px-4 py-3">
-                    <span className={`font-bold font-sans ${SHI_SHEN_CATEGORY[item.category] || 'text-zen-text'}`}>
+                    <span
+                      className={`font-bold font-sans ${SHI_SHEN_CATEGORY[item.category] || 'text-zen-text'}`}
+                    >
                       {item.category}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-bold text-zen-text font-serif">{item.name}</td>
+                  <td className="px-4 py-3 font-bold text-zen-text font-serif">
+                    {item.name}
+                  </td>
                   <td className="px-4 py-3 font-sans">{item.relation}</td>
-                  <td className="px-4 py-3 text-zen-muted font-sans">{item.trait}</td>
+                  <td className="px-4 py-3 text-zen-muted font-sans">
+                    {item.trait}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -343,7 +434,10 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
         {/* 十神分類說明 */}
         <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-3">
           {Object.entries(SHI_SHEN_CATEGORY).map(([cat, color]) => (
-            <div key={cat} className="bg-zen-surface/60 border border-zen-border rounded-xl p-4 text-center">
+            <div
+              key={cat}
+              className="bg-zen-surface/60 border border-zen-border rounded-xl p-4 text-center"
+            >
               <span className={`font-bold font-sans ${color}`}>{cat}</span>
             </div>
           ))}
@@ -353,20 +447,28 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
       {/* 三、地支互動 */}
       <section className="glass-card">
         <h3 className="text-xl font-serif font-bold text-zen-text mb-6 flex items-center gap-2">
-          <span className="text-2xl">🔗</span> 地支互動關係
+          地支互動關係
         </h3>
 
         <div className="space-y-8">
           {/* 六合 */}
           <div>
             <h4 className="text-base font-serif font-bold text-zen-jade mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-zen-jade"></span> 六合 — {ZHI_INTERACTIONS.liuhe.desc}
+              <span className="w-2 h-2 rounded-full bg-zen-jade"></span> 六合 —{' '}
+              {ZHI_INTERACTIONS.liuhe.desc}
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {ZHI_INTERACTIONS.liuhe.pairs.map((item, idx) => (
-                <div key={idx} className="bg-zen-jade-dim border border-zen-jade/20 rounded-xl p-4 hover:border-zen-jade/40 transition-all">
-                  <span className="text-lg font-bold text-zen-jade block mb-1 font-serif">{item.pair}</span>
-                  <span className="text-xs text-zen-muted font-sans">{item.meaning}</span>
+                <div
+                  key={idx}
+                  className="bg-zen-jade-dim border border-zen-jade/20 rounded-xl p-4 hover:border-zen-jade/40 transition-all"
+                >
+                  <span className="text-lg font-bold text-zen-jade block mb-1 font-serif">
+                    {item.pair}
+                  </span>
+                  <span className="text-xs text-zen-muted font-sans">
+                    {item.meaning}
+                  </span>
                 </div>
               ))}
             </div>
@@ -375,13 +477,21 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
           {/* 六沖 */}
           <div>
             <h4 className="text-base font-serif font-bold text-zen-rose mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-zen-rose"></span> 六沖 — {ZHI_INTERACTIONS.liuchong.desc}
+              <span className="w-2 h-2 rounded-full bg-zen-rose"></span> 六沖 —{' '}
+              {ZHI_INTERACTIONS.liuchong.desc}
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {ZHI_INTERACTIONS.liuchong.pairs.map((item, idx) => (
-                <div key={idx} className="bg-zen-rose-dim border border-zen-rose/20 rounded-xl p-4 hover:border-zen-rose/40 transition-all">
-                  <span className="text-lg font-bold text-zen-rose block mb-1 font-serif">{item.pair}</span>
-                  <span className="text-xs text-zen-muted font-sans">{item.meaning}</span>
+                <div
+                  key={idx}
+                  className="bg-zen-rose-dim border border-zen-rose/20 rounded-xl p-4 hover:border-zen-rose/40 transition-all"
+                >
+                  <span className="text-lg font-bold text-zen-rose block mb-1 font-serif">
+                    {item.pair}
+                  </span>
+                  <span className="text-xs text-zen-muted font-sans">
+                    {item.meaning}
+                  </span>
                 </div>
               ))}
             </div>
@@ -390,13 +500,21 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
           {/* 三刑 */}
           <div>
             <h4 className="text-base font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-400"></span> 三刑 — {ZHI_INTERACTIONS.sanxing.desc}
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span> 三刑 —{' '}
+              {ZHI_INTERACTIONS.sanxing.desc}
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {ZHI_INTERACTIONS.sanxing.pairs.map((item, idx) => (
-                <div key={idx} className="bg-amber-400/5 border border-amber-400/20 rounded-xl p-4 hover:border-amber-400/40 transition-all">
-                  <span className="text-lg font-bold text-amber-400 block mb-1 font-serif">{item.pair}</span>
-                  <span className="text-xs text-zen-muted font-sans">{item.meaning}</span>
+                <div
+                  key={idx}
+                  className="bg-amber-400/5 border border-amber-400/20 rounded-xl p-4 hover:border-amber-400/40 transition-all"
+                >
+                  <span className="text-lg font-bold text-amber-400 block mb-1 font-serif">
+                    {item.pair}
+                  </span>
+                  <span className="text-xs text-zen-muted font-sans">
+                    {item.meaning}
+                  </span>
                 </div>
               ))}
             </div>
@@ -405,13 +523,21 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
           {/* 三合 */}
           <div>
             <h4 className="text-base font-serif font-bold text-zen-sage mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-zen-sage"></span> 三合 — {ZHI_INTERACTIONS.sanhe.desc}
+              <span className="w-2 h-2 rounded-full bg-zen-sage"></span> 三合 —{' '}
+              {ZHI_INTERACTIONS.sanhe.desc}
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {ZHI_INTERACTIONS.sanhe.pairs.map((item, idx) => (
-                <div key={idx} className="bg-zen-sage/5 border border-zen-sage/20 rounded-xl p-4 hover:border-zen-sage/40 transition-all">
-                  <span className="text-lg font-bold text-zen-sage block mb-1 font-serif">{item.pair}</span>
-                  <span className="text-xs text-zen-muted font-sans">{item.meaning}</span>
+                <div
+                  key={idx}
+                  className="bg-zen-sage/5 border border-zen-sage/20 rounded-xl p-4 hover:border-zen-sage/40 transition-all"
+                >
+                  <span className="text-lg font-bold text-zen-sage block mb-1 font-serif">
+                    {item.pair}
+                  </span>
+                  <span className="text-xs text-zen-muted font-sans">
+                    {item.meaning}
+                  </span>
                 </div>
               ))}
             </div>
@@ -420,13 +546,21 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
           {/* 三會 */}
           <div>
             <h4 className="text-base font-serif font-bold text-purple-400 mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-purple-400"></span> 三會 — {ZHI_INTERACTIONS.sanhui.desc}
+              <span className="w-2 h-2 rounded-full bg-purple-400"></span> 三會
+              — {ZHI_INTERACTIONS.sanhui.desc}
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {ZHI_INTERACTIONS.sanhui.pairs.map((item, idx) => (
-                <div key={idx} className="bg-purple-400/5 border border-purple-400/20 rounded-xl p-4 hover:border-purple-400/40 transition-all">
-                  <span className="text-lg font-bold text-purple-400 block mb-1 font-serif">{item.pair}</span>
-                  <span className="text-xs text-zen-muted font-sans">{item.meaning}</span>
+                <div
+                  key={idx}
+                  className="bg-purple-400/5 border border-purple-400/20 rounded-xl p-4 hover:border-purple-400/40 transition-all"
+                >
+                  <span className="text-lg font-bold text-purple-400 block mb-1 font-serif">
+                    {item.pair}
+                  </span>
+                  <span className="text-xs text-zen-muted font-sans">
+                    {item.meaning}
+                  </span>
                 </div>
               ))}
             </div>
@@ -437,7 +571,7 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
       {/* 四、格局判定 */}
       <section className="glass-card">
         <h3 className="text-lg font-bold text-zen-text mb-4 flex items-center gap-2">
-          <span className="text-xl">⚖️</span> 格局判定
+          格局判定
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -446,7 +580,9 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
               key={idx}
               className={`${pattern.bgColor} border ${pattern.borderColor} rounded-xl p-4`}
             >
-              <h4 className={`text-lg font-bold ${pattern.color} mb-2`}>{pattern.name}</h4>
+              <h4 className={`text-lg font-bold ${pattern.color} mb-2`}>
+                {pattern.name}
+              </h4>
               <div className="space-y-2 text-sm">
                 <div>
                   <span className="text-zen-muted">條件：</span>
@@ -473,7 +609,7 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
       {/* 五、用神與喜忌 */}
       <section className="glass-card">
         <h3 className="text-lg font-bold text-zen-text mb-4 flex items-center gap-2">
-          <span className="text-xl">🎯</span> 用神與喜忌
+          用神與喜忌
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -505,13 +641,28 @@ export default function FoundationPage({ primaryPattern, favorable, unfavorable 
 
         {/* 五行補運建議 */}
         <div className="mt-4 bg-zen-sage/5 border border-zen-sage/20 rounded-xl p-4">
-          <h4 className="font-bold text-zen-sage mb-2">💡 五行補運方向</h4>
+          <h4 className="font-bold text-zen-sage mb-2">五行補運方向</h4>
           <ul className="text-sm text-zen-text space-y-1">
-            <li>• <span className="text-green-400">木</span>：東方、綠色、植物、文教、慈善</li>
-            <li>• <span className="text-red-400">火</span>：南方、紅色、能源、餐飲、科技</li>
-            <li>• <span className="text-yellow-400">土</span>：中央、黃色、房地產、農業、陶瓷</li>
-            <li>• <span className="text-slate-400">金</span>：西方、白色、金融、五金、法律</li>
-            <li>• <span className="text-blue-400">水</span>：北方、黑色、物流、旅遊、漁業</li>
+            <li>
+              • <span className="text-green-400">木</span>
+              ：東方、綠色、植物、文教、慈善
+            </li>
+            <li>
+              • <span className="text-red-400">火</span>
+              ：南方、紅色、能源、餐飲、科技
+            </li>
+            <li>
+              • <span className="text-yellow-400">土</span>
+              ：中央、黃色、房地產、農業、陶瓷
+            </li>
+            <li>
+              • <span className="text-slate-400">金</span>
+              ：西方、白色、金融、五金、法律
+            </li>
+            <li>
+              • <span className="text-blue-400">水</span>
+              ：北方、黑色、物流、旅遊、漁業
+            </li>
           </ul>
         </div>
       </section>

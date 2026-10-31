@@ -1,14 +1,14 @@
 // src/components/health/sections/TimelineSection.tsx
 // 歲運推演分析 — Health Page Section 3：大運與流年對先天健康弱項的推演。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
+import React from 'react';
 import {
   ContentSection,
   SectionGrammar,
   makeSection,
-} from "../../../components/shared";
-import type { DaYun } from "../../../dayun";
-import type { LiuNian } from "../../../dayun";
+} from '../../../components/shared';
+import type { DaYun } from '../../../dayun';
+import type { LiuNian } from '../../../dayun';
 const MAX_ACTIONS = 3;
 
 interface TimelineSectionProps {
@@ -46,7 +46,7 @@ export default function TimelineSection({
         <strong className="text-lg text-zen-text font-serif block">
           {currentDaYun
             ? `${currentDaYun.startAge}歲~${currentDaYun.startAge + 9}歲大運：${currentDaYun.ganZhi}`
-            : "查無大運"}
+            : '查無大運'}
         </strong>
         <span className="text-xs text-zen-muted block">
           大限管中局：奠定這十年健康修復與病理的背景底色。（歲數為大致區間，非判定因素）
@@ -69,13 +69,15 @@ export default function TimelineSection({
   );
 
   const daYunBadge = (
-    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-      daYunHealthDetails.code === "good"
-        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-        : daYunHealthDetails.code === "bad"
-          ? "bg-red-500/10 text-red-400 border border-red-500/20"
-          : "bg-white/5 text-zen-muted"
-    }`}>
+    <span
+      className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+        daYunHealthDetails.code === 'good'
+          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+          : daYunHealthDetails.code === 'bad'
+            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+            : 'bg-white/5 text-zen-muted'
+      }`}
+    >
       {daYunHealthDetails.status}
     </span>
   );
@@ -94,16 +96,16 @@ export default function TimelineSection({
       <ContentSection
         defaultOpen
         grammar={makeSection(
-          "當前大運與流年品質",
+          '當前大運與流年品質',
           2,
-          `目前大運 ${currentDaYun?.ganZhi ?? "—"}，今年流年 ${currentYear} 年。`,
+          `目前大運 ${currentDaYun?.ganZhi ?? '—'}，今年流年 ${currentYear} 年。`,
           {
             evidence: headerEvidence,
-            timeWindow: "以當前大運與流年為主，建議每三年複盤一次強弱變化。",
+            timeWindow: '以當前大運與流年為主，建議每三年複盤一次強弱變化。',
             actions: [
-              "確認當前大運宮位",
-              "對照流年好壞運",
-              "擇定化解與行動方向",
+              '確認當前大運宮位',
+              '對照流年好壞運',
+              '擇定化解與行動方向',
             ].slice(0, MAX_ACTIONS),
           }
         )}
@@ -113,7 +115,7 @@ export default function TimelineSection({
       <ContentSection
         defaultOpen
         grammar={makeSection(
-          "子項一：大運 x 先天健康狀況",
+          '子項一：大運 x 先天健康狀況',
           3,
           `大運健康推演判定為「${daYunHealthDetails.status}」。`,
           {
@@ -130,14 +132,14 @@ export default function TimelineSection({
                 </p>
               </div>
             ),
-            timeWindow: "適用於當前十年大運週期，重點觀察首三年與交運年份。",
+            timeWindow: '適用於當前十年大運週期，重點觀察首三年與交運年份。',
             actions: [
-              "記錄大運起運與交運年份",
-              "對照先天弱項五行是否受克",
-              "安排定期健康檢查",
+              '記錄大運起運與交運年份',
+              '對照先天弱項五行是否受克',
+              '安排定期健康檢查',
             ].slice(0, MAX_ACTIONS),
             uncertainty:
-              "大運健康推演依命盤最弱五行與大運干支五行屬性推論，非醫療診斷。",
+              '大運健康推演依命盤最弱五行與大運干支五行屬性推論，非醫療診斷。',
           }
         )}
       />
@@ -146,7 +148,7 @@ export default function TimelineSection({
       <ContentSection
         defaultOpen
         grammar={makeSection(
-          "子項二：大運 x 流年雙重干涉",
+          '子項二：大運 x 流年雙重干涉',
           3,
           `歲運合演結構：【${combinedYearlyAnalysis.phrase}】。`,
           {
@@ -160,23 +162,23 @@ export default function TimelineSection({
                 </p>
               </div>
             ),
-            timeWindow: "以當前流年為主效年份，建議每季觀察身體感受變化。",
+            timeWindow: '以當前流年為主效年份，建議每季觀察身體感受變化。',
             actions: [
               primaryWeak
                 ? `特別留意${primaryWeak}氣對應器官感受`
-                : "留意身體微小變化",
-              "保持充足睡眠，忌熬夜暴食",
-              "如感不適請尋求專業醫療協助",
+                : '留意身體微小變化',
+              '保持充足睡眠，忌熬夜暴食',
+              '如感不適請尋求專業醫療協助',
             ].slice(0, MAX_ACTIONS),
             uncertainty:
-              "歲運合演為命理象徵推論，實際健康狀態仍請以專業醫療判斷為準。",
+              '歲運合演為命理象徵推論，實際健康狀態仍請以專業醫療判斷為準。',
           }
         )}
       />
 
       <div className="bg-amber-500/5 border border-amber-500/10 rounded-lg p-3 text-sm text-amber-200 leading-relaxed mb-4">
         <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 mb-1 uppercase tracking-wider block">
-          <span>⚠</span> 不確定處
+          不確定處
         </span>
         歲運推演依命盤五行生剋與大運流年推斷，實際走勢仍受個人選擇與環境影響，僅供參考，非斷言。
       </div>

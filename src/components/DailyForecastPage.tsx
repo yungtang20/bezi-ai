@@ -16,7 +16,6 @@ import { submitCheckIn } from '../lib/checkInSubmit';
 import { useCheckInStats } from '../hooks/useCheckInStats';
 import {
   CATEGORY_LABELS,
-  CATEGORY_EMOJIS,
   DAY_TYPE_FIELDS,
   isBadOutcome,
   isGoodOutcome,
@@ -35,9 +34,9 @@ import {
   ReferenceLine,
 } from 'recharts';
 
-// 六大領域打卡選項：label/emoji 一律引用 calibration 的單一真實來源（CATEGORY_LABELS/CATEGORY_EMOJIS），
-// 避免各頁面各寫一份名稱（曾出現「金錢/家人」與「財運/家庭」並存導致 banner 與表單對不上）。
-const CATEGORY_OPTIONS: { key: CategoryKey; label: string; emoji: string }[] = (
+// 六大領域打卡選項：label 一律引用 calibration 的單一真實來源（CATEGORY_LABELS），
+// 避免各處各寫一份名稱（曾出現「金錢/家人」與「財運/家庭」並存）。
+const CATEGORY_OPTIONS: { key: CategoryKey; label: string }[] = (
   [
     'health',
     'career',
@@ -48,8 +47,7 @@ const CATEGORY_OPTIONS: { key: CategoryKey; label: string; emoji: string }[] = (
   ] as CategoryKey[]
 ).map((key) => ({
   key,
-  label: `${CATEGORY_EMOJIS[key]} ${CATEGORY_LABELS[key]}`,
-  emoji: '😊',
+  label: CATEGORY_LABELS[key],
 }));
 
 interface Props {
@@ -376,7 +374,7 @@ export default function DailyForecastPage({
                               : 'bg-white/5 border border-white/10 text-zen-muted hover:bg-green-500/10'
                           }`}
                         >
-                          😊 順利
+                          順利
                         </button>
                         <button
                           onClick={() =>
@@ -391,7 +389,7 @@ export default function DailyForecastPage({
                               : 'bg-white/5 border border-white/10 text-zen-muted hover:bg-red-500/10'
                           }`}
                         >
-                          😞 不順
+                          不順
                         </button>
                       </div>
                     </div>
@@ -416,7 +414,6 @@ export default function DailyForecastPage({
             {isSubmitted && (
               <div className="flex flex-col items-center justify-center p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mt-2">
                 <div className="flex items-center text-emerald-400 font-medium mb-3">
-                  <span className="text-xl mr-2">✅</span>{' '}
                   {selectedDateStr === new Date().toISOString().split('T')[0]
                     ? '今日'
                     : '這天'}
@@ -430,8 +427,7 @@ export default function DailyForecastPage({
                 </button>
                 {streak.current > 0 && (
                   <div className="text-sm text-orange-300 mt-3">
-                    🔥 已連續打卡 {streak.current} 天（最長 {streak.longest}{' '}
-                    天）
+                    已連續打卡 {streak.current} 天（最長 {streak.longest} 天）
                   </div>
                 )}
               </div>
@@ -447,7 +443,7 @@ export default function DailyForecastPage({
           <h2 className="text-xl font-bold text-zen-text">近期紀錄吻合度</h2>
           {streak.current > 0 && (
             <span className="text-xs px-2 py-1 rounded-lg bg-orange-500/15 text-orange-300 border border-orange-400/30">
-              🔥 連續 {streak.current} 天
+              連續 {streak.current} 天
             </span>
           )}
         </div>

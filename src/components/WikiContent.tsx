@@ -2,13 +2,42 @@ import React, { useState, useEffect, memo } from 'react';
 import DOMPurify from 'dompurify';
 
 interface WikiContentProps {
-  category: 'health' | 'wealth' | 'career' | 'romance' | 'fengshui' | 'foundation' | 'dayun' | 'classics';
+  category:
+    | 'health'
+    | 'wealth'
+    | 'career'
+    | 'romance'
+    | 'fengshui'
+    | 'foundation'
+    | 'dayun'
+    | 'classics';
 }
 
 // [AI MOD] XSS 防護 — 允許的標籤白名單（與 parseMarkdown 產出的標籤集合對齊）
 const ALLOWED_TAGS = [
-  'h1', 'h2', 'h3', 'p', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
-  'li', 'ul', 'ol', 'strong', 'em', 'br', 'a', 'span', 'div', 'code', 'pre', 'blockquote',
+  'h1',
+  'h2',
+  'h3',
+  'p',
+  'hr',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'th',
+  'td',
+  'li',
+  'ul',
+  'ol',
+  'strong',
+  'em',
+  'br',
+  'a',
+  'span',
+  'div',
+  'code',
+  'pre',
+  'blockquote',
 ];
 
 // [AI MOD] HTML 消毒函數 — 改用 battle-tested 的 DOMPurify，取代易被繞過的手寫 regex。
@@ -67,24 +96,34 @@ function parseMarkdown(md: string): string {
 
     // Table row
     if (line.trim().startsWith('|')) {
-      const cells = line.trim().split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+      const cells = line
+        .trim()
+        .split('|')
+        .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
 
       // Check if separator row (e.g., |---|---|)
-      if (cells.every(cell => /^[\s-:]+$/.test(cell))) {
+      if (cells.every((cell) => /^[\s-:]+$/.test(cell))) {
         continue;
       }
 
       if (!inTable) {
-        html += '<table class="w-full border-collapse border border-zinc-700 text-sm">\n<thead>\n<tr>\n';
+        html +=
+          '<table class="w-full border-collapse border border-zinc-700 text-sm">\n<thead>\n<tr>\n';
         html += cells
-          .map(cell => `<th class="bg-zen-card px-3 py-2 text-left text-zen-sage font-semibold border border-zinc-700">${cell.trim()}</th>`)
+          .map(
+            (cell) =>
+              `<th class="bg-zen-card px-3 py-2 text-left text-zen-sage font-semibold border border-zinc-700">${cell.trim()}</th>`
+          )
           .join('\n');
         html += '</tr>\n</thead>\n<tbody>\n';
         inTable = true;
       } else {
         html += '<tr>\n';
         html += cells
-          .map(cell => `<td class="px-3 py-2 border border-zinc-700 text-zinc-300">${cell.trim()}</td>`)
+          .map(
+            (cell) =>
+              `<td class="px-3 py-2 border border-zinc-700 text-zinc-300">${cell.trim()}</td>`
+          )
           .join('\n');
         html += '</tr>\n';
       }
@@ -123,7 +162,9 @@ function parseMarkdown(md: string): string {
   return html;
 }
 
-const WikiContent: React.FC<WikiContentProps> = memo(function WikiContent({ category }) {
+const WikiContent: React.FC<WikiContentProps> = memo(function WikiContent({
+  category,
+}) {
   const [html, setHtml] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +183,9 @@ const WikiContent: React.FC<WikiContentProps> = memo(function WikiContent({ cate
         const response = await fetch(`/已整理/${filename}`);
 
         if (!response.ok) {
-          throw new Error(`無法載入檔案: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `無法載入檔案: ${response.status} ${response.statusText}`
+          );
         }
 
         const text = await response.text();

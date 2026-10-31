@@ -215,7 +215,7 @@ export default function SynastryPage({
                 >
                   <div>
                     <span className="font-bold text-white text-sm">
-                      {p.name} {p.chart.gender === '男' ? '👦' : '👧'}
+                      {p.name} {p.chart.gender === '男' ? '' : ''}
                     </span>
                     <p className="text-sm text-zinc-500 mt-0.5">
                       {p.relationship}・{p.chart.dayMaster}日主
@@ -292,7 +292,7 @@ export default function SynastryPage({
                         <div className="bg-amber-950/10 p-5 rounded-2xl border border-amber-900/30 space-y-4 shadow-lg shadow-amber-900/5">
                           <h4 className="font-bold text-amber-400 text-sm flex items-center justify-between gap-2">
                             <span>
-                              <span className="mr-2">✨</span> 五行磁場交流
+                              <span className="mr-2"></span> 五行磁場交流
                               (契合度 {analysis.scoreData.score}%)
                             </span>
                             <button
@@ -331,7 +331,7 @@ export default function SynastryPage({
 
                         <div className="bg-pink-950/10 p-5 rounded-2xl border border-pink-900/30 space-y-4 shadow-lg shadow-pink-900/5">
                           <h4 className="font-bold text-pink-400 text-sm flex items-center gap-2">
-                            <span>💘</span> 夥伴合盤與緣分牽絆
+                            夥伴合盤與緣分牽絆
                           </h4>
                           <div className="space-y-3">
                             {analysis.spouseE && (
@@ -402,7 +402,7 @@ export default function SynastryPage({
                           ] && (
                             <div className="bg-blue-950/10 p-5 rounded-2xl border border-blue-900/30 space-y-4 shadow-lg shadow-blue-900/5">
                               <h4 className="font-bold text-blue-400 text-sm flex items-center gap-2">
-                                <span>🤝</span> 夥伴相處策略與個性提醒 (對方的{' '}
+                                夥伴相處策略與個性提醒 (對方的{' '}
                                 {analysis.pMaxGod})
                               </h4>
                               <div className="space-y-3">
@@ -434,7 +434,7 @@ export default function SynastryPage({
                                 {analysis.familyRoleInfo && (
                                   <div className="bg-purple-950/20 p-3.5 rounded-xl border border-purple-900/30">
                                     <div className="text-[13px] font-bold text-purple-300 mb-2">
-                                      🏠 家庭角色磁場與相處之道
+                                      家庭角色磁場與相處之道
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
                                       <div className="bg-black/40 border border-purple-900/20 rounded-lg p-3">
@@ -466,7 +466,7 @@ export default function SynastryPage({
                                 {analysis.matchingData && (
                                   <div className="bg-cyan-950/20 p-3.5 rounded-xl border border-cyan-900/30">
                                     <div className="text-[13px] font-bold text-cyan-300 mb-2">
-                                      🧑‍🤝‍🧑 朋友/合作適配度與建議 (
+                                      ‍‍ 朋友/合作適配度與建議 (
                                       {analysis.pMaxGodType})
                                     </div>
                                     <div className="space-y-2 mt-2">

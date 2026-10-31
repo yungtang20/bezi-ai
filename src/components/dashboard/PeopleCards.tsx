@@ -12,10 +12,10 @@ interface Props {
 }
 
 const RELATION_LABEL: Record<string, string> = {
-  '家人': '家人',
-  '伴侶': '伴侶',
-  '合作夥伴': '合作夥伴',
-  '其他': '其他',
+  家人: '家人',
+  伴侶: '伴侶',
+  合作夥伴: '合作夥伴',
+  其他: '其他',
 };
 
 export default function PeopleCards({ onLoad }: Props) {
@@ -38,8 +38,10 @@ export default function PeopleCards({ onLoad }: Props) {
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
     let formatted = digits;
-    if (digits.length >= 7) formatted = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
-    else if (digits.length >= 5) formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    if (digits.length >= 7)
+      formatted = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+    else if (digits.length >= 5)
+      formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`;
     setDate(formatted);
   };
 
@@ -49,7 +51,12 @@ export default function PeopleCards({ onLoad }: Props) {
   };
 
   const resetForm = () => {
-    setName(''); setGender('female'); setDate(''); setTime(''); setCity(''); setError('');
+    setName('');
+    setGender('female');
+    setDate('');
+    setTime('');
+    setCity('');
+    setError('');
     setIsAdding(false);
   };
 
@@ -65,7 +72,15 @@ export default function PeopleCards({ onLoad }: Props) {
     }
     const [y, m, d] = date.split('-').map(Number);
     try {
-      const chart = calculateChart(y, m, d, hour, gender === 'male' ? '男' : '女', false, cityLongitude(city));
+      const chart = calculateChart(
+        y,
+        m,
+        d,
+        hour,
+        gender === 'male' ? '男' : '女',
+        false,
+        cityLongitude(city)
+      );
       const person: PartnerChart = {
         id: Date.now().toString(),
         name: name.trim(),
@@ -94,7 +109,9 @@ export default function PeopleCards({ onLoad }: Props) {
   return (
     <div className="pt-1 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] text-zinc-500">家人成員保存在此裝置；點「載入重排」可檢視該成員的完整命盤。</p>
+        <p className="text-[11px] text-zinc-500">
+          家人成員保存在此裝置；點「載入重排」可檢視該成員的完整命盤。
+        </p>
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
@@ -185,7 +202,9 @@ export default function PeopleCards({ onLoad }: Props) {
       )}
 
       {people.length === 0 && !isAdding && (
-        <p className="text-[11px] text-zinc-600 text-center py-2">尚無家人成員，點上方「+ 新增成員」開始。</p>
+        <p className="text-[11px] text-zinc-600 text-center py-2">
+          尚無家人成員，點上方「+ 新增成員」開始。
+        </p>
       )}
 
       {people.map((p) => (
@@ -197,12 +216,18 @@ export default function PeopleCards({ onLoad }: Props) {
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-bold text-zinc-100">{p.name}</span>
               <span className="text-[10px] text-zinc-500">
-                {RELATION_LABEL[p.relationship] ?? p.relationship} · {p.gender} · {p.birthDate.replace(/-/g, '/')} {p.birthTime.padStart(2, '0')}:00
+                {RELATION_LABEL[p.relationship] ?? p.relationship} · {p.gender}{' '}
+                · {p.birthDate.replace(/-/g, '/')}{' '}
+                {p.birthTime.padStart(2, '0')}:00
                 {p.birthCity ? `（${p.birthCity}）` : ''}
               </span>
             </div>
             <div className="text-[11px] text-zinc-500 font-serif mt-0.5">
-              {p.chart.year.gan}{p.chart.year.zhi} {p.chart.month.gan}{p.chart.month.zhi} {p.chart.day.gan}{p.chart.day.zhi} {p.chart.hour.gan ? p.chart.hour.gan + p.chart.hour.zhi : ''}
+              {p.chart.year.gan}
+              {p.chart.year.zhi} {p.chart.month.gan}
+              {p.chart.month.zhi} {p.chart.day.gan}
+              {p.chart.day.zhi}{' '}
+              {p.chart.hour.gan ? p.chart.hour.gan + p.chart.hour.zhi : ''}
             </div>
           </div>
           <div className="flex gap-1.5 shrink-0">

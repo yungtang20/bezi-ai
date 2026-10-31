@@ -1,15 +1,15 @@
 // src/components/romance/sections/TimelineSection.tsx
 // 歲運推與化解 — 大運流年感情好壞與化解建議。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
-import type { DaYun, LiuNian, PatternResult } from "@bezi/core";
+import React from 'react';
+import type { DaYun, LiuNian, PatternResult } from '@bezi/core';
 import {
   ContentSection,
   ReasoningCard,
   UncertaintyNotice,
   makeSection,
-} from "../../../components/shared";
-import { LECTURE_DATA, getTimelineGuideline } from "../../../data";
+} from '../../../components/shared';
+import { LECTURE_DATA, getTimelineGuideline } from '../../../data';
 
 const MAX_ACTIONS = 3;
 
@@ -23,7 +23,7 @@ interface TimelineSectionProps {
   daYunList: DaYun[];
   currentDaYun: DaYun | undefined;
   currentLiuNian: LiuNian;
-  remedyKey: "身強" | "身弱_平衡" | "身弱_不平衡";
+  remedyKey: '身強' | '身弱_平衡' | '身弱_不平衡';
   romanceRemedy: string;
   isCrisis: boolean;
   isGoodForBreakup: boolean;
@@ -47,29 +47,30 @@ export default function TimelineSection({
   dayMasterElement,
 }: TimelineSectionProps) {
   const daYunQuality = currentDaYun
-    ? getTimelineGuideline(currentDaYun.tenGod, patternLabel, "good") ||
-      getTimelineGuideline(currentDaYun.tenGod, patternLabel, "bad")
+    ? getTimelineGuideline(currentDaYun.tenGod, patternLabel, 'good') ||
+      getTimelineGuideline(currentDaYun.tenGod, patternLabel, 'bad')
     : undefined;
 
   const currentLiuNianTenGod = currentLiuNian.relation;
   const liuNianQuality = currentLiuNianTenGod
-    ? getTimelineGuideline(currentLiuNianTenGod, patternLabel, "good") ||
-      getTimelineGuideline(currentLiuNianTenGod, patternLabel, "bad")
+    ? getTimelineGuideline(currentLiuNianTenGod, patternLabel, 'good') ||
+      getTimelineGuideline(currentLiuNianTenGod, patternLabel, 'bad')
     : undefined;
 
-  const timing = LECTURE_DATA.PEACH_BLOSSOM_TIMING[isMale ? "男" : "女"]?.[
-    dayMasterElement as keyof typeof LECTURE_DATA.PEACH_BLOSSOM_TIMING["男"]
-  ];
+  const timing =
+    LECTURE_DATA.PEACH_BLOSSOM_TIMING[isMale ? '男' : '女']?.[
+      dayMasterElement as keyof (typeof LECTURE_DATA.PEACH_BLOSSOM_TIMING)['男']
+    ];
 
   return (
     <div className="space-y-6">
       <ContentSection
         defaultOpen
         grammar={makeSection(
-          "當前大運與流年感情運勢",
+          '當前大運與流年感情運勢',
           2,
-          `當前年齡 ${currentAge} 歲（${currentYear} 年），處於 ${currentDaYun?.ganZhi ?? "—"} 大運，流年 ${currentLiuNian.ganZhi ?? "—"}${
-            currentDaYun ? `，十神為 ${currentDaYun.tenGod}` : ""
+          `當前年齡 ${currentAge} 歲（${currentYear} 年），處於 ${currentDaYun?.ganZhi ?? '—'} 大運，流年 ${currentLiuNian.ganZhi ?? '—'}${
+            currentDaYun ? `，十神為 ${currentDaYun.tenGod}` : ''
           }。`,
           {
             evidence: (
@@ -78,25 +79,29 @@ export default function TimelineSection({
                   <p className="text-xs text-zen-text">
                     {currentDaYun
                       ? `起運年齡 ${currentDaYun.startAge}–${currentDaYun.endAge} 歲，${currentDaYun.ganZhi}，十神 ${currentDaYun.tenGod}，五行 ${currentDaYun.element}。`
-                      : "暫無大運數據。"}
+                      : '暫無大運數據。'}
                   </p>
                   {daYunQuality ? (
                     <p className="text-xs text-zen-muted mt-1">
                       {daYunQuality.impact}
-                      {daYunQuality.remedy ? ` 化解：${daYunQuality.remedy}` : ""}
+                      {daYunQuality.remedy
+                        ? ` 化解：${daYunQuality.remedy}`
+                        : ''}
                     </p>
                   ) : null}
                 </ReasoningCard>
                 <ReasoningCard label="流年" variant="muted">
                   <p className="text-xs text-zen-text">
-                    {currentYear} 年 ${currentLiuNian.ganZhi ?? "—"}，十神 ${currentLiuNianTenGod ?? "—"}, 五行 ${
-                      currentLiuNian.element ?? "—"
-                    }。
+                    {currentYear} 年 ${currentLiuNian.ganZhi ?? '—'}，十神 $
+                    {currentLiuNianTenGod ?? '—'}, 五行 $
+                    {currentLiuNian.element ?? '—'}。
                   </p>
                   {liuNianQuality ? (
                     <p className="text-xs text-zen-muted mt-1">
                       {liuNianQuality.impact}
-                      {liuNianQuality.remedy ? ` 化解：${liuNianQuality.remedy}` : ""}
+                      {liuNianQuality.remedy
+                        ? ` 化解：${liuNianQuality.remedy}`
+                        : ''}
                     </p>
                   ) : null}
                 </ReasoningCard>
@@ -109,32 +114,35 @@ export default function TimelineSection({
                 ) : null}
               </div>
             ),
-            timeWindow: `當前大運 ${currentDaYun?.startAge ?? "—"}–${currentDaYun?.endAge ?? "—"} 歲，流年 ${currentYear} 年。`,
+            timeWindow: `當前大運 ${currentDaYun?.startAge ?? '—'}–${currentDaYun?.endAge ?? '—'} 歲，流年 ${currentYear} 年。`,
             actions: [
-              "確認當前大運十神與五行",
-              "對照流年好壞運指引",
-              "採用對應化解建議",
+              '確認當前大運十神與五行',
+              '對照流年好壞運指引',
+              '採用對應化解建議',
             ].slice(0, MAX_ACTIONS),
           }
         )}
       />
       <ContentSection
         grammar={makeSection(
-          "桃花時機與補運",
+          '桃花時機與補運',
           3,
-          `日主 ${dayMasterElement} 命（${isMale ? "男" : "女"}命），${romanceRemedy}，桃花時機參考官殺流年。`,
+          `日主 ${dayMasterElement} 命（${isMale ? '男' : '女'}命），${romanceRemedy}，桃花時機參考官殺流年。`,
           {
             evidence: (
               <div className="space-y-2">
                 <ReasoningCard label="桃花補運" variant="default">
                   <p className="text-xs text-zen-text leading-relaxed">
-                    {LECTURE_DATA.ROMANCE_REMEDY[remedyKey]?.[isMale ? "男" : "女"] ?? romanceRemedy}
+                    {LECTURE_DATA.ROMANCE_REMEDY[remedyKey]?.[
+                      isMale ? '男' : '女'
+                    ] ?? romanceRemedy}
                   </p>
                 </ReasoningCard>
                 {timing ? (
                   <ReasoningCard label="桃花流年指引" variant="muted">
                     <p className="text-xs text-zen-text">
-                      桃花元素：{timing.element}；天干 {timing.gans.join("、")}；地支 {timing.zhis.join("、")}。
+                      桃花元素：{timing.element}；天干 {timing.gans.join('、')}
+                      ；地支 {timing.zhis.join('、')}。
                     </p>
                   </ReasoningCard>
                 ) : null}
@@ -154,11 +162,11 @@ export default function TimelineSection({
                 ) : null}
               </div>
             ),
-            timeWindow: "依當前大運與流年五行判斷，建議每三年複盤一次。",
+            timeWindow: '依當前大運與流年五行判斷，建議每三年複盤一次。',
             actions: [
-              "確認當前桃花補運方向",
-              "對照桃花流年天干地支",
-              "評估危機與斷緣時機",
+              '確認當前桃花補運方向',
+              '對照桃花流年天干地支',
+              '評估危機與斷緣時機',
             ].slice(0, MAX_ACTIONS),
           }
         )}

@@ -218,16 +218,6 @@ export const CATEGORY_LABELS: Record<CategoryKey, string> = {
   friends: '人際',
 };
 
-// 各領域顯示 emoji（與 CATEGORY_LABELS 配套；label 一律用 CATEGORY_LABELS，emoji 用此表）
-export const CATEGORY_EMOJIS: Record<CategoryKey, string> = {
-  health: '🏃',
-  career: '💼',
-  romance: '❤️',
-  wealth: '💰',
-  family: '🤝',
-  friends: '🙌',
-};
-
 export const CATEGORY_ORDER: CategoryKey[] = [
   'wealth',
   'career',

@@ -397,7 +397,7 @@ test('E. 三日連續打卡：streak 3 天 + 吻合度報告 + 修改記錄', as
       await page.getByRole('button', { name: '前一天' }).click();
       await page.waitForTimeout(400);
     }
-    await page.getByRole('button', { name: '😊 順利' }).first().click();
+    await page.getByRole('button', { name: '順利' }).first().click();
     await page.getByRole('button', { name: /記錄(今天|這天)的能量/ }).click();
     await expect(page.getByText(/已記錄/)).toBeVisible({ timeout: 10000 });
   }
@@ -412,7 +412,7 @@ test('E. 三日連續打卡：streak 3 天 + 吻合度報告 + 修改記錄', as
 
   // 修改記錄（在已打卡的日子改答案）
   await page.getByRole('button', { name: '修改記錄' }).click();
-  await page.getByRole('button', { name: '😞 不順' }).first().click();
+  await page.getByRole('button', { name: '不順' }).first().click();
   await page.getByRole('button', { name: /記錄(今天|這天)的能量/ }).click();
   await expect(page.getByText(/已記錄/)).toBeVisible({ timeout: 10000 });
   expect(errs, `page errors: ${errs.join(' | ')}`).toHaveLength(0);

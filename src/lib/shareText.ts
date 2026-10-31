@@ -33,20 +33,25 @@ export function buildDailyShareText(info: DailyShareInfo, url: string): string {
       : `${info.dateLabel}　今日方向：${info.outcomeLabel}`,
     info.advice,
   ];
-  if (info.favorable.length > 0) lines.push(`喜用五行：${info.favorable.join('、')}`);
-  lines.push(`👉 立即排我的命盤：${url}`);
-  return lines.filter(line => line.trim().length > 0).join('\n');
+  if (info.favorable.length > 0)
+    lines.push(`喜用五行：${info.favorable.join('、')}`);
+  lines.push(`立即排我的命盤：${url}`);
+  return lines.filter((line) => line.trim().length > 0).join('\n');
 }
 
 /** 合盤分享文案 */
-export function buildSynastryShareText(info: SynastryShareInfo, url: string): string {
+export function buildSynastryShareText(
+  info: SynastryShareInfo,
+  url: string
+): string {
   const lines = [
     `【${SHARE_BRAND}】${info.myName} × ${info.partnerName} 合盤契合度 ${info.score}%`,
   ];
-  if (info.myDayMaster && info.partnerDayMaster) lines.push(`日主：${info.myDayMaster} × ${info.partnerDayMaster}`);
+  if (info.myDayMaster && info.partnerDayMaster)
+    lines.push(`日主：${info.myDayMaster} × ${info.partnerDayMaster}`);
   if (info.topFactor) lines.push(`${info.topFactor}：${info.topDesc || ''}`);
-  lines.push(`👉 測試我們的合盤：${url}`);
-  return lines.filter(line => line.trim().length > 0).join('\n');
+  lines.push(`測試我們的合盤：${url}`);
+  return lines.filter((line) => line.trim().length > 0).join('\n');
 }
 
 /** LINE 分享連結（免 API key） */

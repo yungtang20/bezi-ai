@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BaziChart } from '../paipan';
-import { PatternScores, getPrimaryPattern, determinePattern, getFavorableElements } from '../pattern';
+import {
+  PatternScores,
+  getPrimaryPattern,
+  determinePattern,
+  getFavorableElements,
+} from '../pattern';
 import HealthPage from './HealthPage';
 import WealthPage from './WealthPage';
 import CareerPage from './CareerPage';
@@ -28,36 +33,52 @@ interface Props {
 }
 
 const TABS = [
-  { key: 'health', label: '🌿 健康篇', shortLabel: '健康' },
-  { key: 'wealth', label: '💰 財富篇', shortLabel: '財富' },
-  { key: 'career', label: '💼 事業篇', shortLabel: '事業' },
-  { key: 'friends', label: '🤝 人際篇', shortLabel: '人際' },
-  { key: 'family', label: '🏠 家人篇', shortLabel: '家人' },
-  { key: 'romance', label: '💕 姻緣篇', shortLabel: '姻緣' },
+  { key: 'health', label: '健康篇', shortLabel: '健康' },
+  { key: 'wealth', label: '財富篇', shortLabel: '財富' },
+  { key: 'career', label: '事業篇', shortLabel: '事業' },
+  { key: 'friends', label: '人際篇', shortLabel: '人際' },
+  { key: 'family', label: '家人篇', shortLabel: '家人' },
+  { key: 'romance', label: '姻緣篇', shortLabel: '姻緣' },
 ] as const;
 
-export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props) {
-  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('currentSpecialtyTab') || 'health');
+export default function SpecialtyNav({
+  chart,
+  scores,
+  name,
+  onNavigate,
+}: Props) {
+  const [activeTab, setActiveTab] = useState(
+    () => sessionStorage.getItem('currentSpecialtyTab') || 'health'
+  );
   // [AI MOD] 使用 Partner 型別取代 any[]
   const [partners, setPartners] = useState<Partner[]>([]);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     sessionStorage.removeItem('currentSpecialtyTab');
-    getPartners().then(list => {
-      setPartners(list);
-    }).catch(() => {});
+    getPartners()
+      .then((list) => {
+        setPartners(list);
+      })
+      .catch(() => {});
   }, []);
 
   if (!chart || !scores) {
-    return <div className="p-8 text-center text-zen-muted">缺少排盤資料，請返回首頁重新測算。</div>;
+    return (
+      <div className="p-8 text-center text-zen-muted">
+        缺少排盤資料，請返回首頁重新測算。
+      </div>
+    );
   }
 
   const primaryPattern = getPrimaryPattern(scores);
   const patternResult = determinePattern(chart);
 
   const allElements = ['木', '火', '土', '金', '水'];
-  const { favorable, unfavorable } = getFavorableElements(chart.dayMaster, primaryPattern);
+  const { favorable, unfavorable } = getFavorableElements(
+    chart.dayMaster,
+    primaryPattern
+  );
 
   const renderComponent = () => {
     const props = {
@@ -68,22 +89,29 @@ export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props)
       unfavorable,
       weakestElement: patternResult.weakestElement,
       weakestElements: patternResult.weakestElements,
-      onNavigate
+      onNavigate,
     };
 
-    switch(activeTab) {
-      case 'health': return <HealthPage {...props} partners={partners} />;
-      case 'wealth': return <WealthPage {...props} partners={partners} />;
-      case 'career': return <CareerPage {...props} partners={partners} />;
-      case 'friends': return <FriendsPage {...props} partners={partners} />;
-      case 'romance': return <RomancePage {...props} partners={partners} />;
-      case 'family': return <FamilyPage {...props} partners={partners} />;
-      default: return <HealthPage {...props} partners={partners} />;
+    switch (activeTab) {
+      case 'health':
+        return <HealthPage {...props} partners={partners} />;
+      case 'wealth':
+        return <WealthPage {...props} partners={partners} />;
+      case 'career':
+        return <CareerPage {...props} partners={partners} />;
+      case 'friends':
+        return <FriendsPage {...props} partners={partners} />;
+      case 'romance':
+        return <RomancePage {...props} partners={partners} />;
+      case 'family':
+        return <FamilyPage {...props} partners={partners} />;
+      default:
+        return <HealthPage {...props} partners={partners} />;
     }
   };
 
   // [AI MOD] Navigate to prev/next tab
-  const currentIdx = TABS.findIndex(t => t.key === activeTab);
+  const currentIdx = TABS.findIndex((t) => t.key === activeTab);
   const goToPrev = () => {
     if (currentIdx > 0) setActiveTab(TABS[currentIdx - 1].key);
   };
@@ -99,7 +127,10 @@ export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props)
           onClick={() => onNavigate(11)}
           className="flex items-center gap-2 text-zen-muted hover:text-zen-text transition-colors group"
         >
-          <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+          <ArrowLeft
+            size={16}
+            className="group-hover:-translate-x-0.5 transition-transform"
+          />
           <span className="font-bold text-sm">返回探索</span>
         </button>
 
@@ -126,8 +157,12 @@ export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props)
       </div>
 
       {/* 頁籤導航 (Segmented Control Style) */}
-      <div ref={tabsRef} role="tablist" className="flex flex-wrap lg:flex-nowrap gap-2 mb-8 bg-black/40 border border-white/5 p-2 rounded-2xl shadow-inner">
-        {TABS.map(tab => (
+      <div
+        ref={tabsRef}
+        role="tablist"
+        className="flex flex-wrap lg:flex-nowrap gap-2 mb-8 bg-black/40 border border-white/5 p-2 rounded-2xl shadow-inner"
+      >
+        {TABS.map((tab) => (
           <button
             key={tab.key}
             role="tab"
@@ -140,8 +175,12 @@ export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props)
             }`}
           >
             {/* 手機版顯示短標籤，桌面版顯示完整標籤 */}
-            <span className="md:hidden text-xs font-sans">{tab.shortLabel}</span>
-            <span className="hidden md:inline text-sm font-sans">{tab.label}</span>
+            <span className="md:hidden text-xs font-sans">
+              {tab.shortLabel}
+            </span>
+            <span className="hidden md:inline text-sm font-sans">
+              {tab.label}
+            </span>
           </button>
         ))}
       </div>
@@ -179,9 +218,13 @@ export default function SpecialtyNav({ chart, scores, name, onNavigate }: Props)
             onClick={() => onNavigate(9)}
             className="group relative px-6 py-3 bg-zen-card text-zen-text hover:text-zen-gold rounded-full border border-white/10 hover:border-zen-gold/50 transition-all overflow-hidden flex items-center gap-2"
           >
-            <span className="relative z-10 font-bold tracking-wider text-sm font-sans">開啟專屬【夥伴合盤觀測】</span>
+            <span className="relative z-10 font-bold tracking-wider text-sm font-sans">
+              開啟專屬【夥伴合盤觀測】
+            </span>
             <div className="absolute inset-0 bg-zen-gold/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-            <span className="relative z-10 opacity-70 group-hover:translate-x-1 transition-transform duration-300 text-sm">→</span>
+            <span className="relative z-10 opacity-70 group-hover:translate-x-1 transition-transform duration-300 text-sm">
+              →
+            </span>
           </button>
         </div>
       </div>

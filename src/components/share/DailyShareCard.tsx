@@ -1,6 +1,6 @@
 // src/components/share/DailyShareCard.tsx
 // [AI MOD] 今日運勢分享卡（品牌化）
-// ⚠️ 樣式一律使用 inline hex/rgba：html2canvas 不支援 Tailwind v4 的 oklch()/lab() 色彩函式，
+// 樣式一律使用 inline hex/rgba：html2canvas 不支援 Tailwind v4 的 oklch()/lab() 色彩函式，
 //    若使用 Tailwind 色票工具類會導致擷取失敗。
 import type { CSSProperties } from 'react';
 
@@ -64,8 +64,13 @@ export default function DailyShareCard({
   siteUrl,
   showPrivateDetails = false,
 }: DailyShareCardProps) {
-  const serif: CSSProperties = { fontFamily: '"Noto Serif TC", "Songti TC", "PingFang TC", serif' };
-  const sans: CSSProperties = { fontFamily: '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif' };
+  const serif: CSSProperties = {
+    fontFamily: '"Noto Serif TC", "Songti TC", "PingFang TC", serif',
+  };
+  const sans: CSSProperties = {
+    fontFamily:
+      '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif',
+  };
 
   return (
     <div
@@ -84,12 +89,39 @@ export default function DailyShareCard({
       }}
     >
       {/* 品牌列 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+        }}
+      >
         <div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: C.gold, letterSpacing: 4 }}>八字能量日誌</div>
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 6, letterSpacing: 2, ...sans }}>順應自然週期的個人觀測系統</div>
+          <div
+            style={{
+              fontSize: 26,
+              fontWeight: 700,
+              color: C.gold,
+              letterSpacing: 4,
+            }}
+          >
+            八字能量日誌
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              color: C.muted,
+              marginTop: 6,
+              letterSpacing: 2,
+              ...sans,
+            }}
+          >
+            順應自然週期的個人觀測系統
+          </div>
         </div>
-        <div style={{ fontSize: 13, color: C.muted, textAlign: 'right', ...sans }}>
+        <div
+          style={{ fontSize: 13, color: C.muted, textAlign: 'right', ...sans }}
+        >
           {dateLabel}
           <div style={{ marginTop: 4, color: C.gold }}>{lunarDate}</div>
         </div>
@@ -121,11 +153,17 @@ export default function DailyShareCard({
           <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.3 }}>
             {showPrivateDetails && name ? `${name} 的今日運勢` : '我的今日運勢'}
           </div>
-          {showPrivateDetails && <div style={{ fontSize: 19, color: C.muted, marginTop: 10, ...sans }}>
-            {ganZhi}・日主十神屬「{tenGod}」
-          </div>}
           {showPrivateDetails && (
-            <div style={{ fontSize: 19, color: C.muted, marginTop: 4, ...sans }}>
+            <div
+              style={{ fontSize: 19, color: C.muted, marginTop: 10, ...sans }}
+            >
+              {ganZhi}・日主十神屬「{tenGod}」
+            </div>
+          )}
+          {showPrivateDetails && (
+            <div
+              style={{ fontSize: 19, color: C.muted, marginTop: 4, ...sans }}
+            >
               日主 {dayMaster}　最弱五行 {weakestElement}
             </div>
           )}
@@ -135,8 +173,12 @@ export default function DailyShareCard({
       {/* 喜用神 */}
       {showPrivateDetails && favorable.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 15, color: C.muted, letterSpacing: 2, ...sans }}>喜用五行</span>
-          {favorable.map(element => (
+          <span
+            style={{ fontSize: 15, color: C.muted, letterSpacing: 2, ...sans }}
+          >
+            喜用五行
+          </span>
+          {favorable.map((element) => (
             <span
               key={element}
               style={{
@@ -177,9 +219,21 @@ export default function DailyShareCard({
       <div style={{ flex: 1 }} />
 
       {/* 頁尾 */}
-      <div style={{ borderTop: `1px solid ${C.borderSoft}`, paddingTop: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 13, color: C.muted, ...sans }}>✱ 本頁面分析皆基於八字命理學說</div>
-        <div style={{ fontSize: 14, color: C.gold, ...sans }}>{siteUrl.replace(/^https?:\/\//, '')}</div>
+      <div
+        style={{
+          borderTop: `1px solid ${C.borderSoft}`,
+          paddingTop: 18,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ fontSize: 13, color: C.muted, ...sans }}>
+          ※ 本頁面分析皆基於八字命理學說
+        </div>
+        <div style={{ fontSize: 14, color: C.gold, ...sans }}>
+          {siteUrl.replace(/^https?:\/\//, '')}
+        </div>
       </div>
     </div>
   );

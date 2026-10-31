@@ -169,20 +169,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zen-bg text-zen-text overflow-hidden flex flex-col items-center justify-start md:justify-center relative selection:bg-zen-sage selection:text-white">
-      {/* Background Ambient Effects */}
+      {/* Background Ambient Effect — 單一柔和光暈 */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 150, repeat: Infinity, ease: 'linear' }}
-          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-zen-accent/20 blur-[100px] md:blur-[140px]"
-        />
-        <motion.div
-          animate={{ rotate: -360 }}
-          transition={{ duration: 200, repeat: Infinity, ease: 'linear' }}
-          className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-zen-sage/20 blur-[100px] md:blur-[120px]"
-        />
-        {/* Subtle grid texture overlay */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPHBhdGggZD0iTTAgMGgwLjV2NDBIMHptMCAwaDQwdjAuNUgweiIgZmlsbD0icmdiYSgwLDAsMCwwLjA0KSIvPgo8L3N2Zz4=')] opacity-30 mask-image:linear-gradient(to_bottom,white,transparent)"></div>
+        <div className="absolute -top-[25%] left-1/2 -translate-x-1/2 w-[60vw] h-[60vw] rounded-full bg-zen-sage/10 blur-[120px]" />
       </div>
 
       {/* Main Container */}
@@ -569,7 +558,6 @@ export default function App() {
                         parseInt(form.birthDate.split('-')[0], 10) >= 1945 &&
                         parseInt(form.birthDate.split('-')[0], 10) <= 1979 && (
                           <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 p-3 rounded-xl text-sm md:text-xs">
-                            ⚠️
                             您的出生年份可能受到台灣日光節約時間影響，若在此時間內出生，請確認輸入的時間已扣除一小時。
                           </div>
                         )}

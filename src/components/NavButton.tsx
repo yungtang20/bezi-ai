@@ -1,14 +1,24 @@
 import React from 'react';
 
 interface NavButtonProps {
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  icon: React.ComponentType<{
+    size?: number;
+    strokeWidth?: number;
+    className?: string;
+  }>;
   label: string;
   isActive?: boolean;
   onClick: () => void;
   orientation?: 'horizontal' | 'vertical'; // For distinguishing between Sidebar (vertical) and NavigationBar (horizontal)
 }
 
-export default function NavButton({ icon: Icon, label, isActive, onClick, orientation = 'vertical' }: NavButtonProps) {
+export default function NavButton({
+  icon: Icon,
+  label,
+  isActive,
+  onClick,
+  orientation = 'vertical',
+}: NavButtonProps) {
   if (orientation === 'horizontal') {
     return (
       <button
@@ -23,7 +33,9 @@ export default function NavButton({ icon: Icon, label, isActive, onClick, orient
           className="relative transition-transform duration-300"
           style={{
             transform: isActive ? 'scale(1.15) translateY(-2px)' : undefined,
-            filter: isActive ? 'drop-shadow(0 0 4px rgba(212, 168, 83, 0.4))' : undefined,
+            filter: isActive
+              ? 'drop-shadow(0 0 4px rgba(212, 168, 83, 0.4))'
+              : undefined,
           }}
         >
           <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
@@ -72,7 +84,9 @@ export default function NavButton({ icon: Icon, label, isActive, onClick, orient
         className="transition-transform duration-300"
         style={{
           transform: isActive ? 'scale(1.1)' : undefined,
-          filter: isActive ? 'drop-shadow(0 0 3px rgba(212, 168, 83, 0.3))' : undefined,
+          filter: isActive
+            ? 'drop-shadow(0 0 3px rgba(212, 168, 83, 0.3))'
+            : undefined,
           display: 'inline-flex',
           alignItems: 'center',
         }}

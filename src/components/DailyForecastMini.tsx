@@ -51,27 +51,27 @@ const CATEGORIES = [
   {
     key: 'health',
     label: CATEGORY_LABELS.health,
-    emoji: '🏃',
+    emoji: '',
     color: 'emerald',
   },
-  { key: 'career', label: CATEGORY_LABELS.career, emoji: '💼', color: 'blue' },
+  { key: 'career', label: CATEGORY_LABELS.career, emoji: '', color: 'blue' },
   {
     key: 'romance',
     label: CATEGORY_LABELS.romance,
-    emoji: '❤️',
+    emoji: '',
     color: 'rose',
   },
-  { key: 'wealth', label: CATEGORY_LABELS.wealth, emoji: '💰', color: 'amber' },
+  { key: 'wealth', label: CATEGORY_LABELS.wealth, emoji: '', color: 'amber' },
   {
     key: 'family',
     label: CATEGORY_LABELS.family,
-    emoji: '🤝',
+    emoji: '',
     color: 'violet',
   },
   {
     key: 'friends',
     label: CATEGORY_LABELS.friends,
-    emoji: '🙌',
+    emoji: '',
     color: 'cyan',
   },
 ] as const;
@@ -359,18 +359,18 @@ export default function DailyForecastMini({
     const outcome = dailyEnergy.theoreticalOutcome;
 
     if (outcome === '大好' || totalScore > 5) {
-      return '🌟 今日整體運勢極佳，能量充沛，適合積極行動、把握機會！';
+      return ' 今日整體運勢極佳，能量充沛，適合積極行動、把握機會！';
     }
     if (outcome === '順利' || outcome === '小吉' || totalScore > 2) {
-      return '✨ 今日運勢平穩中有進展，適合推進計畫、穩定發展。';
+      return ' 今日運勢平穩中有進展，適合推進計畫、穩定發展。';
     }
     if (outcome === '平穩' || totalScore >= -2) {
-      return '⚖️ 今日運勢平穩，適合按部就班、維持現狀。';
+      return ' 今日運勢平穩，適合按部就班、維持現狀。';
     }
     if (outcome === '較差' || totalScore >= -5) {
-      return '⚠️ 今日宜保守謹慎，避免重大決定，多觀察少行動。';
+      return ' 今日宜保守謹慎，避免重大決定，多觀察少行動。';
     }
-    return '🌙 今日宜靜不宜動，多休息養精蓄銳，等待時機。';
+    return ' 今日宜靜不宜動，多休息養精蓄銳，等待時機。';
   }, [dailyEnergy, categoryScores]);
 
   // ---- 心流記錄 ----
@@ -427,7 +427,7 @@ export default function DailyForecastMini({
     <div className="space-y-3">
       {/* 標題 */}
       <h3 className="text-sm font-bold text-zen-gold flex items-center gap-1.5">
-        📅 流日預報
+        流日預報
       </h3>
 
       {/* 日期導航 */}
@@ -512,7 +512,7 @@ export default function DailyForecastMini({
           onClick={() => setShowCheckIn(true)}
           className="w-full py-1.5 bg-zen-gold/10 hover:bg-zen-gold/20 border border-zen-gold/30 text-zen-gold text-xs rounded-lg transition-colors"
         >
-          📝 記錄今日能量
+          記錄今日能量
         </button>
       )}
 
@@ -534,9 +534,7 @@ export default function DailyForecastMini({
                       ? 'bg-emerald-500/30 text-emerald-400'
                       : 'bg-zen-surface/60 text-zen-muted hover:bg-emerald-500/10'
                   }`}
-                >
-                  ✓
-                </button>
+                ></button>
                 <button
                   type="button"
                   onClick={() => toggleFeedback(cat.key, 'bad')}
@@ -545,9 +543,7 @@ export default function DailyForecastMini({
                       ? 'bg-red-500/30 text-red-400'
                       : 'bg-zen-surface/60 text-zen-muted hover:bg-red-500/10'
                   }`}
-                >
-                  ✗
-                </button>
+                ></button>
               </div>
             ))}
           </div>
@@ -576,7 +572,7 @@ export default function DailyForecastMini({
       {/* 已記錄提示 */}
       {isCheckedIn && !showCheckIn && (
         <div className="text-center py-2 text-emerald-400 text-xs">
-          ✅ 今日已記錄
+          今日已記錄
         </div>
       )}
     </div>
