@@ -30,15 +30,6 @@ export function adjustScores(
 
   const dayType = dayTenGodType || log.dayTenGodType || '';
 
-  const healthGood = log.health === 'good';
-  const healthBad = log.health === 'bad';
-  const careerGood = log.career === 'good';
-  const careerBad = log.career === 'bad';
-  const romanceGood = log.romance === 'good';
-  const romanceBad = log.romance === 'bad';
-  const wealthGood = log.wealth === 'good';
-  const wealthBad = log.wealth === 'bad';
-
   // Maps each day type to the relevant feedback fields: [goodField, badField]
   const dayTypeFields: Record<
     string,
