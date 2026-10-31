@@ -3,10 +3,8 @@ import { Solar } from 'lunar-javascript';
 import { BaziChart } from './paipan';
 import { PartnerInfo } from './types';
 import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, getTenGod as getTenGodForDaYun, getTenGodType } from './constants';
-import { HARM_MAP, DESTROY_MAP as BREAK_MAP } from './data/rules/taiSui';
 import { checkDayType } from './data/rules/dailyFlowDays';
 import { LECTURE_DATA } from './data/lecture/lectureData';
-import { LiuNian } from './dayun';
 
 export interface DailyEnergy {
   isExtremeDay: boolean;
@@ -270,15 +268,6 @@ export function getUpcomingDatesForCategory(
   return results;
 }
 
-// 取得刑沖影響的柱位
-function getAffectedPillars(chart: BaziChart, zhiList: string[]): string[] {
-  const affected = [];
-  if (zhiList.includes(chart.year.zhi)) affected.push('年柱（祖輩/長官）');
-  if (zhiList.includes(chart.month.zhi)) affected.push('月柱（父母/工作環境）');
-  if (zhiList.includes(chart.day.zhi)) affected.push('日柱（自己/伴侶）');
-  if (zhiList.includes(chart.hour.zhi)) affected.push('時柱（子女/下屬）');
-  return affected;
-}
 
 
 
