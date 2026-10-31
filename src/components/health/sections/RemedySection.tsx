@@ -1,7 +1,6 @@
 // src/components/health/sections/RemedySection.tsx
 // 健康補運指南 — 健康頁第六區塊。
 // 內容僅用 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import { Sparkles, Compass } from 'lucide-react';
 
 export default function RemedySection() {

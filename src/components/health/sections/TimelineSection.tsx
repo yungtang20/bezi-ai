@@ -1,7 +1,6 @@
 // src/components/health/sections/TimelineSection.tsx
 // 歲運推演分析 — Health Page Section 3：大運與流年對先天健康弱項的推演。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   SectionGrammar,

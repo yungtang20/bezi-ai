@@ -1,7 +1,6 @@
 // src/components/wealth/sections/JudgmentSection.tsx
 // 命盤十神分布 — 我是怎麼判斷的。
 // 所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

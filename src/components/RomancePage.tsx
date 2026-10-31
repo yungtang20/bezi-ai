@@ -1,7 +1,6 @@
 // src/components/RomancePage.tsx
 // 姻緣深度解析 — 薄協調層：邏輯交由 useRomanceLogic，呈現交由 sections。
 // 所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
 import { useRomanceLogic } from "./romance/useRomanceLogic";
 import CategoryPageTemplate from "./CategoryPageTemplate";
 import type { PatternScores } from "../pattern";

@@ -1,7 +1,6 @@
 // src/components/wealth/sections/SpaceSection.tsx
 // 2026財星催旺配置 — 依日主五行推演出專屬財位風水與空間軟裝對策（不論身強身弱，專為招商催旺）。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from "react";
 import { Compass } from "lucide-react";
 import {
   ContentSection,

@@ -1,6 +1,5 @@
 // src/components/SynastryPage.tsx
 // 合盤頁協調器：僅負責渲染，邏輯皆由 useSynastryLogic 提供。
-import React from 'react';
 import { ArrowLeft, Plus, Share2, Trash2, Users, Edit2 } from 'lucide-react';
 import { BaziChart } from '../paipan';
 import { PatternScores } from '../pattern';

@@ -1,7 +1,6 @@
 // src/components/romance/sections/ObservationSection.tsx
 // 姻緣觀測分析 — 夫妻宮衝刑害與日主五行姻緣觀測。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

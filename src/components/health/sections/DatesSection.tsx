@@ -1,7 +1,6 @@
 // src/components/health/sections/DatesSection.tsx
 // 最弱五行被剋流日 — 健康頁第八區塊。
 // 內容僅用 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import { HEALTH_DATA } from '../../../data';
 
 interface DatesSectionProps {

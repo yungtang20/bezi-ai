@@ -1,7 +1,6 @@
 // src/components/romance/sections/SynastrySection.tsx
 // 合盤適配判定 — 與伴侶命盤的五行與十神適配分析。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

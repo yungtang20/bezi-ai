@@ -1,7 +1,6 @@
 // src/components/wealth/sections/TimelineSection.tsx
 // 歲運推演與化解 — 大運流年好壞運與化解建議（依命盤十神類別與格局強弱）。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

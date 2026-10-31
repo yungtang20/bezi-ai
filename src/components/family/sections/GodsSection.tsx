@@ -1,7 +1,6 @@
 // src/components/family/sections/GodsSection.tsx
 // 3. 專屬十神家宅開運指南 — 依主次十神定制家族相處與軟裝佈置建議。
 // 所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 
 interface GodsSectionProps {
   tenGodCount: Record<string, number>;

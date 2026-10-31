@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { BaziChart } from '../paipan';
 import {
   PatternScores,

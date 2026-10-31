@@ -1,6 +1,5 @@
 // FamilyTab — 家庭 tab. 父母子女互動、手足關係、子息緣分、家庭變動與健康警訊。
 // Same data values as src/data; no logic changes.
-import React from "react";
 import { ContentSection, ReasoningCard, UncertaintyNotice, SectionGrammar } from "../shared";
 import {
   familyRoles,

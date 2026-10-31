@@ -1,7 +1,6 @@
 // src/components/health/sections/JudgmentSection.tsx
 // 命盤五行分佈 — 健康頁第一區塊。
 // 內容僅用 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import { Activity } from 'lucide-react';
 
 interface JudgmentSectionProps {

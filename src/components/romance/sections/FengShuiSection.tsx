@@ -1,7 +1,6 @@
 // src/components/romance/sections/FengShuiSection.tsx
 // 2026桃花催旺位 — 依日主五行與性別推演出專屬桃花方位與佈置。
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
-import React from 'react';
 import {
   ContentSection,
   ReasoningCard,

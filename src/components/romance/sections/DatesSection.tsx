@@ -1,7 +1,6 @@
 // src/components/romance/sections/DatesSection.tsx
 // 近期專屬桃花日 — 依日主五行與性別推演出專屬桃花流日。
 // 使用 ContentSection 固定文法：結論先行 → 依據 → 時間窗 → 3 個可執行動作 → 不確定處。
-import React from "react";
 import {
   ContentSection,
   ReasoningCard,
