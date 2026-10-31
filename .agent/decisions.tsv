@@ -1,0 +1,10 @@
+ts	pr	title	why	evidence	result
+2026-10-31	#24	refactor(storage): typed IndexedDB wrappers + verify tooling	Replace dynamic dbRequest dispatch with typed wrappers; add verify CLI	PR #24 merged; lint 0, vitest 195, api 26, build, e2e 30	merged
+2026-10-31	#25	chore: remove unused React default imports	React 19 JSX transform makes React default unused	PR #25 merged; 42 files, 7 ins/47 del	merged
+2026-10-31	#26	chore: clean core unused locals/imports	Remove dead locals in core domain modules	PR #26 merged; 4 files	merged
+2026-10-31	#27	chore: remove more unused imports	App, AIChatPanel, career sections	PR #27 merged; 7 files	merged
+2026-10-31	#28	chore: remove unused calibration locals	Dead good/bad locals in calibration	PR #28 merged; 1 file	merged
+2026-10-31	#29	chore: clean unused ai imports	factChecker, chartContext, registry	PR #29 merged; 5 files	merged
+2026-10-31	#30	chore: remove dead dailyAnalysis helpers	Dead helpers not referenced anywhere	PR #30 merged; 114 deletions	merged
+2026-10-31	#31	chore: enable unused checks for core	Enable noUnusedLocals/Parameters for packages/core	PR #31 merged; core passes	merged
+2026-10-31	#32	chore: clean WealthPage unused locals	Remove unused destructured locals	PR #32 merged; 16 deletions	merged
