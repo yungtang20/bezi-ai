@@ -32,7 +32,7 @@ export function getDailyEnergy(
   weakestElement: string,
   favorable: string[],
   unfavorable: string[],
-  primaryPattern: string,
+  _primaryPattern: string,
   targetDate?: Date
 ): DailyEnergy {
   const d = targetDate || new Date();
