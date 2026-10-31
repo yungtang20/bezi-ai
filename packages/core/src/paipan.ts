@@ -118,9 +118,6 @@ export function calculateChart(
   const dayGanZhi = translateGanZhi(lunar.getDayInGanZhi());      // 日柱
   const hourGanZhi = translateGanZhi(lunar.getTimeInGanZhi());    // 時柱
 
-  // 3. 取得各柱的詳細八字物件
-  const baZi = lunar.getEightChar();
-  
   // 取得每一柱的天干、地支、藏干列表
   const yearPillar = buildPillar(yearGanZhi);
   const monthPillar = buildPillar(monthGanZhi);

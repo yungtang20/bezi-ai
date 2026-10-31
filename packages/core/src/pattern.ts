@@ -53,9 +53,6 @@ function isWetSoil(zhi: string): boolean {
   return WET_SOIL.includes(zhi);
 }
 
-function isDrySoil(zhi: string): boolean {
-  return DRY_SOIL.includes(zhi);
-}
 
 /**
  * 濕土（含天干）：地支辰、丑，以及天干「己」。
@@ -230,10 +227,6 @@ function isSupporting(dayElement: string, other: string, source?: string): boole
   return other === dayElement || ELEMENT_GENERATES[other] === dayElement;
 }
 
-/** 判斷某五行是否為日主的「剋洩耗」（剋我、我剋、我生） */
-function isDraining(dayElement: string, other: string): boolean {
-  return other !== dayElement && ELEMENT_GENERATES[other] !== dayElement;
-}
 
 /** 取得生我的五行（印星五行） */
 function getGeneratingElement(dayElement: string): string {
@@ -696,7 +689,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   const reasons: string[] = [];
 
   // 1. 掃描刑沖合
-  const { interactions, damagedPillars, harmonyResults } = scanInteractions(chart);
+  const { damagedPillars, harmonyResults } = scanInteractions(chart);
 
   // 2. 掃描三合/半合/三會
   const formations = scanCombinedFormations(chart);
