@@ -1,6 +1,6 @@
 // App — thin step coordinator.
 // 路由與頁面調度層：不再包含表單驗證、排盤計算、校準邏輯（已拆至 hooks）。
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowRight,

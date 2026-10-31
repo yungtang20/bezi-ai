@@ -3,13 +3,11 @@
 // 內容僅用 ContentSection 文法；所有數值與 src/data 僅讀引用，不改動邏輯。
 import {
   ContentSection,
-  ReasoningCard,
   UncertaintyNotice,
   type SectionGrammar,
   makeSection,
 } from '../../../components/shared';
 import { LECTURE_DATA } from '../../../data';
-import { GAN_TO_ELEMENT } from '../../../constants';
 
 const MAX_ACTIONS = 3;
 
