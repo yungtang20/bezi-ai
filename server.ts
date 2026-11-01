@@ -1,29 +1,60 @@
 // server.ts
-import express from "express";
-import { randomUUID, timingSafeEqual } from "node:crypto";
-import path from "path";
-import { createServer as createViteServer } from "vite";
-import OpenAI from "openai";
-import dotenv from "dotenv";
-import { formatErrorResponse } from "./src/errors";
-import { missingEvidenceOutput, validateAIOutput, type EvidenceBundle, type ValidationResult } from "./src/ai/grounding";
-import { BAZI_SYSTEM_PROMPT, SYNASTRY_SYSTEM_PROMPT, DAYUN_SYSTEM_PROMPT } from "./src/ai/prompts";
-import { parseAgnesResponse } from "./src/lib/parseAgnesResponse";
-import { SqliteEvidenceSource, type EvidenceData } from "./src/lib/evidence/provider";
-import { checkFactualClaims, type FactCheckResult } from "./src/ai/factChecker";
-import { calculateChart, calculateDaYun, getFutureLiuNian, getFiveElementData, getTenGodData } from "./packages/core/src/index";
-import { classifyQuery } from "./src/ai/knowledge/classifier";
-import { retrieveKnowledge, formatKnowledgeForPrompt } from "./src/ai/knowledge/retriever";
-import type { KnowledgeItem } from "./src/ai/knowledge/types";
+import express from 'express';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import path from 'path';
+import { createServer as createViteServer } from 'vite';
+import OpenAI from 'openai';
+import dotenv from 'dotenv';
+import { formatErrorResponse } from './src/errors';
+import {
+  missingEvidenceOutput,
+  validateAIOutput,
+  type EvidenceBundle,
+  type ValidationResult,
+} from './src/ai/grounding';
+import {
+  BAZI_SYSTEM_PROMPT,
+  SYNASTRY_SYSTEM_PROMPT,
+  DAYUN_SYSTEM_PROMPT,
+} from './src/ai/prompts';
+import { parseAgnesResponse } from './src/lib/parseAgnesResponse';
+import {
+  SqliteEvidenceSource,
+  type EvidenceData,
+} from './src/lib/evidence/provider';
+import { checkFactualClaims, type FactCheckResult } from './src/ai/factChecker';
+import {
+  calculateChart,
+  calculateDaYun,
+  getFutureLiuNian,
+  getFiveElementData,
+  getTenGodData,
+} from './packages/core/src/index';
+import { classifyQuery } from './src/ai/knowledge/classifier';
+import {
+  retrieveKnowledge,
+  formatKnowledgeForPrompt,
+} from './src/ai/knowledge/retriever';
+import type { KnowledgeItem } from './src/ai/knowledge/types';
 
 // [AI MOD] CORS 中介程式：僅允許相同 origin 或明確允許的來源。
-// 預設開放（向後相容），但可透過 ALLOWED_ORIGINS 環境變數限制。
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-function corsMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
+// 預設 fail closed（向後相容於同源），可透過 ALLOWED_ORIGINS 環境變數限制跨來源。
+// [FIX] 必須在 request 時才讀 process.env.ALLOWED_ORIGINS：dotenv.config() 在模組載入
+// 之後才執行，若在此處以 module-top const 預先解析，allow-list 永遠是空值（.env.local /
+// render.yaml 的 ALLOWED_ORIGINS 全部失效），跨來源 preflight 拿不到 ACAO header。
+function getAllowedOrigins(): string[] {
+  return (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+function corsMiddleware(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
   const origin = req.headers.origin;
+  const ALLOWED_ORIGINS = getAllowedOrigins();
   // [AI MOD] 同源請求永不阻擋：Vite 產出的 module script 帶 crossorigin 屬性，
   // 瀏覽器連同源請求也會附帶 Origin header，若用 ALLOWED_ORIGINS 過濾會誤殺前端資源。
   let sameOrigin = false;
@@ -34,31 +65,46 @@ function corsMiddleware(req: express.Request, res: express.Response, next: expre
       sameOrigin = false;
     }
   }
-  if (origin && !sameOrigin && ALLOWED_ORIGINS.length > 0 && !ALLOWED_ORIGINS.includes(origin)) {
-    res.status(403).json({ error: "Origin not allowed" });
+  if (
+    origin &&
+    !sameOrigin &&
+    ALLOWED_ORIGINS.length > 0 &&
+    !ALLOWED_ORIGINS.includes(origin)
+  ) {
+    res.status(403).json({ error: 'Origin not allowed' });
     return;
   }
   // 只回應已驗證的 origin；空 allow-list 時不反射任意 origin，避免 permissive-by-default。
   if (origin && (sameOrigin || ALLOWED_ORIGINS.includes(origin))) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (ALLOWED_ORIGINS.length > 0) {
-    res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGINS[0]);
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
   }
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key");
-  if (req.method === "OPTIONS") {
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, X-API-Key'
+  );
+  if (req.method === 'OPTIONS') {
     res.status(204).end();
     return;
   }
   next();
 }
 
-function securityHeaders(_req: express.Request, res: express.Response, next: express.NextFunction) {
+function securityHeaders(
+  _req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains'
+    );
   }
   next();
 }
@@ -73,17 +119,27 @@ const explicitAgnesModel = process.env.AGNES_MODEL;
 const explicitChatAuthToken = process.env.BEZI_CHAT_API_KEY;
 const explicitAuthClientSecret = process.env.BEZI_AUTH_CLIENT_SECRET;
 const explicitDevAuthBypass = process.env.ENABLE_DEV_AUTH_BYPASS;
+const explicitAllowedOrigins = process.env.ALLOWED_ORIGINS;
 dotenv.config({ path: '.env.local', override: true });
 dotenv.config();
 if (explicitNodeEnv !== undefined) process.env.NODE_ENV = explicitNodeEnv;
 if (explicitPort !== undefined) process.env.PORT = explicitPort;
-if (explicitFixtureFlag !== undefined) process.env.ENABLE_DEV_FIXTURE = explicitFixtureFlag;
-if (explicitAgnesApiKey !== undefined) process.env.AGNES_API_KEY = explicitAgnesApiKey;
-if (explicitAgnesBaseUrl !== undefined) process.env.AGNES_BASE_URL = explicitAgnesBaseUrl;
-if (explicitAgnesModel !== undefined) process.env.AGNES_MODEL = explicitAgnesModel;
-if (explicitChatAuthToken !== undefined) process.env.BEZI_CHAT_API_KEY = explicitChatAuthToken;
-if (explicitAuthClientSecret !== undefined) process.env.BEZI_AUTH_CLIENT_SECRET = explicitAuthClientSecret;
-if (explicitDevAuthBypass !== undefined) process.env.ENABLE_DEV_AUTH_BYPASS = explicitDevAuthBypass;
+if (explicitFixtureFlag !== undefined)
+  process.env.ENABLE_DEV_FIXTURE = explicitFixtureFlag;
+if (explicitAgnesApiKey !== undefined)
+  process.env.AGNES_API_KEY = explicitAgnesApiKey;
+if (explicitAgnesBaseUrl !== undefined)
+  process.env.AGNES_BASE_URL = explicitAgnesBaseUrl;
+if (explicitAgnesModel !== undefined)
+  process.env.AGNES_MODEL = explicitAgnesModel;
+if (explicitChatAuthToken !== undefined)
+  process.env.BEZI_CHAT_API_KEY = explicitChatAuthToken;
+if (explicitAuthClientSecret !== undefined)
+  process.env.BEZI_AUTH_CLIENT_SECRET = explicitAuthClientSecret;
+if (explicitAllowedOrigins !== undefined)
+  process.env.ALLOWED_ORIGINS = explicitAllowedOrigins;
+if (explicitDevAuthBypass !== undefined)
+  process.env.ENABLE_DEV_AUTH_BYPASS = explicitDevAuthBypass;
 
 // [AI MOD] Rate limiting & input validation 常數
 // 每 60 秒 per-IP 最多 30 次 /api/chat 請求；一般聊天不會超，可擋惡意刷量。
@@ -95,35 +151,58 @@ const MAX_MSG_CONTENT_LEN = 8000;
 const MAX_CUSTOM_PROMPT_LEN = 20_000;
 const MAX_USER_API_KEY_LEN = 200; // backward-compatible request validation; request keys are never used
 const MAX_RECORD_ID_LEN = 128;
-const DEV_FIXTURE_ENABLED = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEV_FIXTURE === 'true';
+const DEV_FIXTURE_ENABLED =
+  process.env.NODE_ENV === 'development' &&
+  process.env.ENABLE_DEV_FIXTURE === 'true';
 const sqlEvidenceSource = new SqliteEvidenceSource();
-const chatAuthToken = process.env.BEZI_CHAT_API_KEY || "";
-const authClientSecret = process.env.BEZI_AUTH_CLIENT_SECRET || "";
-const DEV_AUTH_BYPASS = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEV_AUTH_BYPASS === 'true';
+const chatAuthToken = process.env.BEZI_CHAT_API_KEY || '';
+const authClientSecret = process.env.BEZI_AUTH_CLIENT_SECRET || '';
+const DEV_AUTH_BYPASS =
+  process.env.NODE_ENV === 'development' &&
+  process.env.ENABLE_DEV_AUTH_BYPASS === 'true';
 // [AI MOD] 匿名模式：開啟後 /api/auth/token 無需 client_secret 即可發放 session token（仍受 per-IP 限流約束），
 // 讓終端使用者零授權摩擦。生產環境的成本保護主要依賴 rateLimit，而非 client_secret。
 const ANONYMOUS_CHAT_ENABLED = process.env.ENABLE_ANONYMOUS_CHAT === 'true';
 const SESSION_TTL_MS = 60 * 60_000;
 const sessions = new Map<string, number>();
-const computedEvidence = new Map<string, { owner: string; expiresAt: number; data: EvidenceData }>();
+const computedEvidence = new Map<
+  string,
+  { owner: string; expiresAt: number; data: EvidenceData }
+>();
 
 function getSuppliedCredential(req: express.Request): string {
   const authorization = req.header('authorization');
-  return (authorization?.startsWith('Bearer ') ? authorization.slice(7) : req.header('x-api-key')) || '';
+  return (
+    (authorization?.startsWith('Bearer ')
+      ? authorization.slice(7)
+      : req.header('x-api-key')) || ''
+  );
 }
 
-function constantTimeEqual(receivedValue: string, expectedValue: string): boolean {
+function constantTimeEqual(
+  receivedValue: string,
+  expectedValue: string
+): boolean {
   const received = Buffer.from(receivedValue);
   const expected = Buffer.from(expectedValue);
-  return expected.length > 0 && received.length === expected.length && timingSafeEqual(received, expected);
+  return (
+    expected.length > 0 &&
+    received.length === expected.length &&
+    timingSafeEqual(received, expected)
+  );
 }
 
-function requireChatAuthorization(req: express.Request, res: express.Response, next: express.NextFunction) {
+function requireChatAuthorization(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
   const supplied = getSuppliedCredential(req);
   const expiresAt = supplied ? sessions.get(supplied) : undefined;
   const sessionValid = Boolean(expiresAt && expiresAt > Date.now());
   if (supplied && expiresAt && !sessionValid) sessions.delete(supplied);
-  const valid = sessionValid || constantTimeEqual(supplied || '', chatAuthToken);
+  const valid =
+    sessionValid || constantTimeEqual(supplied || '', chatAuthToken);
   if (!valid) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
@@ -135,10 +214,26 @@ function requireChatAuthorization(req: express.Request, res: express.Response, n
 // 由 packages/core calculateChart 實排產生（見 data/bazi_records.json）。
 const DEV_FIXTURE_BAZI = {
   chart: {
-    year: '甲子', month: '丁卯', day: '戊午', time: '丁巳', dayMaster: '戊', gender: '男',
+    year: '甲子',
+    month: '丁卯',
+    day: '戊午',
+    time: '丁巳',
+    dayMaster: '戊',
+    gender: '男',
   },
   fiveElements: { wood: 50, fire: 100, earth: 25, metal: 0, water: 25 },
-  tenGods: { '比肩': 2, '劫財': 1, '食神': 1, '傷官': 1, '偏財': 1, '正財': 1, '七殺': 1, '正官': 1, '偏印': 1, '正印': 3 },
+  tenGods: {
+    比肩: 2,
+    劫財: 1,
+    食神: 1,
+    傷官: 1,
+    偏財: 1,
+    正財: 1,
+    七殺: 1,
+    正官: 1,
+    偏印: 1,
+    正印: 3,
+  },
 };
 
 function createDevFixtureEvidence(query: string): EvidenceBundle {
@@ -147,15 +242,17 @@ function createDevFixtureEvidence(query: string): EvidenceBundle {
     requestId: 'dev-fixture-request',
     userId: 'dev-fixture-user',
     query,
-    items: [{
-      sourceId: 'mcp:dev-fixture-bazi',
-      sourceType: 'mcp',
-      title: 'Development Bazi Fixture',
-      content: JSON.stringify(DEV_FIXTURE_BAZI),
-      retrievedAt: now.toISOString(),
-      schemaVersion: 'dev-fixture-v1',
-      supports: ['命盤資料', '五行分數', '十神比例'],
-    }],
+    items: [
+      {
+        sourceId: 'mcp:dev-fixture-bazi',
+        sourceType: 'mcp',
+        title: 'Development Bazi Fixture',
+        content: JSON.stringify(DEV_FIXTURE_BAZI),
+        retrievedAt: now.toISOString(),
+        schemaVersion: 'dev-fixture-v1',
+        supports: ['命盤資料', '五行分數', '十神比例'],
+      },
+    ],
     limitations: ['僅供 development smoke test，不代表真實命盤資料。'],
     allowedClaims: ['僅可根據 development fixture 進行示範性回答。'],
     expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
@@ -166,9 +263,13 @@ function createDevFixtureEvidence(query: string): EvidenceBundle {
 // 單一 server instance 適用；多 instance 部署需改用 Redis-backed 限流。
 // 每個端點可指定 bucket（"chat" / "synastry" / "dayun"）以分開計算限流。
 const ipHits = new Map<string, { count: number; resetAt: number }>();
-function rateLimit(bucket: string = "chat") {
-  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const ip = req.ip || req.socket.remoteAddress || "unknown";
+function rateLimit(bucket: string = 'chat') {
+  return (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const key = `${bucket}:${ip}`;
     const now = Date.now();
     let entry = ipHits.get(key);
@@ -184,7 +285,9 @@ function rateLimit(bucket: string = "chat") {
     if (entry.count > RATE_LIMIT_MAX) {
       res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
       res.status(429);
-      res.write(`data: ${JSON.stringify({ error: "請求過於頻繁，請稍後再試。" })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({ error: '請求過於頻繁，請稍後再試。' })}\n\n`
+      );
       res.end();
       return;
     }
@@ -210,26 +313,61 @@ interface CurrentEvidenceInput {
   gender?: 'male' | 'female';
 }
 
-function buildComputedEvidence(input: CurrentEvidenceInput): EvidenceData | null {
-  if (typeof input.birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)) return null;
+function buildComputedEvidence(
+  input: CurrentEvidenceInput
+): EvidenceData | null {
+  if (
+    typeof input.birthDate !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(input.birthDate)
+  )
+    return null;
   if (input.gender !== 'male' && input.gender !== 'female') return null;
-  if (input.birthTime !== undefined && input.birthTime !== '' && !/^\d{1,2}$/.test(input.birthTime)) return null;
+  if (
+    input.birthTime !== undefined &&
+    input.birthTime !== '' &&
+    !/^\d{1,2}$/.test(input.birthTime)
+  )
+    return null;
   const [year, month, day] = input.birthDate.split('-').map(Number);
   const date = new Date(year, month - 1, day);
   const today = new Date();
-  if (year < 1900 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day || date > today) return null;
+  if (
+    year < 1900 ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day ||
+    date > today
+  )
+    return null;
   const unknownHour = !input.birthTime;
   const hour = unknownHour ? 12 : Number(input.birthTime);
   if (!Number.isInteger(hour) || hour < 0 || hour > 23) return null;
 
-  const chart = calculateChart(year, month, day, hour, input.gender === 'male' ? '男' : '女', unknownHour);
+  const chart = calculateChart(
+    year,
+    month,
+    day,
+    hour,
+    input.gender === 'male' ? '男' : '女',
+    unknownHour
+  );
   const fiveElements = Object.fromEntries(
-    getFiveElementData(chart).map(item => {
-      const key = ({ 木: 'wood', 火: 'fire', 土: 'earth', 金: 'metal', 水: 'water' } as const)[item.name as '木' | '火' | '土' | '金' | '水'];
+    getFiveElementData(chart).map((item) => {
+      const key = (
+        {
+          木: 'wood',
+          火: 'fire',
+          土: 'earth',
+          金: 'metal',
+          水: 'water',
+        } as const
+      )[item.name as '木' | '火' | '土' | '金' | '水'];
       return [key, item.value];
-    }),
+    })
   ) as EvidenceData['fiveElements'];
-  const tenGods = Object.fromEntries(getTenGodData(chart).map(item => [item.name, item.value]));
+  const tenGods = Object.fromEntries(
+    getTenGodData(chart).map((item) => [item.name, item.value])
+  );
   const recordId = `current-${randomUUID()}`;
   return {
     record_id: recordId,
@@ -244,8 +382,14 @@ function buildComputedEvidence(input: CurrentEvidenceInput): EvidenceData | null
     fiveElements,
     tenGods,
     // 未知時辰時不產生以中午近似推算的精確起運資料。
-    dayun: unknownHour ? [] : calculateDaYun(chart).map(item => ({ ...item })),
-    liunian: getFutureLiuNian(new Date().getFullYear(), 10, chart.dayMaster).map(item => ({ ...item })),
+    dayun: unknownHour
+      ? []
+      : calculateDaYun(chart).map((item) => ({ ...item })),
+    liunian: getFutureLiuNian(
+      new Date().getFullYear(),
+      10,
+      chart.dayMaster
+    ).map((item) => ({ ...item })),
   };
 }
 
@@ -254,66 +398,97 @@ function buildComputedEvidence(input: CurrentEvidenceInput): EvidenceData | null
 // [AI MOD] 輸入驗證：限制 messages 數量、單則長度、customPrompt/apiKey 長度
 function validateChatInput(body: ChatInputBody): string | null {
   const { messages, customPrompt, apiKey, record_id } = body || {};
-  if (!messages || !Array.isArray(messages)) return "無效的歷史訊息格式。";
-  if (messages.length > MAX_MESSAGES) return `訊息數量超過上限（${MAX_MESSAGES} 則）。`;
+  if (!messages || !Array.isArray(messages)) return '無效的歷史訊息格式。';
+  if (messages.length > MAX_MESSAGES)
+    return `訊息數量超過上限（${MAX_MESSAGES} 則）。`;
   for (const m of messages) {
-    if (!m || typeof m.content !== "string") return "訊息內容格式無效。";
-    if (m.content.length > MAX_MSG_CONTENT_LEN) return `單則訊息過長（上限 ${MAX_MSG_CONTENT_LEN} 字元）。`;
+    if (!m || typeof m.content !== 'string') return '訊息內容格式無效。';
+    if (m.content.length > MAX_MSG_CONTENT_LEN)
+      return `單則訊息過長（上限 ${MAX_MSG_CONTENT_LEN} 字元）。`;
   }
-  if (customPrompt !== undefined && customPrompt !== null && typeof customPrompt !== "string") {
-    return "系統提示格式無效。";
+  if (
+    customPrompt !== undefined &&
+    customPrompt !== null &&
+    typeof customPrompt !== 'string'
+  ) {
+    return '系統提示格式無效。';
   }
-  if (typeof customPrompt === "string" && customPrompt.length > MAX_CUSTOM_PROMPT_LEN) {
+  if (
+    typeof customPrompt === 'string' &&
+    customPrompt.length > MAX_CUSTOM_PROMPT_LEN
+  ) {
     return `系統提示過長（上限 ${MAX_CUSTOM_PROMPT_LEN} 字元）。`;
   }
-  if (apiKey !== undefined && apiKey !== null && typeof apiKey !== "string") {
-    return "API Key 格式無效。";
+  if (apiKey !== undefined && apiKey !== null && typeof apiKey !== 'string') {
+    return 'API Key 格式無效。';
   }
-  if (typeof apiKey === "string" && apiKey.length > MAX_USER_API_KEY_LEN) {
-    return "API Key 格式無效。";
+  if (typeof apiKey === 'string' && apiKey.length > MAX_USER_API_KEY_LEN) {
+    return 'API Key 格式無效。';
   }
-  if (record_id !== undefined && (typeof record_id !== 'string' || record_id.length === 0 || record_id.length > MAX_RECORD_ID_LEN || !/^[A-Za-z0-9_-]+$/.test(record_id))) {
-    return "record_id 格式無效。";
+  if (
+    record_id !== undefined &&
+    (typeof record_id !== 'string' ||
+      record_id.length === 0 ||
+      record_id.length > MAX_RECORD_ID_LEN ||
+      !/^[A-Za-z0-9_-]+$/.test(record_id))
+  ) {
+    return 'record_id 格式無效。';
   }
   return null;
 }
 
-function createEvidenceBundle(data: EvidenceData, query: string, sourceType: 'sql' | 'computed' = 'sql'): EvidenceBundle {
+function createEvidenceBundle(
+  data: EvidenceData,
+  query: string,
+  sourceType: 'sql' | 'computed' = 'sql'
+): EvidenceBundle {
   const now = new Date();
   const timeUnknown = data.bazi.time === '時辰未知';
   return {
     requestId: `${sourceType}-${data.record_id}-${now.getTime()}`,
     userId: 'anonymous',
     query,
-    items: [{
-      sourceId: `${sourceType}:${data.record_id}`,
-      sourceType,
-      title: `Bazi record ${data.record_id}`,
-      content: JSON.stringify(data),
-      retrievedAt: now.toISOString(),
-      schemaVersion: 'bazi-record-v1',
-      supports: timeUnknown
-        ? ['前三柱命盤資料', '五行分數', '十神比例', '流年']
-        : ['命盤資料', '五行分數', '十神比例', '大運流年'],
-    }],
+    items: [
+      {
+        sourceId: `${sourceType}:${data.record_id}`,
+        sourceType,
+        title: `Bazi record ${data.record_id}`,
+        content: JSON.stringify(data),
+        retrievedAt: now.toISOString(),
+        schemaVersion: 'bazi-record-v1',
+        supports: timeUnknown
+          ? ['前三柱命盤資料', '五行分數', '十神比例', '流年']
+          : ['命盤資料', '五行分數', '十神比例', '大運流年'],
+      },
+    ],
     limitations: [
       sourceType === 'computed'
         ? '資料由伺服器依本次工作階段提供的出生資訊重新排盤，工作階段到期後即失效。'
         : '資料來自 server-side SQL evidence source。',
-      ...(timeUnknown ? ['出生時辰未知；時柱與精確起運資料未納入，不得推論相關結果。'] : []),
+      ...(timeUnknown
+        ? ['出生時辰未知；時柱與精確起運資料未納入，不得推論相關結果。']
+        : []),
     ],
-    allowedClaims: [timeUnknown
-      ? '僅可根據前三柱、五行、十神與流年 Evidence 回答；不得聲稱精確時柱或起運。'
-      : '僅可根據此 Evidence Bundle 回答。'],
+    allowedClaims: [
+      timeUnknown
+        ? '僅可根據前三柱、五行、十神與流年 Evidence 回答；不得聲稱精確時柱或起運。'
+        : '僅可根據此 Evidence Bundle 回答。',
+    ],
     expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
     source: { type: sourceType, id: data.record_id },
   };
 }
 
-function writeSseContent(res: express.Response, content: string, factCheck?: FactCheckResult): void {
+function writeSseContent(
+  res: express.Response,
+  content: string,
+  factCheck?: FactCheckResult
+): void {
   // Validate the complete structured response before emitting answer chunks.
   for (let offset = 0; offset < content.length; offset += 32) {
-    res.write(`data: ${JSON.stringify({ content: content.slice(offset, offset + 32) })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ content: content.slice(offset, offset + 32) })}\n\n`
+    );
   }
   if (factCheck) {
     res.write(`data: ${JSON.stringify({ factCheck })}\n\n`);
@@ -343,19 +518,32 @@ function createChatHandler(systemPrompt: string) {
 
       // Evidence 必須由受信任的 server-side SQL/MCP pipeline 建立；client 不得自帶或偽造。
       // Dev fixture 是 server-side only，且 production 永遠無法啟用。
-      const query = messages.map((message: ChatMessage) => message.content || '').join('\n');
+      const query = messages
+        .map((message: ChatMessage) => message.content || '')
+        .join('\n');
       let evidenceBundle: EvidenceBundle | null = null;
       let evidenceData: EvidenceData | null = null;
       if (record_id) {
         const current = computedEvidence.get(record_id);
         const credential = getSuppliedCredential(req);
         if (record_id.startsWith('current-')) {
-          if (current && current.expiresAt > Date.now() && current.owner === credential) {
+          if (
+            current &&
+            current.expiresAt > Date.now() &&
+            current.owner === credential
+          ) {
             evidenceData = current.data;
-            evidenceBundle = createEvidenceBundle(evidenceData, query, 'computed');
-            console.log(`[SERVER] Using computed session evidence ${record_id}`);
+            evidenceBundle = createEvidenceBundle(
+              evidenceData,
+              query,
+              'computed'
+            );
+            console.log(
+              `[SERVER] Using computed session evidence ${record_id}`
+            );
           } else {
-            if (current && current.expiresAt <= Date.now()) computedEvidence.delete(record_id);
+            if (current && current.expiresAt <= Date.now())
+              computedEvidence.delete(record_id);
             evidenceBundle = null;
           }
         } else {
@@ -372,25 +560,42 @@ function createChatHandler(systemPrompt: string) {
         evidenceData = DEV_FIXTURE_BAZI as unknown as EvidenceData;
       }
       if (!evidenceBundle) {
-        const output = missingEvidenceOutput(['伺服器已驗證的 Evidence Bundle']);
-        res.write(`data: ${JSON.stringify({ content: output.answer, result: output })}\n\n`);
+        const output = missingEvidenceOutput([
+          '伺服器已驗證的 Evidence Bundle',
+        ]);
+        res.write(
+          `data: ${JSON.stringify({ content: output.answer, result: output })}\n\n`
+        );
         return res.end();
       }
-      if (DEV_FIXTURE_ENABLED && !record_id) console.log('[SERVER] Using development-only server-side Bazi fixture');
+      if (DEV_FIXTURE_ENABLED && !record_id)
+        console.log('[SERVER] Using development-only server-side Bazi fixture');
 
       // [AI MOD] customPrompt 型別淨化：只接受字串，避免物件/陣列被注入。內容不刪改（chat 功能所需）。
-      const safeCustomPrompt = typeof customPrompt === "string" ? customPrompt : "";
-      const agnesApiKey = process.env.AGNES_API_KEY || "";
+      const safeCustomPrompt =
+        typeof customPrompt === 'string' ? customPrompt : '';
+      const agnesApiKey = process.env.AGNES_API_KEY || '';
 
       if (!agnesApiKey) {
-        res.write(`data: ${JSON.stringify({ error: "目前無法完成分析，請稍後再試。" })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({ error: '目前無法完成分析，請稍後再試。' })}\n\n`
+        );
         return res.end();
       }
 
-      const openAiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
-      openAiMessages.push({ role: "system", content: systemPrompt });
-      openAiMessages.push({ role: "system", content: `[命盤資訊]\n${JSON.stringify(evidenceData)}` });
-      openAiMessages.push({ role: "system", content: JSON.stringify(evidenceBundle) });
+      const openAiMessages: Array<{
+        role: 'system' | 'user' | 'assistant';
+        content: string;
+      }> = [];
+      openAiMessages.push({ role: 'system', content: systemPrompt });
+      openAiMessages.push({
+        role: 'system',
+        content: `[命盤資訊]\n${JSON.stringify(evidenceData)}`,
+      });
+      openAiMessages.push({
+        role: 'system',
+        content: JSON.stringify(evidenceBundle),
+      });
 
       // [知識管線] 分類 → 檢索 → 附加知識條目。管線任何失敗都降級為「無知識條目」，不中斷聊天。
       let knowledgeItems: KnowledgeItem[] = [];
@@ -399,18 +604,25 @@ function createChatHandler(systemPrompt: string) {
           const classification = classifyQuery(query);
           const { items } = retrieveKnowledge(classification, evidenceData);
           knowledgeItems = items;
-          console.log(`[SERVER] knowledge pipeline: category=${classification.category} confidence=${classification.confidence} topics=${classification.topics.length} retrieved=${items.length}`);
+          console.log(
+            `[SERVER] knowledge pipeline: category=${classification.category} confidence=${classification.confidence} topics=${classification.topics.length} retrieved=${items.length}`
+          );
         } catch (pipelineErr: unknown) {
-          console.error("[SERVER] knowledge pipeline failed, degrading to chart-only evidence");
+          console.error(
+            '[SERVER] knowledge pipeline failed, degrading to chart-only evidence'
+          );
         }
       }
-      openAiMessages.push({ role: "system", content: `[檢索到的命理知識]\n${formatKnowledgeForPrompt(knowledgeItems)}` });
+      openAiMessages.push({
+        role: 'system',
+        content: `[檢索到的命理知識]\n${formatKnowledgeForPrompt(knowledgeItems)}`,
+      });
       // 驗證用 bundle = Evidence 來源 + 檢索到的知識條目；claims 的 sourceIds 必須落在此集合內。
       const validationBundle: EvidenceBundle = {
         ...evidenceBundle,
         items: [
           ...evidenceBundle.items,
-          ...knowledgeItems.map(item => ({
+          ...knowledgeItems.map((item) => ({
             sourceId: item.sourceId,
             sourceType: 'computed' as const,
             title: item.title,
@@ -425,19 +637,24 @@ function createChatHandler(systemPrompt: string) {
       for (const m of messages) {
         if (!m || !m.content) continue;
         openAiMessages.push({
-          role: m.role === "user" ? "user" : "assistant",
-          content: m.content
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.content,
         });
       }
 
       if (openAiMessages.length === 0) {
-        res.write(`data: ${JSON.stringify({ error: "請先輸入您的問題後再送出。" })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({ error: '請先輸入您的問題後再送出。' })}\n\n`
+        );
         return res.end();
       }
 
-      const agnesBaseUrl = process.env.AGNES_BASE_URL || 'https://apihub.agnes-ai.com/v1';
+      const agnesBaseUrl =
+        process.env.AGNES_BASE_URL || 'https://apihub.agnes-ai.com/v1';
       const agnesModel = process.env.AGNES_MODEL || 'agnes-3.0-flash';
-      console.log(`[SERVER] Querying Agnes AI with model ${agnesModel} (Streaming)...`);
+      console.log(
+        `[SERVER] Querying Agnes AI with model ${agnesModel} (Streaming)...`
+      );
       const openai = new OpenAI({
         apiKey: agnesApiKey,
         baseURL: agnesBaseUrl,
@@ -450,8 +667,9 @@ function createChatHandler(systemPrompt: string) {
           ? [
               ...openAiMessages,
               {
-                role: "user" as const,
-                content: "你上一則回覆未通過結構化驗證（缺少 JSON code fence，或 claims 的 sourceIds 引用了未提供的來源）。請依系統提示的引用規則重新回覆一次，格式與 footer 欄位不得更動，且 sourceIds 只能使用實際提供給你的編號。",
+                role: 'user' as const,
+                content:
+                  '你上一則回覆未通過結構化驗證（缺少 JSON code fence，或 claims 的 sourceIds 引用了未提供的來源）。請依系統提示的引用規則重新回覆一次，格式與 footer 欄位不得更動，且 sourceIds 只能使用實際提供給你的編號。',
               },
             ]
           : openAiMessages;
@@ -462,7 +680,7 @@ function createChatHandler(systemPrompt: string) {
           top_p: 1,
           max_tokens: 16384,
           seed: withCorrection ? undefined : 42,
-          stream: true
+          stream: true,
         });
         let raw = '';
         for await (const chunk of completion) {
@@ -472,17 +690,29 @@ function createChatHandler(systemPrompt: string) {
         return raw;
       };
 
-      const validateAttempt = (rawOutput: string): { output: unknown; result: ValidationResult } => {
+      const validateAttempt = (
+        rawOutput: string
+      ): { output: unknown; result: ValidationResult } => {
         const parsedResponse = parseAgnesResponse(rawOutput);
         let parsedOutput: unknown;
-        try { parsedOutput = JSON.parse(parsedResponse.content); } catch { parsedOutput = null; }
+        try {
+          parsedOutput = JSON.parse(parsedResponse.content);
+        } catch {
+          parsedOutput = null;
+        }
         if (!parsedOutput && parsedResponse.metadataValid) {
-          const sourceIds = evidenceBundle.items.map(item => item.sourceId);
+          const sourceIds = evidenceBundle.items.map((item) => item.sourceId);
           parsedOutput = {
             status: 'answered',
             answer: parsedResponse.content,
             claims: parsedResponse.metadata.insight
-              ? [{ text: parsedResponse.metadata.insight, sourceIds, confidence: 'low' }]
+              ? [
+                  {
+                    text: parsedResponse.metadata.insight,
+                    sourceIds,
+                    confidence: 'low',
+                  },
+                ]
               : [],
             limitations: evidenceBundle.limitations,
             nextQuestions: [],
@@ -493,7 +723,13 @@ function createChatHandler(systemPrompt: string) {
           parsedOutput = {
             status: 'answered',
             answer: parsedResponse.content.trim(),
-            claims: [{ text: 'Development fixture analysis', sourceIds: ['mcp:dev-fixture-bazi'], confidence: 'low' }],
+            claims: [
+              {
+                text: 'Development fixture analysis',
+                sourceIds: ['mcp:dev-fixture-bazi'],
+                confidence: 'low',
+              },
+            ],
             limitations: ['僅供 development smoke test，不代表真實命盤資料。'],
             nextQuestions: [],
           };
@@ -506,7 +742,13 @@ function createChatHandler(systemPrompt: string) {
           parsedOutput = {
             status: 'answered',
             answer: parsedResponse.content.trim(),
-            claims: [{ text: 'Development fixture analysis', sourceIds: ['mcp:dev-fixture-bazi'], confidence: 'low' }],
+            claims: [
+              {
+                text: 'Development fixture analysis',
+                sourceIds: ['mcp:dev-fixture-bazi'],
+                confidence: 'low',
+              },
+            ],
             limitations: ['僅供 development smoke test，不代表真實命盤資料。'],
             nextQuestions: [],
           };
@@ -518,7 +760,9 @@ function createChatHandler(systemPrompt: string) {
       let rawOutput = await callModelOnce(false);
       let { output: parsedOutput, result } = validateAttempt(rawOutput);
       if (!result.valid && !DEV_FIXTURE_ENABLED) {
-        console.log("[SERVER] AI output failed structured validation, honest retry once");
+        console.log(
+          '[SERVER] AI output failed structured validation, honest retry once'
+        );
         rawOutput = await callModelOnce(true);
         ({ output: parsedOutput, result } = validateAttempt(rawOutput));
       }
@@ -527,23 +771,32 @@ function createChatHandler(systemPrompt: string) {
         writeSseContent(res, refusal.answer);
       } else {
         const output = parsedOutput as { answer?: unknown };
-        const answerText = typeof output?.answer === 'string' ? output.answer : '';
-        const bazi = evidenceData && typeof evidenceData.bazi === 'object' && evidenceData.bazi !== null && 'dayMaster' in (evidenceData.bazi as Record<string, unknown>) ? evidenceData : null;
+        const answerText =
+          typeof output?.answer === 'string' ? output.answer : '';
+        const bazi =
+          evidenceData &&
+          typeof evidenceData.bazi === 'object' &&
+          evidenceData.bazi !== null &&
+          'dayMaster' in (evidenceData.bazi as Record<string, unknown>)
+            ? evidenceData
+            : null;
         // [Q4] 決定性事實檢查：AI 回答中的命理事實對照引擎排盤（不依賴 AI 自述）。
         const factCheck = bazi ? checkFactualClaims(answerText, bazi) : null;
-        if (factCheck) console.log(`[SERVER] factCheck verdict=${factCheck.verdict} checked=${factCheck.checked} failed=${factCheck.failed}`);
+        if (factCheck)
+          console.log(
+            `[SERVER] factCheck verdict=${factCheck.verdict} checked=${factCheck.checked} failed=${factCheck.failed}`
+          );
         writeSseContent(res, answerText, factCheck ?? undefined);
       }
 
       res.end();
     } catch (err: unknown) {
-      console.error("[SERVER ERROR]:", err);
+      console.error('[SERVER ERROR]:', err);
       res.write(`data: ${JSON.stringify(formatErrorResponse(err))}\n\n`);
       res.end();
     }
   };
 }
-
 
 async function startServer() {
   const app = express();
@@ -551,16 +804,19 @@ async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
 
   // Enable JSON request body parser（限制 1mb，避免灌爆）
-  app.use(express.json({ limit: "1mb" }));
+  app.use(express.json({ limit: '1mb' }));
 
   // [AI MOD] CORS 套用
   app.use(securityHeaders);
   app.use(corsMiddleware);
 
-  app.post("/api/auth/token", rateLimit(), (req, res) => {
+  app.post('/api/auth/token', rateLimit(), (req, res) => {
     const clientSecret = req.body?.client_secret;
     const devBypass = DEV_AUTH_BYPASS;
-    const secretValid = typeof clientSecret === 'string' && clientSecret.length > 0 && constantTimeEqual(clientSecret, authClientSecret);
+    const secretValid =
+      typeof clientSecret === 'string' &&
+      clientSecret.length > 0 &&
+      constantTimeEqual(clientSecret, authClientSecret);
     // 匿名模式（ENABLE_ANONYMOUS_CHAT=true）允許無 secret 發放 token；secret 仍可提供（向後相容）。
     if (!devBypass && !secretValid && !ANONYMOUS_CHAT_ENABLED) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -572,55 +828,88 @@ async function startServer() {
     res.json({ token, expiresIn: SESSION_TTL_MS / 1000 });
   });
 
-  app.get("/api/records", requireChatAuthorization, rateLimit(), async (_req, res) => {
-    try {
-      res.json(await sqlEvidenceSource.listRecords());
-    } catch {
-      res.status(500).json({ error: '目前無法取得命盤清單。' });
+  app.get(
+    '/api/records',
+    requireChatAuthorization,
+    rateLimit(),
+    async (_req, res) => {
+      try {
+        res.json(await sqlEvidenceSource.listRecords());
+      } catch {
+        res.status(500).json({ error: '目前無法取得命盤清單。' });
+      }
     }
-  });
+  );
 
-  app.post("/api/evidence/current", requireChatAuthorization, rateLimit("evidence"), (req, res) => {
-    try {
-      const now = Date.now();
-      for (const [recordId, record] of computedEvidence) {
-        if (record.expiresAt <= now) computedEvidence.delete(recordId);
+  app.post(
+    '/api/evidence/current',
+    requireChatAuthorization,
+    rateLimit('evidence'),
+    (req, res) => {
+      try {
+        const now = Date.now();
+        for (const [recordId, record] of computedEvidence) {
+          if (record.expiresAt <= now) computedEvidence.delete(recordId);
+        }
+        const data = buildComputedEvidence(req.body || {});
+        if (!data) {
+          res.status(400).json({ error: '出生資料格式無效。' });
+          return;
+        }
+        const owner = getSuppliedCredential(req);
+        computedEvidence.set(data.record_id, {
+          owner,
+          expiresAt: now + SESSION_TTL_MS,
+          data,
+        });
+        res.setHeader('Cache-Control', 'no-store');
+        res.status(201).json({
+          record_id: data.record_id,
+          birth: `${data.bazi.year}-${data.bazi.month}-${data.bazi.day}`,
+          gender: data.bazi.gender,
+          source: 'current',
+          time_known: data.bazi.time !== '時辰未知',
+        });
+      } catch {
+        res.status(400).json({ error: '無法建立目前命盤的驗證資料。' });
       }
-      const data = buildComputedEvidence(req.body || {});
-      if (!data) {
-        res.status(400).json({ error: '出生資料格式無效。' });
-        return;
-      }
-      const owner = getSuppliedCredential(req);
-      computedEvidence.set(data.record_id, { owner, expiresAt: now + SESSION_TTL_MS, data });
-      res.setHeader('Cache-Control', 'no-store');
-      res.status(201).json({
-        record_id: data.record_id,
-        birth: `${data.bazi.year}-${data.bazi.month}-${data.bazi.day}`,
-        gender: data.bazi.gender,
-        source: 'current',
-        time_known: data.bazi.time !== '時辰未知',
-      });
-    } catch {
-      res.status(400).json({ error: '無法建立目前命盤的驗證資料。' });
     }
-  });
+  );
 
   // Secure Server-side API Routes with Streaming (SSE) using Agnes OpenAI-compatible API
   // [AI MOD] 三條端點分流：/api/chat（八字解讀）、/api/chat/synastry（合盤配對）、/api/chat/dayun（大運流年）。
   // 各端點共用 evidence pipeline 與 SSE 輸出，僅差異在 systemPrompt 與限流 bucket。
-  app.options("/api/chat", corsMiddleware, (req, res) => res.status(204).end());
-  app.options("/api/chat/synastry", corsMiddleware, (req, res) => res.status(204).end());
-  app.options("/api/chat/dayun", corsMiddleware, (req, res) => res.status(204).end());
-  app.post("/api/chat", requireChatAuthorization, rateLimit("chat"), createChatHandler(BAZI_SYSTEM_PROMPT));
-  app.post("/api/chat/synastry", requireChatAuthorization, rateLimit("synastry"), createChatHandler(SYNASTRY_SYSTEM_PROMPT));
-  app.post("/api/chat/dayun", requireChatAuthorization, rateLimit("dayun"), createChatHandler(DAYUN_SYSTEM_PROMPT));
+  app.options('/api/chat', corsMiddleware, (req, res) => res.status(204).end());
+  app.options('/api/chat/synastry', corsMiddleware, (req, res) =>
+    res.status(204).end()
+  );
+  app.options('/api/chat/dayun', corsMiddleware, (req, res) =>
+    res.status(204).end()
+  );
+  app.post(
+    '/api/chat',
+    requireChatAuthorization,
+    rateLimit('chat'),
+    createChatHandler(BAZI_SYSTEM_PROMPT)
+  );
+  app.post(
+    '/api/chat/synastry',
+    requireChatAuthorization,
+    rateLimit('synastry'),
+    createChatHandler(SYNASTRY_SYSTEM_PROMPT)
+  );
+  app.post(
+    '/api/chat/dayun',
+    requireChatAuthorization,
+    rateLimit('dayun'),
+    createChatHandler(DAYUN_SYSTEM_PROMPT)
+  );
 
   // Vite middleware for development index fallback
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
@@ -631,8 +920,10 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[FULLSTACK ENGINE] Server is actively listening on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(
+      `[FULLSTACK ENGINE] Server is actively listening on http://0.0.0.0:${PORT}`
+    );
   });
 }
 

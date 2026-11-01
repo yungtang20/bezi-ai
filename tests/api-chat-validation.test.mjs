@@ -33,6 +33,11 @@ before(async () => {
       NODE_ENV: 'production',
       ENABLE_DEV_FIXTURE: 'false',
       BEZI_CHAT_API_KEY: 'test-chat-key',
+      // [FIX] 自帶 allow-list，使 preflight 測試在 CI（無 .env.local）與本機皆決定性可跑。
+      // 與 api-cors.test.mjs / prod-smoke.spec.ts 的顯式 ALLOWED_ORIGINS 慣例一致。
+      // 被送出的 Origin（http://localhost:3000）是跨來源（server 在 127.0.0.1:3101），
+      // 唯有列入 allow-list 才會回傳 Access-Control-Allow-Origin。
+      ALLOWED_ORIGINS: 'http://localhost:3000',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
