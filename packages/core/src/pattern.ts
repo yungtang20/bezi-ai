@@ -868,6 +868,12 @@ export function determinePattern(chart: BaziChart): PatternResult {
     reason += ` | ${reasons.slice(0, 5).join('；')}`;
   }
 
+  if (handout.status === 'REVIEW_REQUIRED') {
+    reason += ' | 本盤半合覆寫未經跨盤驗證；上述格局分數與喜忌僅是舊引擎暫算，不能視為徐玉蘭已核定的定盤';
+  } else if (handout.status === 'INCOMPLETE') {
+    reason += ' | 七字盤資料不足；此結果並非完整100分定盤，喜忌待補齊資料後再核對';
+  }
+
   const { favorable, unfavorable } = getFavorableElements(dayMaster, pattern);
   const weakestElements = findWeakestElement(chart);
 
@@ -880,6 +886,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
     weakestElement: weakestElements[0] || '木',
     weakestElements,
     reason,
+    handoutTrace: handout,
   };
 }
 
