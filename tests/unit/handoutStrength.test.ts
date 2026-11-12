@@ -59,7 +59,25 @@ describe('徐玉蘭講義七字位置分 + 半合位置覆寫（證據分級）'
     const dayBranch = trace.positions.find(p => p.position === 'day' && p.slot === 'branch');
     expect(dayBranch?.beforePoints).toBe(0);
     expect(dayBranch?.afterPoints).toBe(20);
-    expect(trace.delta).toBe(20);
+    // 只有課堂片段的局部覆寫線索，沒有完整官網四柱驗證，不能對外公布確定分數。
+    expect(trace.status).toBe('REVIEW_REQUIRED');
+    expect(trace.score).toBeNull();
+    expect(trace.delta).toBeNull();
+  });
+
+  it('不同命盤即使出現相同酉丑半合，不得把單一官網案例外推為已驗證定格局', () => {
+    const chart = mockChart('乙子', '丁丑', '癸酉', '癸丑');
+    const trace = calculateHandoutStrength(chart);
+    expect(trace.baseline).toBe(45);
+    expect(trace.changes.map(p => [p.position, p.afterPoints]))
+      .toEqual([['month', 35], ['hour', 10]]);
+    expect(trace.status).toBe('REVIEW_REQUIRED');
+    expect(trace.score).toBeNull();
+    expect(trace.delta).toBeNull();
+
+    const result = determinePattern(chart);
+    expect(result.handoutTrace?.status).toBe('REVIEW_REQUIRED');
+    expect(result.reason).toContain('未經跨盤驗證');
   });
 
   it('非相鄰酉丑不得僅因字面同盤就觸發此「相鄰半合」模組', () => {
