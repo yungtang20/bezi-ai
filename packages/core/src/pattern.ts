@@ -238,7 +238,7 @@ function getGeneratingElement(dayElement: string): string {
 }
 
 // ==================== 刑沖合掃描 ====================
-// 來源：定格局.pdf P1 — 優先級：刑 > 沖 > 合
+// 舊引擎啟發式順序：刑 > 沖 > 合（未經足夠教師實例驗證；不屬正式優先序）
 
 interface PillarInteraction {
   type: '刑' | '沖' | '合' | '害' | '破';
@@ -439,14 +439,17 @@ function checkTombActivation(chart: BaziChart): TombInfo[] {
   const tombs: TombInfo[] = [];
 
   zhis.forEach((zhi, idx) => {
-    const activation = TOMB_ACTIVATIONS.find(a => a.zhi === zhi);
-    if (activation) {
-      const hasTrigger = activation.trigger.some(gan => allGans.includes(gan));
+    const options = TOMB_ACTIVATIONS.filter(a => a.zhi === zhi);
+    if (options.length) {
+      const triggered = options.filter(a => a.trigger.some(gan => allGans.includes(gan)));
+      // 辰/未/戌可能同時遇到不同庫的透干線索；無來源確認優先序時
+      // 不能使用 .find 選第一種庫來改變五行或加分。
       tombs.push({
         zhi,
         pillarIndex: idx,
-        activated: hasTrigger,
-        tombType: hasTrigger ? activation.result : '未啟動',
+        activated: triggered.length === 1,
+        tombType: triggered.length > 1 ? '多重庫候選未決'
+          : triggered.length === 1 ? triggered[0].result : '未啟動',
         element: ZHI_TO_ELEMENT[zhi],
       });
     }
@@ -661,7 +664,7 @@ function getAllElementsInChart(chart: BaziChart): Record<string, number> {
 // ==================== 核心：determinePattern ====================
 
 /**
- * 判定格局 — 依照定格局.pdf 完整規則
+ * 舊引擎格局暫算 — 仍含未驗證的固定加減分；只能與 evidence trace 一併呈現
  *
  * 步驟：
  * 1. 掃描天干地支的所有互動（刑、沖、合）
