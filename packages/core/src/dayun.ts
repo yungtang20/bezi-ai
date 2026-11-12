@@ -143,7 +143,7 @@ export function getDaYunQuality(
   return '平運';
 }
 /**
- * 徐玉蘭口徑例外表：引擎分段判斷與老師實測口徑不一致時，以老師口徑為準。
+ * 課堂單盤候選：尚無完整教師原音與跨盤條件，不可作全域大運例外。
  * 每條記錄可獨立審計，原因欄位註明對應逐字稿段落，避免硬編碼散落在 React 元件內。
  */
 export interface DaYunQualityOverride {
@@ -160,13 +160,13 @@ export const DA_YUN_QUALITY_OVERRIDES: DaYunQualityOverride[] = [
     gender: '男',
     ganZhi: '壬午',
     quality: '好運',
-    reason: '老師實測口徑（2-1-1 [00:23]-[03:30]）：癸男壬午大運實測為好運，與機率模型分段判斷不一致，以老師口徑為準。',
+    reason: '課堂單一示例（2-1-1 [00:23]-[03:30]）尚待完整命盤與原音核實，不能套用所有癸男壬午大運。',
   },
 ];
 
 /**
- * 大運分段好壞判斷，包含老師口徑例外（override）。
- * 先檢查 override 表；命中以老師口徑為準；否則退回 getDaYunQuality。
+ * 大運分段暫算：不使用未經跨盤驗證的單一案例 override。
+ * 此函式僅是依輸入的喜忌清單作方向性計算，並非教師個案預測。
  * 純函式，可單元測試，不依賴 React 元件狀態。
  */
 export function getDaYunSegmentQuality(
@@ -178,10 +178,9 @@ export function getDaYunSegmentQuality(
   unfavorable: string[],
   opts?: { daYunStartYear?: number; year?: number },
 ): '好運' | '壞運' | '平運' {
-  const override = DA_YUN_QUALITY_OVERRIDES.find(
-    o => o.dayMaster === dayMaster && o.gender === gender && o.ganZhi === `${gan}${zhi}`,
-  );
-  if (override) return override.quality;
+  // 單一課堂示例不能被套用到所有同日主、同性別、同大運的命盤。
+  // 例外表僅作待核查案例紀錄；完整命盤與老師原音經獨立確認前不覆寫。
+  // 保留本函式舊簽名供呼叫端使用。
   return getDaYunQuality(gan, zhi, favorable, unfavorable, opts);
 }
 
