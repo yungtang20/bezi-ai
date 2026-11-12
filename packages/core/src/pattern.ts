@@ -4,6 +4,7 @@
 
 import { BaziChart } from './paipan';
 import { calculateHandoutStrength, type HandoutStrengthTrace } from './handoutStrength';
+import { inspectBaziInteractions, type InteractionTrace } from './evidenceInteractions';
 import { GAN_TO_ELEMENT, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
 
 // ==================== 基礎對應表 ====================
@@ -201,6 +202,8 @@ export interface PatternResult {
   weakestElements: string[]; // [AI MOD] 所有最弱五行（含被旺神重剋者，可能多個）
   reason?: string;          // 判斷理由（前端顯示用）
   handoutTrace?: HandoutStrengthTrace; // 講義七字位置與半合覆寫；非完整後端規則
+  interactionTrace?: InteractionTrace; // 刑沖破害、合會、四庫候選及必要條件排除
+  verificationStatus?: 'OBSERVED_SITE_CASE' | 'PROVISIONAL_REVIEW' | 'INCOMPLETE';
 }
 
 export interface PatternScores {
@@ -678,6 +681,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   // 只對可核對且有加分變動的相鄰半合使用新演算；其餘情形保留舊引擎，
   // 等待多命盤及授權後端原始碼比對後再整體替換。
   const handout = calculateHandoutStrength(chart);
+  const interactionTrace = inspectBaziInteractions(chart);
   if (handout.status === 'READY' && handout.changes.length > 0 && handout.score !== null) {
     const score = handout.score;
     const pattern: PatternResult['pattern'] =
@@ -693,6 +697,8 @@ export function determinePattern(chart: BaziChart): PatternResult {
       reason: `講義七字分${handout.baseline}，半合位置覆寫${handout.delta! >= 0 ? '+' : ''}${handout.delta}：${changed}；` +
         `${score}分為${pattern}分數區間（其它刑沖合絆、流年體感仍須交叉定盤）`,
       handoutTrace: handout,
+      interactionTrace,
+      verificationStatus: 'OBSERVED_SITE_CASE',
     };
   }
 
@@ -868,6 +874,12 @@ export function determinePattern(chart: BaziChart): PatternResult {
     reason += ` | ${reasons.slice(0, 5).join('；')}`;
   }
 
+  // 舊引擎仍含藏干30%、透干+3、三會+15 等未完整核實的固定加減分。
+  // 非官網已觀察的單盤，一律顯示此數值僅供比較，不是徐氏已定盤。
+  reason += ' | 格局、分數、喜忌均為未核驗的舊引擎暫算；刑沖破害/合會/四庫只列候選，不可據此判定歲運吉凶';
+  if (interactionTrace.conflicts.length) {
+    reason += ` | 偵測到${interactionTrace.conflicts.length}組同對多重關係，尚無完整優先序`;
+  }
   if (handout.status === 'REVIEW_REQUIRED') {
     reason += ' | 本盤半合覆寫未經跨盤驗證；上述格局分數與喜忌僅是舊引擎暫算，不能視為徐玉蘭已核定的定盤';
   } else if (handout.status === 'INCOMPLETE') {
@@ -887,6 +899,9 @@ export function determinePattern(chart: BaziChart): PatternResult {
     weakestElements,
     reason,
     handoutTrace: handout,
+    interactionTrace,
+    verificationStatus: handout.status === 'INCOMPLETE' || interactionTrace.status === 'INCOMPLETE'
+      ? 'INCOMPLETE' : 'PROVISIONAL_REVIEW',
   };
 }
 
