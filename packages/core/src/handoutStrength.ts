@@ -145,6 +145,20 @@ export function calculateHandoutStrength(chart: BaziChart): HandoutStrengthTrace
   const score = positions.reduce((sum, p) => sum + p.afterPoints, 0);
   notes.push('半合只按證據範圍內的相鄰配對覆寫有效五行，每個柱位最多取分一次');
   notes.push('本結果未包含其他規則交互；正式從格及流年體感定盤須另核對');
+
+  // 唯一有完整網站步驟截圖的四柱個案。不得以相同的半合字面配對
+  // 就推論不同四柱必然得到相同的覆寫分數（參見 skill 的 site-case.json）。
+  const observedSiteCase = chart.dayMaster === '癸'
+    && chart.year.gan === '甲' && chart.year.zhi === '子'
+    && chart.month.gan === '丁' && chart.month.zhi === '丑'
+    && chart.day.gan === '癸' && chart.day.zhi === '酉'
+    && chart.hour.gan === '癸' && chart.hour.zhi === '丑';
+  if (pairs.length > 0 && !observedSiteCase) {
+    notes.push('本盤半合覆寫未經跨盤驗證；位置變化僅是待核查候選，不得作為已確定的格局、喜忌或最終分數');
+    return { status: 'REVIEW_REQUIRED', baseline, score: null, delta: null,
+      positions, pairs, changes, notes };
+  }
+
   return { status: 'READY', baseline, score, delta: score - baseline,
     positions, pairs, changes, notes };
 }
