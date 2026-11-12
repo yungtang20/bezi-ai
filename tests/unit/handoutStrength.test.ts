@@ -43,6 +43,8 @@ describe('徐玉蘭講義七字位置分 + 半合位置覆寫（證據分級）'
     expect(result.pattern).toBe('從強');
     expect(result.score).toBe(90);
     expect(result.handoutTrace?.score).toBe(90);
+    expect(result.verificationStatus).toBe('OBSERVED_SITE_CASE');
+    expect(result.interactionTrace?.gates.some(g => g.status === 'BLOCKED')).toBe(true);
   });
 
   it('同一個酉在兩側與兩個丑各半合，不能漏掉時丑，也不能重複計酉', () => {
@@ -77,6 +79,7 @@ describe('徐玉蘭講義七字位置分 + 半合位置覆寫（證據分級）'
 
     const result = determinePattern(chart);
     expect(result.handoutTrace?.status).toBe('REVIEW_REQUIRED');
+    expect(result.verificationStatus).toBe('PROVISIONAL_REVIEW');
     expect(result.reason).toContain('未經跨盤驗證');
   });
 
