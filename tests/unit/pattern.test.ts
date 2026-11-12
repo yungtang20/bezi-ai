@@ -12,15 +12,14 @@ describe('Pattern Determination (Ge Ju)', () => {
     expect(result.favorable.length).toBeGreaterThan(0);
   });
 
-  it('marks 40-55% scores as continuum (徐玉蘭口徑：分數只是工具，定盤才是裁判)', () => {
-    // 1968-09-02 16:00 男：庚金日主，實測分數 40（連續體下緣）
+  it('does not preserve the old continuum label after excluding the day stem from seven-position scoring', () => {
+    // 舊引擎把日干多算5分，令此回歸樣本誤落在40分連續體邊界。
+    // 這是程式權重回歸測試；35分不是已經原音確認的徐玉蘭最後定盤。
     const chart = calculateChart(1968, 9, 2, 16, '男');
     const result: PatternResult = determinePattern(chart);
-    expect(result.score).toBeGreaterThanOrEqual(40);
-    expect(result.score).toBeLessThan(55);
-    expect(result.isContinuum).toBe(true);
-    // 連續體時 reason 必須標註不確定
-    expect(result.reason).toContain('連續體');
+    expect(result.score).toBe(35);
+    expect(result.isContinuum).toBe(false);
+    expect(result.reason).not.toContain('連續體');
   });
 
   it('does not mark scores outside 40-55% as continuum', () => {
