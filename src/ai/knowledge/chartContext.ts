@@ -50,7 +50,9 @@ export function buildChartContext(evidence: EvidenceData): ChartContext | null {
           birthYear: 2000, birthMonth: 1, birthDay: 1, birthHour: 12,
           zodiac: '',
         } as BaziChart;
-        pattern = determinePattern(chart).pattern;
+        const evaluated = determinePattern(chart);
+        // AI 下游不得把舊引擎暫算或跨盤未驗證規則當成確定格局。
+        pattern = evaluated.verificationStatus === 'OBSERVED_SITE_CASE' ? evaluated.pattern : null;
       }
     } catch {
       pattern = null;

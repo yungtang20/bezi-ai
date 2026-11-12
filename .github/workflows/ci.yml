@@ -21,9 +21,15 @@ jobs:
         cache: 'npm'
 
     - name: Install Dependencies
-      run: npm ci || npm install
+      run: npm ci
 
-    - name: Run Type & Lint Check
+    - name: Scan Production Dependencies
+      run: npm audit --omit=dev --audit-level=high
+
+    - name: Run TypeScript Typecheck
+      run: npm run typecheck
+
+    - name: Run ESLint Syntax Checks
       run: npm run lint
 
     - name: Run Unit Tests

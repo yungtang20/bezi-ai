@@ -140,6 +140,23 @@ export default function Dashboard({
       {/* B 軸：打卡改變格局時顯式顯示因果鏈 */}
       <PatternSwitchNotice />
 
+      {/* 來源可信度明示：格局候選不等於徐老師完整定盤。 */}
+      <div
+        role="status"
+        className="rounded-lg border border-amber-500/20 bg-zinc-900/60 p-3 text-xs text-zinc-300 leading-relaxed"
+      >
+        {patternResult.verificationStatus === 'OBSERVED_SITE_CASE'
+          ? '本命盤已重現教學網站單一案例的45→90分及從強格顯示；不代表老師原音與所有合會優先序均已核實。'
+          : patternResult.verificationStatus === 'INCOMPLETE'
+            ? '四柱資料未完整，不能定格局或選用神；本頁的格局、喜忌及歲運僅為待核對的示例。'
+            : '格局尚未核定：刑沖破害、合會、四庫及競合優先序尚需來源複查。本頁的格局、喜忌及歲運屬暫算，不可視為個人事件預測。'}
+        {patternResult.interactionTrace?.conflicts.length ? (
+          <span className="block mt-1">
+            已找到 {patternResult.interactionTrace.conflicts.length} 組同一配對的多重關係候選，尚未自動擇一或加減分。
+          </span>
+        ) : null}
+      </div>
+
       {/* [AI MOD] 今日能量卡（每日鉤子）：首屏第一眼 */}
       {view === 'today' && (
         <TodayEnergyCard

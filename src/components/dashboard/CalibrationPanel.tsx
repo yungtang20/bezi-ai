@@ -93,7 +93,7 @@ export default function CalibrationPanel({
             <div className="flex justify-between items-start mb-2">
               <span className="text-xs text-zinc-400">格局</span>
               <span className="text-sm font-bold text-white">
-                {patternResult.pattern}
+                {patternResult.pattern}{patternResult.verificationStatus !== 'OBSERVED_SITE_CASE' ? '（候選）' : '（網站單盤）'}
               </span>
             </div>
             <div className="flex justify-between items-start mb-2">
@@ -108,6 +108,9 @@ export default function CalibrationPanel({
                 {patternResult.unfavorable.join('、')}
               </span>
             </div>
+            {patternResult.verificationStatus !== 'OBSERVED_SITE_CASE' && (
+              <p className="text-[10px] text-amber-300 leading-snug">此格局與喜忌尚未核實；以下內容僅為舊引擎候選。</p>
+            )}
             {patternResult.isContinuum && (
               <p className="text-[10px] text-zinc-500 leading-snug max-w-[260px]">
                 40-55% 屬連續體，顯示「偏平衡」，非絕對身強或身弱。
@@ -162,7 +165,7 @@ export default function CalibrationPanel({
             </div>
             {report.samples > 0 && (
               <div className="mt-2 p-2 bg-indigo-500/10 border border-indigo-500/20 rounded text-xs text-indigo-300">
-                近期吻合度：{report.accuracy}% ({report.matches}/
+                近期回顧吻合度：{report.accuracy}% ({report.matches}/
                 {report.samples})
               </div>
             )}
@@ -208,7 +211,7 @@ export default function CalibrationPanel({
                 </div>
               ))}
               <div className="mt-2 p-2 bg-indigo-500/10 border border-indigo-500/20 rounded text-xs text-indigo-300">
-                整體準確率：{report.accuracy}% ({report.matches}/
+                既有記錄方向吻合率（非預測準確率）：{report.accuracy}% ({report.matches}/
                 {report.samples} 筆方向吻合)
               </div>
             </div>
@@ -273,7 +276,7 @@ export default function CalibrationPanel({
           </button>
         </div>
         <p className="mt-2 text-[10px] text-zinc-500">
-          校準後會調整格局分數，並可能觸發定盤切換。紀錄兩年後系統會建議是否調整格局方向。
+          打卡屬主觀事後回顧，調整的是假設分數；不得宣稱已完成老師定盤，也不能替代事前鎖定規則的獨立盲測。
         </p>
       </div>
     </div>

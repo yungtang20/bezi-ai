@@ -120,15 +120,15 @@ describe('DaYun Quality (徐玉蘭口徑：前 5 年走天干、後 5 年走地�
   });
 });
 
-describe('DaYun segment quality override (老師口徑例外表)', () => {
+describe('DaYun 單盤來源閘門：不跨個案套用 override', () => {
   const favorable = ['金', '土', '水'];
   const unfavorable = ['火', '土'];
 
-  it('癸男壬午大運命中 override → 好運', () => {
-    // getDaYunQuality: 壬=水（平）、午=火（忌） → 壞運；
-    // override 表以老師口徑為準 → 好運。
+  it('癸男壬午不因單一課堂示例被全部判為好運', () => {
+    // 這是「使用提供的喜忌作分段暫算」，不是徐玉蘭已完成的跨盤預測。
+    // 本例壬水為喜，午火為忌；前五年看壬、後五年看午。
     expect(getDaYunSegmentQuality('癸', '男', '壬', '午', favorable, unfavorable, { daYunStartYear: 2000, year: 2000 })).toBe('好運');
-    expect(getDaYunSegmentQuality('癸', '男', '壬', '午', favorable, unfavorable, { daYunStartYear: 2000, year: 2005 })).toBe('好運');
+    expect(getDaYunSegmentQuality('癸', '男', '壬', '午', favorable, unfavorable, { daYunStartYear: 2000, year: 2005 })).toBe('壞運');
   });
 
   it('非 override 命中時退回 getDaYunQuality 邏輯', () => {
