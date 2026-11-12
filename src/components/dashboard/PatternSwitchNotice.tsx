@@ -1,7 +1,7 @@
 // src/components/dashboard/PatternSwitchNotice.tsx
 // 打卡導致格局切換時的因果鏈提示。
 // 顯示：哪一天打卡、什麼回饋、哪個分數變動、從哪個格局切到哪一個。
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AppNotification } from '../../storage';
 import { getAllNotifications, markNotificationRead } from '../../storage';
 
@@ -15,23 +15,18 @@ export default function PatternSwitchNotice({
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useMemo(() => {
-    setLoading(false);
+  // 僅在掛載時載入，不能每次 render 都重新觸發 DB request / setState。
+  useEffect(() => {
+    let active = true;
+    void getAllNotifications().then(all => {
+      if (active) setNotifications(all.filter(n => n.type === 'pattern_switch'));
+    }).catch(() => {
+      if (active) setNotifications([]);
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
   }, []);
-
-  // fetch on mount via lazy effect
-  (async () => {
-    try {
-      const all = await getAllNotifications();
-      setNotifications(all.filter((n) => n.type === 'pattern_switch'));
-    } catch {
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  })();
-
-  const unread = notifications.filter((n) => !n.read);
 
   if (loading) return null;
   if (notifications.length === 0) return null;
@@ -42,7 +37,7 @@ export default function PatternSwitchNotice({
     <div
       className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 mb-4 animate-fade-in-up"
       role="region"
-      aria-label="格局自動調整通知"
+      aria-label="格局候選分數調整通知"
     >
       <div className="flex items-start gap-2 mb-2">
         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px] text-amber-400 font-bold">
@@ -76,7 +71,7 @@ export default function PatternSwitchNotice({
           </span>
         </div>
         <p className="text-[10px] text-zinc-500 mt-1">
-          系統依你近期打卡的實際感受（順利／不順），累積格局分數後自動切換。這是「越用越準」的回饋：你的生活體驗越準，命盤越貼近你。
+          系統依你近期打卡的實際感受（順利／不順），累積格局分數後自動切換。這只是以個人回顧資料調整的候選分數，不能視為模型預測準確率已獲獨立驗證，也不是徐玉蘭老師確認的定盤。
         </p>
       </div>
 
