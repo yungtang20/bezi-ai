@@ -3,6 +3,7 @@
 // 來源講義：定格局.pdf（10頁）、天干地支合化條件.pdf（2頁）、天干地支含刑沖破害.pdf（10頁）
 
 import { BaziChart } from './paipan';
+import { calculateHandoutStrength, type HandoutStrengthTrace } from './handoutStrength';
 import { GAN_TO_ELEMENT, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
 
 // ==================== 基礎對應表 ====================
@@ -199,6 +200,7 @@ export interface PatternResult {
   weakestElement: string;
   weakestElements: string[]; // [AI MOD] 所有最弱五行（含被旺神重剋者，可能多個）
   reason?: string;          // 判斷理由（前端顯示用）
+  handoutTrace?: HandoutStrengthTrace; // 講義七字位置與半合覆寫；非完整後端規則
 }
 
 export interface PatternScores {
@@ -380,7 +382,7 @@ function scanCombinedFormations(chart: BaziChart): CombinedFormation[] {
   for (const meeting of TRIAD_MEETINGS) {
     const found = meeting.branches.filter(b => zhis.includes(b));
     if (found.length === 3) {
-      const indices = meeting.branches.map(b => zhis.indexOf(b));
+      const indices = zhis.flatMap((zhi, idx) => meeting.branches.includes(zhi) ? [idx] : []);
       formations.push({
         type: '三會',
         branches: meeting.branches,
@@ -394,7 +396,7 @@ function scanCombinedFormations(chart: BaziChart): CombinedFormation[] {
   for (const group of TRIAD_GROUPS) {
     const found = group.branches.filter(b => zhis.includes(b));
     if (found.length === 3) {
-      const indices = group.branches.map(b => zhis.indexOf(b));
+      const indices = zhis.flatMap((zhi, idx) => group.branches.includes(zhi) ? [idx] : []);
       formations.push({
         type: '三合',
         branches: group.branches,
@@ -404,7 +406,7 @@ function scanCombinedFormations(chart: BaziChart): CombinedFormation[] {
     } else if (found.length === 2) {
       // 半合或暗拱
       const missing = group.branches.find(b => !zhis.includes(b));
-      const indices = found.map(b => zhis.indexOf(b));
+      const indices = zhis.flatMap((zhi, idx) => found.includes(zhi) ? [idx] : []);
       formations.push({
         type: '半合',
         branches: found,
@@ -672,6 +674,28 @@ export function determinePattern(chart: BaziChart): PatternResult {
   const dayMaster = chart.dayMaster;
   const dayElement = GAN_TO_ELEMENT[dayMaster];
 
+  // 講義和官方網站都提供了半合對「位置分」的覆寫例證。
+  // 只對可核對且有加分變動的相鄰半合使用新演算；其餘情形保留舊引擎，
+  // 等待多命盤及授權後端原始碼比對後再整體替換。
+  const handout = calculateHandoutStrength(chart);
+  if (handout.status === 'READY' && handout.changes.length > 0 && handout.score !== null) {
+    const score = handout.score;
+    const pattern: PatternResult['pattern'] =
+      score > 80 ? '從強' : score < 20 ? '從弱' : score >= 45 ? '身強' : '身弱';
+    const { favorable, unfavorable } = getFavorableElements(dayMaster, pattern);
+    const weakestElements = findWeakestElement(chart);
+    const changed = handout.changes.map(p =>
+      `${p.position}${p.slot}(${p.symbol}): ${p.beforeElement}/${p.beforePoints}→${p.afterElement}/${p.afterPoints}`).join('；');
+    const isContinuum = score >= 40 && score < 55;
+    return {
+      pattern, favorable, unfavorable, score, isContinuum,
+      weakestElement: weakestElements[0] || '木', weakestElements,
+      reason: `講義七字分${handout.baseline}，半合位置覆寫${handout.delta! >= 0 ? '+' : ''}${handout.delta}：${changed}；` +
+        `${score}分為${pattern}分數區間（其它刑沖合絆、流年體感仍須交叉定盤）`,
+      handoutTrace: handout,
+    };
+  }
+
   const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
   const isHourEmpty = !chart.hour.gan || !chart.hour.zhi;
@@ -679,7 +703,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   // 權重（來源：定格局.docx P1 ＋ 課程逐字稿 1-3 [10:06]-[10:25]，徐玉蘭口徑）
   // 天干：5% 5% 5% 5%（年/月/日/時）
   // 地支：20% 35% 20% 10%（年/月/日/時）— 年支20%、時支10%
-  const ganWeights = [5, 5, 5, isHourEmpty ? 0 : 5];
+  const ganWeights = [5, 5, 0, isHourEmpty ? 0 : 5]; // 日干是參考日主，不能再加權；七字合計100
   const zhiWeights = [20, 35, 20, isHourEmpty ? 0 : 10];
 
   // 總分 = 加分項百分比（0~100）
@@ -819,9 +843,9 @@ export function determinePattern(chart: BaziChart): PatternResult {
   // 從格嚴格判斷：需檢查是否有根（金日主的根須考慮濕土生金：丑辰算根、未戌不算）
   const hasRoot = zhis.some(z => (z ? isSupporting(dayElement, ZHI_TO_ELEMENT[z], z) : false));
 
-  if (finalScore > 80 && !hasRoot) {
+  if (finalScore > 80) {
     pattern = '從強';
-    reason = `加分項超過80%且無強根 → 從強格（分數：${finalScore.toFixed(1)}）`;
+    reason = `加分項超過80% → 從強分數區間（仍須結合定盤條件；分數：${finalScore.toFixed(1)}）`;
   } else if (finalScore < 20 && !hasRoot) {
     pattern = '從弱';
     reason = `加分項少於20%且無強根 → 從弱格（分數：${finalScore.toFixed(1)}）`;
