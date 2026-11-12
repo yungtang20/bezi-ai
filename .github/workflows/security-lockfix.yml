@@ -19,7 +19,8 @@ jobs:
           node-version: '24'
           cache: 'npm'
       - name: Refresh patched transitive dependencies without install scripts
-        run: npm audit fix --package-lock-only --ignore-scripts
+        run: |
+          npm audit fix --package-lock-only --ignore-scripts || true
       - name: Validate production dependency advisories
         run: npm audit --omit=dev --audit-level=high
       - name: Commit only updated lockfile
