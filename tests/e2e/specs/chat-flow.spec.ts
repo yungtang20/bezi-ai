@@ -265,7 +265,7 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
   await page.getByRole('button', { name: '探索' }).first().click();
   await page.getByRole('button', { name: /近期日子/ }).click();
 
-  await expect(page.getByText(/已連續打卡 1 天/)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText('連續 1 天', { exact: true }).first()).toBeVisible({ timeout: 20000 });
   await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
   if (evaluableDay) {
     // 一個打卡領域只計一筆，不因為十神日型有多個候選領域就膨脹分母。
