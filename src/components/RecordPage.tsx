@@ -375,7 +375,7 @@ export default function RecordPage({
         <div className="space-y-6">
           <div className="bg-zen-card rounded-[2rem] p-6 shadow-sm border border-zen-muted/10">
             <h3 className="text-xs tracking-[0.2em] text-zen-muted font-medium uppercase mb-5">
-              本月格局吻合度
+              本月紀錄方向吻合度
             </h3>
             <div className="flex items-center gap-6">
               <div className="relative w-16 h-16 shrink-0">
