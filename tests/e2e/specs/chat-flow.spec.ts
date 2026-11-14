@@ -270,8 +270,14 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
       open.onerror = () => reject(open.error);
       open.onsuccess = () => {
         const db = open.result;
-        const tx = db.transaction('patternScores', 'readwrite');
+        const tx = db.transaction(['patternScores', 'dailyLogs'], 'readwrite');
         tx.objectStore('patternScores').put({ id: '__e2e_idb_probe__', scores: { checked: true } });
+        // 同一 dailyLogs store 加一筆明確 key 的測試哨兵，區分整個 store 與自動 key 的既有打卡。
+        tx.objectStore('dailyLogs').put({
+          id: 8888, date: '2099-01-01', health: null, career: null, romance: null,
+          wealth: null, family: null, friends: null, note: 'e2e-sentinel',
+          theoreticalOutcome: '平穩', createdAt: '2099-01-01T00:00:00.000Z',
+        });
         tx.oncomplete = () => { db.close(); resolve(); };
         tx.onerror = () => { db.close(); reject(tx.error); };
       };
