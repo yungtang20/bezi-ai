@@ -146,7 +146,7 @@ test('first attempt invalid triggers one honest retry with correction, second at
     return {
       status: 'answered',
       answer: '重試後正確的回答',
-      claims: [{ text: '正確主張', sourceIds: ['kb:wealthGuidelines:wealth-土'], confidence: 'high' }],
+      claims: [{ text: '重試後正確的回答', sourceIds: ['kb:wealthGuidelines:wealth-土'], confidence: 'high' }],
       limitations: [], nextQuestions: [],
     };
   };
