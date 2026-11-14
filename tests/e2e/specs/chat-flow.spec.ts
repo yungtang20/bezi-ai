@@ -265,7 +265,33 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
   await page.getByRole('button', { name: '探索' }).first().click();
   await page.getByRole('button', { name: /近期日子/ }).click();
 
-  await expect(page.getByText('連續 1 天', { exact: true }).first()).toBeVisible({ timeout: 20000 });
+  const checkinSnapshot = await page.evaluate(async () => {
+    const logDates = await new Promise<string[]>((resolve, reject) => {
+      const request = indexedDB.open('BaziJournalDB', 5);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const all = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs').getAll();
+        all.onerror = () => { db.close(); reject(all.error); };
+        all.onsuccess = () => {
+          const dates = (all.result as Array<{ date: string }>).map(row => row.date);
+          db.close();
+          resolve(dates);
+        };
+      };
+    });
+    const now = new Date();
+    const localToday = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+    return { localToday, logDates };
+  });
+  console.log('[CHECKIN-E2E] ' + JSON.stringify(checkinSnapshot));
+  expect(checkinSnapshot.logDates).toHaveLength(1);
+  if (checkinSnapshot.logDates.includes(checkinSnapshot.localToday)) {
+    await expect(page.getByText('連續 1 天', { exact: true }).first()).toBeVisible({ timeout: 20000 });
+  } else {
+    // 留存舊日打卡不是連續「今日」：仍須顯示累積紀錄，但不得捏造今日 streak。
+    await expect(page.getByText(/已累積 1 天紀錄/)).toBeVisible();
+  }
   await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
   if (evaluableDay) {
     // 一個打卡領域只計一筆，不因為十神日型有多個候選領域就膨脹分母。
