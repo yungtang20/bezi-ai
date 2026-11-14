@@ -33,7 +33,10 @@ jobs:
     # 但讓差異在 CI log 可見，避免靜默再漂移。
     - name: Check Lecture Data Drift
       run: npm run check:drift
-      continue-on-error: true
+      continue-on-error: false
+
+    - name: Test Lecture Drift Gate
+      run: node --test tests/lecture-drift-gate.test.mjs
 
     - name: Run Unit Tests
       run: npm test
