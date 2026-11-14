@@ -17,6 +17,16 @@ describe('grounding validators', () => {
     const result = validateAIOutput({ status: 'answered', answer: 'x', claims: [], limitations: [], nextQuestions: [] }, bundle);
     expect(result.valid).toBe(false);
   });
+  it('rejects a claim that is not present in the answer even with a real sourceId (#44)', () => {
+    const result = validateAIOutput({
+      status: 'answered',
+      answer: '請注意睡眠與生活作息。',
+      claims: [{ text: '您的日主一定是甲', sourceIds: ['sql:chart:1'], confidence: 'high' }],
+      limitations: [], nextQuestions: [],
+    }, bundle);
+    expect(result.valid).toBe(false);
+    expect(result.errors.join(';')).toMatch(/主張.*回答/);
+  });
   it('produces an explicit missing-data refusal', () => {
     expect(missingEvidenceOutput(['出生時間']).status).toBe('needs_data');
   });

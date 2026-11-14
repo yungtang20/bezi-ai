@@ -42,7 +42,8 @@ before(async () => {
     req.on('end', () => {
       try { lastMessages = JSON.parse(raw).messages || []; } catch { lastMessages = []; }
       res.writeHead(200, { 'Content-Type': 'text/event-stream' });
-      const output = JSON.stringify(mockOutputFactory());
+      const generated = mockOutputFactory();
+      const output = typeof generated === 'string' ? generated : JSON.stringify(generated);
       res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: output } }] })}\n\ndata: [DONE]\n\n`);
     });
   });
@@ -265,4 +266,11 @@ test('AI answer with valid chart fact remains available (#43)', async () => {
   const body = await post({ messages: [{ role: 'user', content: '我的日主是什麼？' }], record_id: 'demo-001' });
   assert.match(body, /日主為戊/);
   assert.doesNotMatch(body, /命盤事實核對未通過/);
+});
+
+test('unstructured markdown footer cannot fabricate a claim citation from existing sourceIds (#44)', async () => {
+  mockOutputFactory = () => '文字：日主為戊。\n\n```json\n{"insight":"日主為戊","terms":[],"advice":[]}\n```';
+  const body = await post({ messages: [{ role: 'user', content: '請分析命盤' }], record_id: 'demo-001' });
+  assert.doesNotMatch(body, /文字：日主為戊/);
+  assert.match(body, /模型輸出未通過結構化引用驗證|目前資料不足/);
 });
