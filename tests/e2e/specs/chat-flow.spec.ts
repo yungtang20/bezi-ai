@@ -243,18 +243,34 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
     .getByRole('button', { name: /記錄今天的能量|記錄這天的能量/ })
     .click();
 
-  // 打卡成功 → 出現連續天數
-  await expect(page.getByText(/已連續打卡 1 天/)).toBeVisible({
-    timeout: 20000,
-  });
-  await expect(
-    page.getByRole('heading', { name: '近期紀錄吻合度' })
-  ).toBeVisible();
+  // 真正驗證 IndexedDB 的保存成功，避免格局自動切換時的 reload 遮蔽持久化結果。
+  // 原測試假設提交後仍停在同一頁，但 autoSwitched 會觸發 window.location.reload。
+  await page.waitForFunction(async () => new Promise<boolean>((resolve) => {
+    const open = indexedDB.open('BaziJournalDB', 5);
+    open.onerror = () => resolve(false);
+    open.onsuccess = () => {
+      const db = open.result;
+      const request = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs').getAll();
+      request.onsuccess = () => {
+        const saved = request.result as Array<{ date: string }>;
+        db.close();
+        resolve(saved.length === 1);
+      };
+      request.onerror = () => { db.close(); resolve(false); };
+    };
+  }), undefined, { timeout: 30000 });
+
+  // 重進頁面從持久化紀錄計算 streak（不依賴提交時是否發生自動格局切換）。
+  await page.goto('/');
+  await page.getByRole('button', { name: '探索' }).first().click();
+  await page.getByRole('button', { name: /近期日子/ }).click();
+
+  await expect(page.getByText(/已連續打卡 1 天/)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
   if (evaluableDay) {
-    // 單筆樣本只顯示累積狀態，不把 1 筆資料包裝成百分比結論
-    await expect(page.getByText(/1\/3 筆/)).toBeVisible();
+    // 一個打卡領域只計一筆，不因為十神日型有多個候選領域就膨脹分母。
+    await expect(page.getByText(/[01]\/1 筆方向吻合/)).toBeVisible();
   } else {
-    // 平穩日：二元感受不計入 → 顯示該日型應記錄領域的引導文案
     await expect(page.getByText(/感受就能開始計算吻合度/)).toBeVisible();
   }
 });
