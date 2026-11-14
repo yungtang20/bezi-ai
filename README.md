@@ -37,11 +37,11 @@ Bezi 不只產生一張命盤。它把先天命局、大運流年、流月流日
 Bezi 採取 local-first 設計，並把 AI 使用情境另外隔離：
 
 - 姓名、出生資料、校準與日誌主要保存在使用者目前的瀏覽器裝置。
-- 只有開啟 AI 問答時，出生日期、時辰與性別才會送至本服務後端，建立該工作階段的驗證命盤；**不會送出姓名**。
+- 只有開啟 AI 問答時，出生日期、時辰、性別及有選擇時的**出生城市經度**才會送至本服務後端，重新建立該工作階段的命盤 Evidence；**不會送出姓名或出生城市名稱**。
 - AI 工作階段使用短期 token，當次命盤 Evidence 只允許建立它的工作階段存取。
 - 產品使用事件只在本機保存彙總次數，不記錄生日、命盤或問答內容，也不傳送至外部分析服務。
 - Agnes API 金鑰只存在伺服器環境變數，不會進入前端 bundle、瀏覽器儲存空間或使用者請求。
-- AI 回應會經結構化 Evidence 驗證、決定性事實核對（`factChecker`）與 DOMPurify 清理後才顯示。
+- AI 回應在輸出前經 JSON 結構與引用編號存在性驗證、部分決定性命盤事實核對（`factChecker`），已偵測錯誤時停止顯示原始回答；前端使用 DOMPurify 清理。**合法來源編號不保證每一段解讀受原講義語意支持。**
 
 > 命理內容僅供文化研究、自我觀察與生活參考，不構成醫療、投資、法律或其他專業建議。
 
@@ -71,7 +71,7 @@ flowchart LR
 | API      | Express、短期授權、輸入驗證、限流、SSE 串流                                                                                 |
 | AI 安全  | Server-side Evidence Bundle、知識檢索引用溯源、決定性事實核對、缺資料時 fail closed                                         |
 | 儲存     | 瀏覽器 LocalStorage／IndexedDB；伺服器 SQLite 範例 Evidence                                                                 |
-| 品質     | TypeScript、Vitest 200 測試、Node API tests 27 項、Playwright 30 案、知識／事實評測腳本、講義 drift 檢查、GitHub Actions CI |
+| 品質     | TypeScript、Vitest、Node API integration、Playwright、知識／事實評測、講義 drift 鎖版檢查、GitHub Actions CI；每次變更以 HEAD CI 及 log 實際數字為準 |
 
 ## 本機執行
 
@@ -145,16 +145,24 @@ npm start
 
 > **Computed evidence 的 ownership**：`/api/evidence/current` 建立的 session 命盤 Evidence 會綁定**發放當下使用的 token**（owner check）。只有同一個 token 能透過 `/api/chat` 讀取該 `record_id`；換 token 或換 IP 皆會被視為 evidence 不足而拒答。Evidence 與 session token 的 TTL 均為 60 分鐘，過期即失效。
 
+### 本次品質保障與限制
+
+- `/api/evidence/current` 以出生資料及選用的 `longitude`（經度數值，須為有效數字且位於 ±180°）伺服器排盤，避免前後端在真太陽時邊界出現不同日主。未選經度則維持原模式。**前端校準格局仍屬回饋層，不等於伺服器已重新驗證過的格局。**
+- AI 供應商回覆必須是結構化 JSON，`claims.text` 需出現在 `answer` 中且 `sourceIds` 存在於本次檢索來源；檢查只針對結構、來源存在與部分可抽取的命盤事實，**不代表全篇命理語意符合講義**。偵測錯誤事實時不送出原回答。
+- 單實例匿名 AI 保留 per-IP HTTP 限流，另有 `BEZI_MODEL_MAX_CALLS_PER_WINDOW`（預設每個 IP 每分鐘 20 次 provider call）、`BEZI_MODEL_MAX_GLOBAL_CALLS_PER_WINDOW`（全站 80 次）、`BEZI_MODEL_MAX_ACTIVE_PER_CLIENT`（2）、`BEZI_MODEL_MAX_ACTIVE_GLOBAL`（8）控管，**一次重試也是一次呼叫**。這不是精準 token/費用帳本，也不能跨多台實例共享狀態。
+- `npm run check:drift` 鎖住兩筆已知 `UNKNOWN` 講義雙源差異，CI 會阻止新增或變更差異；不代表已判定哪一份才是老師原始口徑。詳 `docs/knowledge/known-lecture-drift.json`。
+- 「近期紀錄吻合度」只比較使用者打卡主觀感受與系統規則的樣本內方向，不能當成獨立預測準確率。獨立回測契約見 `docs/evaluation/`，未收集後驗觀察時不會出具準確率。
+
 ## 測試與驗證
 
 ```bash
 # TypeScript 靜態檢查
 npm run lint
 
-# Vitest 單元測試（26 檔、200 測試）
+# Vitest 單元測試（2026-11-15 commit 3556305 的 CI：27 檔、205 測試）
 npm test
 
-# API integration tests（7 檔、27 測試：chat 驗證、CORS、dev-auth、evidence/knowledge pipeline、evidence ownership、rate limit）
+# API integration tests（2026-11-15 commit 3556305 的 CI：8 檔、35 測試，含模型呼叫預算）
 npm run test:api
 
 # 知識管線 × 真實模型評測（需 .env.local 的真實 Agnes key）
@@ -225,7 +233,7 @@ bezi-ai/
 └─ .github/workflows/ci.yml # lint + test + test:api + build + prod-smoke
 ```
 
-## 排盤方法與正確性證據
+## 排盤方法與可重放的工程驗證
 
 ### 命理口徑來源：徐玉蘭老師教學框架
 
@@ -250,16 +258,16 @@ Bezi 的命理斷法**不是泛泛的網路八字**，而是對齊徐玉蘭 Mast
 - **時柱**：早子時（23:00–23:59）日柱維持當日、時柱為次日日干之子時（lunar-javascript EightChar 標準行為，已以回歸測試釘住）。
 - **大運順逆**：年干陰陽 × 性別，與年柱同一學派，內部一致。
 
-### 四層正確性證據鏈（不依賴引擎自我宣告）
+### 四層工程驗證證據鏈（不依賴引擎自我宣告）
 
-「結果是對的」不靠模型自述、也不靠使用者感覺，靠四層**可重放**的決定性證據：
+工程上能驗證的部分不靠模型自述，靠四層可重放證據；這些不證明命理推論的科學預測效度：
 
 1. **排盤引擎（機械層）**——節氣時刻以 Meeus 低精度太陽黃經獨立計算交叉驗證（立春 1995 = 02-04 07:19 UTC、立春 2000 = 02-04 12:36 UTC、清明 1984 = 04-04 14:28 UTC 等）；日柱以 JDN 六十週期公式（錨點 1949-10-01 = 甲子）獨立驗證。`tests/unit/paipan.test.ts`、`dayun.test.ts` 為 golden 回歸測試：四柱、起運、流年干支與十神皆硬編碼獨立驗證值，含立春前/後邊界案例。（依徐玉蘭口徑，起運歲數僅供顯示區間、不作為判定因素。）
-2. **知識資料（講義層）**——`tests/unit/teacherAlignment.test.ts` 把講義原值逐字釘進斷言（官運旺流日干支、補桃花方位、2026 飛星位置、補洩法耗洩組……），任何「覺得講義怪就自行修正」都會讓測試變紅，確保程式碼與徐玉蘭口徑一致。
+2. **知識資料（講義層）**——`tests/unit/teacherAlignment.test.ts` 把講義原值逐字釘進斷言（官運旺流日干支、補桃花方位、2026 飛星位置、補洩法耗洩組……），任何「覺得講義怪就自行修正」都會讓測試變紅，鎖住已核對的既有教材摘錄；未核對的雙源差異須保持 UNKNOWN，不得宣稱所有講義都已驗證。
 3. **AI 事實核對（管線層）**——`src/ai/factChecker.ts` 從 AI 回答抽取命理事實（日主、四柱、生肖、五行最旺/最弱、大運干支），對照 Evidence 命盤逐項判對錯，結果經 SSE `{ factCheck }` 幀回傳、前端顯示「事實核對 N/M」徽章。`tests/unit/factChecker.test.ts` 以金值命盤斷言；`scripts/eval-ai-factual.mjs`（`npm run eval:ai-factual`）用 **mock Agnes 注入已知錯誤答案**走完整管線，斷言 6 處錯誤（錯日主、錯年柱、錯生肖、錯五行、捏造大運等）全被抓、正確答案 accuracy=1——正確性由腳本注入，不由模型產生。
-4. **AI 引用誠實度（端到端層）**——`scripts/eval-knowledge-real.mjs` 以**真實 Agnes 模型**跑真實查詢，斷言 ①管線有檢索條目、②模型每條 claim 引用的 `sourceId` 在知識庫裡**真實存在**、③虛構引用不被放行。AI 可以說錯話，但不能引用不存在的講義。
+4. **AI 引用誠實度（端到端層）**——`scripts/eval-knowledge-real.mjs` 以**真實 Agnes 模型**跑真實查詢，斷言 ①管線有檢索條目、②模型每條 claim 引用的 `sourceId` 在知識庫裡**真實存在**、③虛構引用不被放行。此測試只能驗證引用編號存在、非全篇語意支持；AI 仍可能出現未被檢查器抽到的錯誤。
 
-> 證明鏈：原始講義（人工核過）→ pin test 釘住 → 注入錯誤驗證檢查器 → e2e 複跑可重放。任何一環斷掉，系統會自己報紅。
+> 驗證鏈：可查到的教材摘錄與獨立排盤案例 → pin tests → 注入錯誤驗證檢查器 → CI/E2E 重放。未核對來源或未涵蓋的命理推論保持 UNKNOWN；不能僅由 CI 綠燈推定所有解讀正確。
 
 ### 學派差異提醒
 
