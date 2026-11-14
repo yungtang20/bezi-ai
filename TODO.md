@@ -9,7 +9,7 @@
 ## 🟡 應該完成（開發體驗）
 
 - [ ] **優化建置 chunk** — `vite.config.ts` 已設定 `manualChunks`（vendor 切分、chunkSizeWarningLimit: 800），建置報告顯示 chunks 縮小
-- [ ] **設定 codebase-memory-mcp** → 連接專案記憶體到 MCP 伺服器
+- [x] ~~**設定 codebase-memory-mcp**~~ → 2026-11-12 已移除 MCP（binary、plugin、daemon 皆刪除），不再使用
 - [ ] **建立領域規則溯源表** → 已建立 `domain-rule-map.md`（對應 LLM_WIKI.md ↔ src/data/ 程式碼規則）
 
 ## 🟢 可選完成（架構演進）
@@ -18,10 +18,10 @@
 - [x] **定義 domain module 介面契約** → 完成：`.opencode/memory/domain-module-contracts.md`（paipan/pattern/dayun/dailyAnalysis 經 `@bezi/core` workspace shim；matchmaking/calibration 為真實實作；含邊界審查結論）
 - [x] **補齊 Playwright E2E** → 完成：`chat-flow.spec.ts` 從 3 測試擴充至 5（新增分流端點 401 保護 + 授權後 SSE grounding 驗證）
 
-
 ## 📝 本輪完成工作（2026-10-23，AI 事實正確性證據層 Q4）
 
 **AI 回答「說得對不對」的決定性驗證**（不依賴 AI 自述、不用 LLM-as-judge）：
+
 1. `src/ai/factChecker.ts` — 純函式 `checkFactualClaims(answer, record)`：從 AI 回答抽取緊鄰句式命理事實（日主、四柱、生肖、五行最旺/最弱、大運干支），對照 Evidence 命盤（引擎排盤、經 golden 驗證）逐項判 correct/wrong/unverifiable；時辰未知 → 時柱 unverifiable 不計分；抽不到事實 → no_facts 不惩罚。
 2. `server.ts` — `createChatHandler` 在 `validateAIOutput` 通過後跑事實檢查，SSE 於內容 chunks 之後、`[DONE]` 之前回傳 `{ factCheck }` 幀；非命盤 Evidence（合盤）以型別守衛跳過。
 3. 前端 — `useSSEChat` 解析 `factCheck` 幀存到 `ChatMessage`；`AIChatPanel` 在 assistant 訊息下顯示「事實核對 N/M」徽章（綠＝全對、紅＝有誤＋hover 明細）。
@@ -33,6 +33,7 @@
 ## 📝 本輪完成工作（2026-10-23，P1 真太陽時 + P2 我的親人卡片）
 
 **P1 真太陽時（出生地經度校正）**：
+
 1. `packages/core/src/trueSolarTime.ts` — 經度差 + 均時差（Meeus 近似）純函式 `toTrueSolarTime()`；跨午夜回傳 `dayDelta`。
 2. `packages/core/src/paipan.ts` — `calculateChart(..., longitude?)`：指定經度時四柱以真太陽時排盤；`BaziChart` 新增選填 `trueSolarYear/Month/Day/Hour`（未指定時 undefined，行為完全不變）；`birth*` 欄位仍保留民用值供顯示。
 3. `packages/core/src/dayun.ts` — `calculateDaYun` 讀 `chart.trueSolar* ?? birth*`，起運與柱位保持同一學派（跨午夜出生不再「柱位真太陽、起運民用」矛盾）。
@@ -40,6 +41,7 @@
 5. **Golden 測試** `tests/unit/trueSolarTime.test.ts`（4 項）：預設不變性、凌晨 0 時真太陽回退前一日 23 時（日柱 丙午→乙巳）、23 時低於 23:00 時辰 子→亥（1990-01-15 23:00 台中 → 丁亥）、`birth*` 民用值保留。scan 證明：hour-only 輸入在台北 24 小時內時辰跨 120 分鐘邊界 0 次，但日柱（早子/晚子）88 例差異 → 功能真實生效。
 
 **P2 我的親人卡片（profile 頁家人管理）**：
+
 1. `src/components/dashboard/PeopleCards.tsx` — 家人成員增/刪/載入重排；資料層**複用** SynastryPage 的 `partners` store（`relationship:'家人'`），不建第二份 convention。
 2. `PartnerChart` 新增選填 `birthCity`（真太陽時一致）。
 3. `Dashboard.tsx` profile view 新增「我的親人」accordion；「載入重排」→ `App.loadPerson` 填入表單（含城市 chip）並跳回 onboarding 重排。
@@ -49,34 +51,29 @@
 
 ## 📌 當前狀態摘要（2026-10-22 更新）
 
-| 檢查項目 | 結果 |
-|----------|------|
-| `npm run lint` | ✅ 通過（tsc --noEmit） |
-| `npm test` | ✅ 通過（17 檔、99 測試全過，含 paipan/dayun golden 回歸） |
-| API 驗證（.mjs） | ✅ 19 項全過（chat-validation 7 + cors 4 + evidence-pipeline 7 + dev-auth-bypass 1；須 `--test-concurrency=1` 避免 port 3000 衝突） |
-| Playwright E2E | ✅ 13/13 全過(chat-flow 11 + prod-smoke 2;含一鍵範例命盤、打卡吻合度、四區導覽三斷點、分享圖、production 煙霧) |
-| `npm run build` | ✅ 通過（前端 + 後端 bundle） |
-| chunk 大小 | ✅ 已優化（Vite 預設分包，無跨 chunk 循環） |
-| codebase-memory-mcp | ✅ 已索引（2,407 節點、8,043 邊、16 層） |
-| git repo | ✅ 完成（2026-10-21 經授權 init + push；remote `origin` → `github.com/yungtang20/bezi`，private，branch `main`） |
-| CI/CD | ✅ 完成（2026-10-21 ci.yml 已推送；每次 push 自動跑 lint + test + build + production 煙霧） |
-| 正式部署 | ✅ 上線（2026-10-21）Render `bezi-ai-api` → https://bezi-ai-api.onrender.com，匿名授權已啟用 |
+| 檢查項目            | 結果                                                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run lint`      | ✅ 通過（tsc --noEmit）                                                                                                             |
+| `npm test`          | ✅ 通過（17 檔、99 測試全過，含 paipan/dayun golden 回歸）                                                                          |
+| API 驗證（.mjs）    | ✅ 19 項全過（chat-validation 7 + cors 4 + evidence-pipeline 7 + dev-auth-bypass 1；須 `--test-concurrency=1` 避免 port 3000 衝突） |
+| Playwright E2E      | ✅ 13/13 全過(chat-flow 11 + prod-smoke 2;含一鍵範例命盤、打卡吻合度、四區導覽三斷點、分享圖、production 煙霧)                      |
+| `npm run build`     | ✅ 通過（前端 + 後端 bundle）                                                                                                       |
+| chunk 大小          | ✅ 已優化（Vite 預設分包，無跨 chunk 循環）                                                                                         |
+| codebase-memory-mcp | ❌ 已移除（2026-11-12；曾索引 2,407 節點）                                                                                          |
+| git repo            | ✅ 完成（2026-10-21 經授權 init + push；remote `origin` → `github.com/yungtang20/bezi`，private，branch `main`）                    |
+| CI/CD               | ✅ 完成（2026-10-21 ci.yml 已推送；每次 push 自動跑 lint + test + build + production 煙霧）                                         |
+| 正式部署            | ✅ 上線（2026-10-21）Render `bezi-ai-api` → https://bezi-ai-api.onrender.com，匿名授權已啟用                                        |
 
 ## 📝 本輪完成工作（2026-10-22，排盤正確性 P0）
 
 **🐛 排盤學派 bug 修復**（獨立天文驗證發現）：
+
 1. `packages/core/src/paipan.ts` — 年柱改用 `getYearInGanZhiExact`（立春精確時刻）、月柱改用 `getMonthInGanZhiExact`（節氣精確時刻）。原實作年柱用農曆正月初一學派、月柱用節氣日 00:00 日界，與 `calculateDaYun` 採用的 `getYearGanIndexExact`（立春學派）不一致 → 立春日數小時內的出生者，顯示年柱與大運順逆矛盾（6000 樣本掃描 ~2.5% 年柱與標準八字系統不符）。現引擎與 lunar-javascript 標準 EightChar 10/10 案例一致。
 2. `packages/core/src/dayun.ts` — `DaYun` 補上 `endAge`（原為 `undefined`）。
 
-**🐛 demo 證據假資料修復**（AI 會讀到錯誤命盤）：
-3. `data/bazi_records.json`、`data/bezi.db` — 以 engine 實排重生 demo-001/demo-002。原 fixture 四柱為手寫假值（demo-002 日柱 辛巳 實為 壬辰、日主 辛 實為 壬、起運 4 歲實為 7 歲）。
-4. `server.ts` `DEV_FIXTURE_BAZI` — 原月柱丙寅/時柱壬戌 為假值，改為與 demo-001 engine 輸出一致（丁卯/丁巳）＋真實五行/十神分佈。
-5. `src/App.tsx` — 修正過時註解（原寫「甲子年 丁卯月 戊午日」與 demo-001 時柱矛盾）。
+**🐛 demo 證據假資料修復**（AI 會讀到錯誤命盤）：3. `data/bazi_records.json`、`data/bezi.db` — 以 engine 實排重生 demo-001/demo-002。原 fixture 四柱為手寫假值（demo-002 日柱 辛巳 實為 壬辰、日主 辛 實為 壬、起運 4 歲實為 7 歲）。4. `server.ts` `DEV_FIXTURE_BAZI` — 原月柱丙寅/時柱壬戌 為假值，改為與 demo-001 engine 輸出一致（丁卯/丁巳）＋真實五行/十神分佈。5. `src/App.tsx` — 修正過時註解（原寫「甲子年 丁卯月 戊午日」與 demo-001 時柱矛盾）。
 
-**Golden 回歸測試**（Q4：不靠 AI 自述或感覺證明正確）：
-6. `tests/unit/paipan.test.ts` — 12 項 golden：四柱硬編碼值（獨立驗證：日柱 JDN 錨點 1949-10-01=甲子；節氣 Meeus 太陽黃經計算）、立春前/後邊界、早子時、時辰未知、五行/十神分佈。
-7. `tests/unit/dayun.test.ts` — 6 項 golden：四組起運年齡（節氣日數÷3 獨立驗證）＋大運干支順逆＋流年干支/十神。
-8. `README.md` — 新增「排盤方法與正確性證據」章節（立春學派聲明、證據鏈、學派差異說明）。
+**Golden 回歸測試**（Q4：不靠 AI 自述或感覺證明正確）：6. `tests/unit/paipan.test.ts` — 12 項 golden：四柱硬編碼值（獨立驗證：日柱 JDN 錨點 1949-10-01=甲子；節氣 Meeus 太陽黃經計算）、立春前/後邊界、早子時、時辰未知、五行/十神分佈。7. `tests/unit/dayun.test.ts` — 6 項 golden：四組起運年齡（節氣日數÷3 獨立驗證）＋大運干支順逆＋流年干支/十神。8. `README.md` — 新增「排盤方法與正確性證據」章節（立春學派聲明、證據鏈、學派差異說明）。
 
 ## 📝 本輪完成工作（2026-10-21）
 
@@ -96,6 +93,7 @@
 **🐛 重大 bug 修復**：`validateBirthInput` 只接受 `HH:mm`，但主表單儲存的是小時 → **填了時辰的使用者完全無法送出表單**（已支援 HH/HH:mm/HHmm 三格式 + 9 項回歸測試 `tests/unit/validation.test.ts`）
 
 **🐛 正式站全白修復（上線後才發現）**：
+
 1. CORS：module script 帶 `crossorigin` → 瀏覽器連同源請求也帶 Origin → 前端資源全 403 → React 無法掛載。修正：同源永不阻擋（新增 `tests/api-cors.test.mjs` 4 項）
 2. `manualChunks`：字串模糊匹配把 `motion/react` 誤歸入 vendor-react → 跨 chunk 循環 → production 崩潰（dev 不重現）。修正：移除自訂分包，改用 Vite 預設
 3. 防火牆：新增 production bundle 煙霧測試並接上 CI（`tests/e2e/specs/prod-smoke.spec.ts`）
