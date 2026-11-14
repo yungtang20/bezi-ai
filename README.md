@@ -143,6 +143,8 @@ npm start
 
 聊天端點必須攜帶 Bearer Session Token 與有效的 `record_id`。前端不能直接提交或偽造 Evidence Bundle。SSE 在內容 chunks 之後、`[DONE]` 之前回傳 `{ factCheck }` 幀，載有逐項事實核對結果。
 
+> **Computed evidence 的 ownership**：`/api/evidence/current` 建立的 session 命盤 Evidence 會綁定**發放當下使用的 token**（owner check）。只有同一個 token 能透過 `/api/chat` 讀取該 `record_id`；換 token 或換 IP 皆會被視為 evidence 不足而拒答。Evidence 與 session token 的 TTL 均為 60 分鐘，過期即失效。
+
 ## 測試與驗證
 
 ```bash
@@ -152,7 +154,7 @@ npm run lint
 # Vitest 單元測試（24 檔、195 測試）
 npm test
 
-# API integration tests（5 檔、26 測試：chat 驗證、CORS、dev-auth、evidence/knowledge pipeline）
+# API integration tests（7 檔、27 測試：chat 驗證、CORS、dev-auth、evidence/knowledge pipeline、evidence ownership、rate limit）
 npm run test:api
 
 # 知識管線 × 真實模型評測（需 .env.local 的真實 Agnes key）
@@ -210,8 +212,8 @@ bezi-ai/
 │  ├─ calibration.ts        # 打卡回饋 → 格局分數調整
 │  └─ storage.ts            # 瀏覽器 local-first 儲存
 ├─ tests/
-│  ├─ unit/                 # Vitest 單元（24 檔、195 測試，含 golden 回歸與講義對齊 pin）
-│  ├─ api-*.test.mjs        # API 整合（5 檔、27 測試）
+│  ├─ unit/                 # Vitest 單元（26 檔、200 測試，含 golden 回歸與講義對齊 pin）
+│  ├─ api-*.test.mjs        # API 整合（7 檔、27 測試）
 │  └─ e2e/specs/            # Playwright E2E（4 套、30 案）
 ├─ scripts/
 │  ├─ eval-ai-factual.mjs   # AI 事實核對評測（mock 注入已知對／錯答案）

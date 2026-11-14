@@ -1,0 +1,5 @@
+ts	phase	decision	why	evidence	result
+2026-11-14	plan	保留既有計分，增加來源限制說明	移除舊公式須先獲刪除授權，且無證據支持替代公式	packages/core/src/dailyAnalysis.ts:67	進行中
+2026-11-14	sources	財旺流日補運保留大運條件	講義依身強與大運平衡分三支	../講義_八字/八字｜3-1_講義.pdf 第23頁	已核對文字層，原頁由既有研究核對
+2026-11-14	verification	以範例命盤核對頁面揭露與切換日期	確保資訊出現在實際介面	bezi/docs/daily-teacher-alignment-plan.md	兩項說明存在，11-14 可切換至 11-15；截圖逾時
+2026-11-14	scope	未移除舊公式	使用者保留刪除核准，替代公式也未經證實	packages/core/src/dailyAnalysis.ts:67	舊公式仍會影響吉凶方向及吻合度

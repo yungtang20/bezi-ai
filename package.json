@@ -13,9 +13,10 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:api": "node --test --test-concurrency=1 tests/api-chat-validation.test.mjs tests/api-cors.test.mjs tests/api-dev-auth-bypass.test.mjs tests/api-evidence-pipeline.test.mjs tests/api-knowledge-pipeline.test.mjs",
+    "test:api": "node --test --test-concurrency=1 tests/api-chat-validation.test.mjs tests/api-cors.test.mjs tests/api-dev-auth-bypass.test.mjs tests/api-evidence-pipeline.test.mjs tests/api-evidence-ownership.test.mjs tests/api-rate-limit.test.mjs tests/api-knowledge-pipeline.test.mjs",
     "eval:ai-factual": "node scripts/eval-ai-factual.mjs",
     "test:e2e": "playwright test",
+    "check:drift": "node scripts/check-lecture-drift.mjs",
     "verify": "node scripts/agent/verify.mjs",
     "verify:logic": "node scripts/agent/verify.mjs logic",
     "verify:ui": "node scripts/agent/verify.mjs ui",
@@ -23,7 +24,6 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "better-sqlite3": "^13.0.3",
@@ -48,14 +48,11 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.72.0",
-    "@typescript-eslint/parser": "^8.72.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.0",
     "eslint": "^10.13.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
-    "mammoth": "^1.12.0",
     "prettier": "^3.9.10",
     "rollup-plugin-visualizer": "^7.1.1",
     "tailwindcss": "^4.1.14",
@@ -63,7 +60,6 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
     "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^4.1.10",
-    "workbox-window": "^7.4.1"
+    "vitest": "^4.1.10"
   }
 }

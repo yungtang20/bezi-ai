@@ -21,10 +21,19 @@ jobs:
         cache: 'npm'
 
     - name: Install Dependencies
-      run: npm ci || npm install
+      run: npm ci
+
+    - name: Core Package Type Check
+      run: npx tsc -p packages/core/tsconfig.json --noEmit
 
     - name: Run Type & Lint Check
       run: npm run lint
+
+    # 講義知識雙源漂移偵測：差異已知（兩處語意差），未定權威來源前不擋 merge，
+    # 但讓差異在 CI log 可見，避免靜默再漂移。
+    - name: Check Lecture Data Drift
+      run: npm run check:drift
+      continue-on-error: true
 
     - name: Run Unit Tests
       run: npm test

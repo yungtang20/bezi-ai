@@ -11,6 +11,9 @@ coverage/
 .vscode/
 .idea/
 
+# 專案僅用 npm；bun 產生的 lockfile 不進版控
+bun.lock
+
 # Playwright / test artifacts
 tests/e2e/reports/*
 !tests/e2e/reports/verify/

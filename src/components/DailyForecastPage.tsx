@@ -254,6 +254,13 @@ export default function DailyForecastPage({
 
         {/* 本月行事曆 */}
         <h2 className="text-xl font-bold text-zen-text mb-4">本月流日預報</h2>
+        <p className="text-sm text-zen-muted leading-relaxed mb-4">
+          「得財」標記使用的干支清單已對照《八字｜3-1》講義第 3、7、11、15、19
+          頁，不代表保證得財。 《八字｜3-1》講義第 23
+          頁的財旺流日補運另分三種：身強補財；
+          身弱且大運平衡補財；身弱且大運不平衡補比劫、印。
+          格局或大運平衡狀態未確定時，不能直接選定補運方式；從格不在該頁範圍內。
+        </p>
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => {
@@ -447,6 +454,10 @@ export default function DailyForecastPage({
             </span>
           )}
         </div>
+        <p className="text-sm text-zen-muted leading-relaxed mb-4">
+          每日吉凶方向由系統以自訂權重估算，尚未證實是徐玉蘭老師的公式。
+          吻合度只比較紀錄與這個系統估算，不代表老師教法或預測能力已獲驗證。
+        </p>
 
         {report.samples > 0 ? (
           <div className="relative z-10">

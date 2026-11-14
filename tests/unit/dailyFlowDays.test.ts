@@ -58,3 +58,62 @@ describe('犯小人日 / 健康注意日', () => {
     expect(divergences).toEqual([]);
   });
 });
+
+describe('得財日與財富篇筆記的流日清單', () => {
+  const wealthDays: Record<string, string[]> = {
+    金: ['甲寅', '甲子', '乙卯', '甲辰', '壬寅', '癸卯', '乙未'],
+    木: [
+      '丙寅',
+      '丙午',
+      '丙戌',
+      '丁未',
+      '丁巳',
+      '戊戌',
+      '戊寅',
+      '戊午',
+      '己未',
+      '己巳',
+    ],
+    水: [
+      '甲寅',
+      '丙辰',
+      '乙未',
+      '乙巳',
+      '甲午',
+      '甲戌',
+      '丙午',
+      '丙戌',
+      '丙寅',
+      '丁未',
+      '丁巳',
+    ],
+    火: ['庚辰', '辛丑', '己丑', '戊申', '庚申', '辛酉'],
+    土: [
+      '壬申',
+      '壬子',
+      '壬辰',
+      '癸酉',
+      '癸丑',
+      '癸亥',
+      '庚子',
+      '庚辰',
+      '庚申',
+      '辛亥',
+    ],
+  };
+
+  it('五種日主、兩種性別的六十甲子標記均與清單一致', () => {
+    for (const [element, dayMaster] of Object.entries(DAY_MASTERS)) {
+      for (const gender of ['男', '女']) {
+        for (const pillar of ALL_PILLARS) {
+          expect(
+            checkDayType(pillar[0], pillar[1], dayMaster, gender).includes(
+              '得財日'
+            ),
+            `${element}日主 ${gender}命 ${pillar}`
+          ).toBe(wealthDays[element].includes(pillar));
+        }
+      }
+    }
+  });
+});

@@ -1,0 +1,29 @@
+{
+  "mode": "logic",
+  "startedAt": "2026-11-14T06:51:38.881Z",
+  "steps": [
+    {
+      "name": "lint",
+      "ok": true,
+      "durationSec": 10.5,
+      "exitCode": 0,
+      "tail": ""
+    },
+    {
+      "name": "unit",
+      "ok": true,
+      "durationSec": 3.3,
+      "exitCode": 0,
+      "tail": "\n RUN  v4.1.11 D:/徐玉蘭/bezi\n\n\n Test Files  26 passed (26)\n      Tests  200 passed (200)\n   Start at  14:51:50\n   Duration  1.85s (transform 4.13s, setup 0ms, import 6.57s, tests 626ms, environment 6ms)\n\n"
+    },
+    {
+      "name": "api",
+      "ok": true,
+      "durationSec": 19.8,
+      "exitCode": 0,
+      "tail": "\n✔ rejects non-string apiKey before provider selection (2325.75ms)\n✔ rejects non-string customPrompt before provider selection (4.374ms)\n✔ sets CORS headers on /api/chat OPTIONS preflight (12.5288ms)\n✔ creates session-scoped current-chart evidence from validated birth input (49.0248ms)\n✔ marks unknown birth hour and still creates bounded three-pillar evidence (21.3532ms)\n✔ rejects invalid birth input before creating current-chart evidence (10.0596ms)\n✔ rejects oversized request body (18.5195ms)\n✔ 同源請求（含 Origin header）不被阻擋 (2060.8393ms)\n✔ 外來 origin 仍被阻擋 (10.0403ms)\n✔ 允許清單內的 origin 通過 (4.873ms)\n✔ 無 Origin header 的請求（server-to-server）通過 (10.4759ms)\n✔ development-only auth bypass issues a token without a secret (3263.7331ms)\n✔ cross-token computed evidence access is rejected (2115.2857ms)\n✔ same-token computed evidence access succeeds (45.378ms)\n✔ different credential string cannot read another token evidence (64.8113ms)\n✔ rejects missing authorization before querying evidence (2096.7295ms)\n✔ records endpoint requires authorization and returns summaries (12.7538ms)\n✔ rejects an invalid client secret (6.5907ms)\n✔ issues a session token that authorizes chat (49.4206ms)\n✔ valid record_id passes the gate and calls the provider (21.2275ms)\n✔ invalid record_id returns needs_data without calling the provider (2.6183ms)\n✔ missing record_id returns needs_data without calling the provider (11.9678ms)\n✔ knowledge prompt is attached after evidence and before user messages (2680.2425ms)\n✔ valid kb sourceIds pass the fabricated-citation gate (24.3644ms)\n✔ fabricated kb sourceIds are rejected with refusal (21.4752ms)\n✔ first attempt invalid triggers one honest retry with correction, second attempt passes (37.9674ms)\n✔ two consecutive invalid attempts end in honest refusal (32.9814ms)\n✔ unclassifiable query degrades to general_bazi knowledge, chat still works (17.0401ms)\n✔ record with full pillars completes pipeline with pattern-dependent items (15.2136ms)\n✔ exceeding chat rate limit returns SSE 429 (3525.3535ms)\nℹ tests 30\nℹ suites 0\nℹ pass 30\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 19371.075\n"
+    }
+  ],
+  "finishedAt": "2026-11-14T06:52:12.478Z",
+  "passed": true
+}

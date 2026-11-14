@@ -281,41 +281,41 @@
 
 ### 3.1 核心計算模組
 
-| 概念     | 來源檔案                                                       | 實現檔案                               | 函式/變數                                                      |
-| -------- | -------------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------- |
-| 十天干   | 1-6、2-0 五行關係十神表                                        | `packages/core/src/constants.ts`       | `GAN_TO_ELEMENT`, `YANG_GANS`                                  |
-| 十二地支 | 1-1 地支藏干表                                                 | `packages/core/src/constants.ts`       | `ZHI_TO_ELEMENT`                                               |
-| 地支藏干 | 1-1 地支藏干表                                                 | `packages/core/src/pattern.ts`         | `ZHI_HIDDEN`, `ZHI_HIDDEN_DETAIL`                              |
-| 天干五合 | 天干地支合化條件.docx                                          | `packages/core/src/pattern.ts`         | `STEM_HARMONIES`, `findStemHarmony()`                          |
-| 地支六合 | 天干地支合化條件.docx                                          | `packages/core/src/pattern.ts`         | `BRANCH_HARMONIES`, `findBranchHarmony()`                      |
-| 地支六沖 | 1-2 地支互動表講義                                             | `src/matchmaking.ts`                   | `PAIR_RELATIONS`, `checkLiuChong()`                            |
-| 地支三刑 | 1-2 地支互動表講義                                             | `src/data/core/earthlyBranchTraits.ts` | `BRANCH_INTERACTIONS`                                          |
-| 地支相害 | 天干地支含刑沖破害                                             | `src/matchmaking.ts`                   | `checkLiuHai()`                                                |
-| 地支相破 | 天干地支含刑沖破害                                             | `src/matchmaking.ts`                   | `checkLiuPo()`                                                 |
-| 十神計算 | 十神.docx                                                      | `packages/core/src/constants.ts`       | `getTenGod()`, `getTenGodCategory()`                           |
-| 命盤計算 | 1-1, 1-2                                                       | `packages/core/src/paipan.ts`          | `calculateChart()`, `buildPillar()`                            |
-| 格局判定 | 定格局.docx ＋ 課程逐字稿 1-3/1-4（2026-10-27 徐玉蘭口徑對齊） | `packages/core/src/pattern.ts`         | `determinePattern()`, `getPrimaryPattern()`, `getCheckYears()` |
-| 大運計算 | 大運流年補運架構 ＋ 逐字稿 2-1-1（前 5 天干後 5 地支）         | `packages/core/src/dayun.ts`           | `calculateDaYun()`, `getDaYunQuality()`                        |
-| 流年計算 | 2000-2030 流年五行對照表                                       | `packages/core/src/dayun.ts`           | `getLiuNian()`, `getFutureLiuNian()`                           |
-| 合盤判斷 | 姻緣篇.docx                                                    | `src/matchmaking.ts`                   | `checkSpouseStar()`, `checkMutualComplement()`                 |
+| 概念     | 來源檔案                                                       | 實現檔案                                    | 函式/變數                                                      |
+| -------- | -------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------- |
+| 十天干   | 1-6、2-0 五行關係十神表                                        | `packages/core/src/constants.ts`            | `GAN_TO_ELEMENT`, `YANG_GANS`                                  |
+| 十二地支 | 1-1 地支藏干表                                                 | `packages/core/src/constants.ts`            | `ZHI_TO_ELEMENT`                                               |
+| 地支藏干 | 1-1 地支藏干表                                                 | `packages/core/src/pattern.ts`              | `ZHI_HIDDEN`, `ZHI_HIDDEN_DETAIL`                              |
+| 天干五合 | 天干地支合化條件.docx                                          | `packages/core/src/pattern.ts`              | `STEM_HARMONIES`, `findStemHarmony()`                          |
+| 地支六合 | 天干地支合化條件.docx                                          | `packages/core/src/pattern.ts`              | `BRANCH_HARMONIES`, `findBranchHarmony()`                      |
+| 地支六沖 | 1-2 地支互動表講義                                             | `src/matchmaking.ts`（真實實作，未進 core） | `PAIR_RELATIONS`, `checkLiuChong()`                            |
+| 地支三刑 | 1-2 地支互動表講義                                             | `src/data/core/earthlyBranchTraits.ts`      | `BRANCH_INTERACTIONS`                                          |
+| 地支相害 | 天干地支含刑沖破害                                             | `src/matchmaking.ts`（真實實作，未進 core） | `checkLiuHai()`                                                |
+| 地支相破 | 天干地支含刑沖破害                                             | `src/matchmaking.ts`（真實實作，未進 core） | `checkLiuPo()`                                                 |
+| 十神計算 | 十神.docx                                                      | `packages/core/src/constants.ts`            | `getTenGod()`, `getTenGodCategory()`                           |
+| 命盤計算 | 1-1, 1-2                                                       | `packages/core/src/paipan.ts`               | `calculateChart()`, `buildPillar()`                            |
+| 格局判定 | 定格局.docx ＋ 課程逐字稿 1-3/1-4（2026-10-27 徐玉蘭口徑對齊） | `packages/core/src/pattern.ts`              | `determinePattern()`, `getPrimaryPattern()`, `getCheckYears()` |
+| 大運計算 | 大運流年補運架構 ＋ 逐字稿 2-1-1（前 5 天干後 5 地支）         | `packages/core/src/dayun.ts`                | `calculateDaYun()`, `getDaYunQuality()`                        |
+| 流年計算 | 2000-2030 流年五行對照表                                       | `packages/core/src/dayun.ts`                | `getLiuNian()`, `getFutureLiuNian()`                           |
+| 合盤判斷 | 姻緣篇.docx                                                    | `src/matchmaking.ts`（真實實作，未進 core） | `checkSpouseStar()`, `checkMutualComplement()`                 |
 
 ### 3.2 分類知識模組
 
 #### 健康篇 (05_健康)
 
-| 概念           | 來源檔案    | 實現檔案                            | 變數                               |
-| -------------- | ----------- | ----------------------------------- | ---------------------------------- |
-| 五行器官對應   | 健康篇.docx | `src/data/charts/healthData.ts`     | `HEALTH_DATA.ORGANS`               |
-| 五行健康警訊   | 健康篇.docx | `src/data/charts/healthData.ts`     | `HEALTH_DATA.WARNINGS`             |
-| 大運看健康     | 健康篇.docx | `src/data/charts/healthData.ts`     | `HEALTH_DATA.DAYUN_HEALTH`         |
-| 三刑與健康     | 健康篇.docx | `src/data/charts/healthData.ts`     | `HEALTH_DATA.SANXING_HEALTH`       |
-| 飛星健康影響   | 健康篇.docx | `src/data/charts/healthData.ts`     | `HEALTH_DATA.FLYING_STAR_HEALTH`   |
-| 極端能量流日   | 健康篇.docx | `src/data/charts/healthData.ts`     | `HEALTH_DATA.EXTREME_DAYS`         |
-| 每月健康注意日 | 健康篇.docx | `src/data/charts/healthData.ts`     | `HEALTH_DATA.MONTHLY_HEALTH_ALERT` |
-| 健康補運       | 健康篇.docx | `src/data/charts/healthRemedies.ts` | `healthRemedies[]`                 |
-| 健康養生指南   | 健康篇.docx | `src/data/charts/healthData.ts`     | `HEALTH_PRESERVATION_GUIDE`        |
-| 每日健康注意日 | 健康篇.docx | `src/data/rules/dailyFlowDays.ts`   | `checkDayType()`                   |
-| 流日健康分析   | 健康篇.docx | `src/dailyAnalysis.ts`              | `getDailyEnergy()`                 |
+| 概念           | 來源檔案    | 實現檔案                             | 變數                               |
+| -------------- | ----------- | ------------------------------------ | ---------------------------------- |
+| 五行器官對應   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.ORGANS`               |
+| 五行健康警訊   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.WARNINGS`             |
+| 大運看健康     | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.DAYUN_HEALTH`         |
+| 三刑與健康     | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.SANXING_HEALTH`       |
+| 飛星健康影響   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.FLYING_STAR_HEALTH`   |
+| 極端能量流日   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.EXTREME_DAYS`         |
+| 每月健康注意日 | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.MONTHLY_HEALTH_ALERT` |
+| 健康補運       | 健康篇.docx | `src/data/charts/healthRemedies.ts`  | `healthRemedies[]`                 |
+| 健康養生指南   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_PRESERVATION_GUIDE`        |
+| 每日健康注意日 | 健康篇.docx | `src/data/rules/dailyFlowDays.ts`    | `checkDayType()`                   |
+| 流日健康分析   | 健康篇.docx | `packages/core/src/dailyAnalysis.ts` | `getDailyEnergy()`                 |
 
 #### 財富篇 (02_財運)
 
@@ -345,23 +345,23 @@
 
 #### 感情姻緣篇 (04_感情姻緣)
 
-| 概念         | 來源檔案 | 實現檔案                                 | 變數                                             |
-| ------------ | -------- | ---------------------------------------- | ------------------------------------------------ |
-| 配偶星特質   | 5-1 講義 | `src/data/charts/spouseTraits.ts`        | `spouseTraits[]`                                 |
-| 夫妻宮特質   | 5-1 講義 | `src/data/charts/spouseGuidelines.ts`    | `SPOUSE_TRAITS_MAPPING`                          |
-| 桃花流年     | 5-2 講義 | `src/data/rules/peachBlossomTiming.ts`   | `MALE_ROMANCE_DAYS`, `FEMALE_ROMANCE_DAYS`       |
-| 桃花危機     | 4-5 講義 | `src/data/rules/peachBlossomTiming.ts`   | `PEACH_BLOSSOM_CRISIS`                           |
-| 桃花補運     | 4-7 講義 | `src/data/lecture/lectureData.ts`        | `LECTURE_DATA.PEACH_BLOSSOM_REMEDY`              |
-| 桃花時機     | 5-2 講義 | `src/data/lecture/lectureData.ts`        | `LECTURE_DATA.PEACH_BLOSSOM_TIMING`              |
-| 合盤五行互補 | 5-2 講義 | `src/data/rules/partnerMatching.ts`      | `PARTNER_MATCHING_DATA.FIVE_ELEMENTS_COMPLEMENT` |
-| 合盤十神配對 | 5-2 講義 | `src/data/rules/partnerMatching.ts`      | `PARTNER_MATCHING_DATA.TEN_GODS_MATCHING`        |
-| 合盤生肖三合 | 5-2 講義 | `src/data/rules/partnerMatching.ts`      | `PARTNER_MATCHING_DATA.ZODIAC_TRINITY`           |
-| 日柱結構相似 | 5-2 講義 | `src/matchmaking.ts`                     | `checkDayStructureSimilarity()`                  |
-| 互為夫妻星   | 5-1 講義 | `src/matchmaking.ts`                     | `checkSpouseStar()`                              |
-| 感情風水     | 5-1 講義 | `src/data/charts/romanceRemediesData.ts` | `ROMANCE_FENG_SHUI_DATA`                         |
-| 飛星桃花     | 5-2 講義 | `src/data/lecture/lectureData.ts`        | `LECTURE_DATA.FLYING_STARS_ROMANCE`              |
-| 十神相處策略 | 5-2 講義 | `src/data/charts/spouseGuidelines.ts`    | `PARTNER_TEN_GODS_TRAITS`                        |
-| 夫妻宮沖刑   | 5-1 講義 | `src/data/charts/spouseGuidelines.ts`    | `SPOUSE_STAR_CLASHES`                            |
+| 概念         | 來源檔案 | 實現檔案                                    | 變數                                             |
+| ------------ | -------- | ------------------------------------------- | ------------------------------------------------ |
+| 配偶星特質   | 5-1 講義 | `src/data/charts/spouseTraits.ts`           | `spouseTraits[]`                                 |
+| 夫妻宮特質   | 5-1 講義 | `src/data/charts/spouseGuidelines.ts`       | `SPOUSE_TRAITS_MAPPING`                          |
+| 桃花流年     | 5-2 講義 | `src/data/rules/peachBlossomTiming.ts`      | `MALE_ROMANCE_DAYS`, `FEMALE_ROMANCE_DAYS`       |
+| 桃花危機     | 4-5 講義 | `src/data/rules/peachBlossomTiming.ts`      | `PEACH_BLOSSOM_CRISIS`                           |
+| 桃花補運     | 4-7 講義 | `src/data/lecture/lectureData.ts`           | `LECTURE_DATA.PEACH_BLOSSOM_REMEDY`              |
+| 桃花時機     | 5-2 講義 | `src/data/lecture/lectureData.ts`           | `LECTURE_DATA.PEACH_BLOSSOM_TIMING`              |
+| 合盤五行互補 | 5-2 講義 | `src/data/rules/partnerMatching.ts`         | `PARTNER_MATCHING_DATA.FIVE_ELEMENTS_COMPLEMENT` |
+| 合盤十神配對 | 5-2 講義 | `src/data/rules/partnerMatching.ts`         | `PARTNER_MATCHING_DATA.TEN_GODS_MATCHING`        |
+| 合盤生肖三合 | 5-2 講義 | `src/data/rules/partnerMatching.ts`         | `PARTNER_MATCHING_DATA.ZODIAC_TRINITY`           |
+| 日柱結構相似 | 5-2 講義 | `src/matchmaking.ts`（真實實作，未進 core） | `checkDayStructureSimilarity()`                  |
+| 互為夫妻星   | 5-1 講義 | `src/matchmaking.ts`（真實實作，未進 core） | `checkSpouseStar()`                              |
+| 感情風水     | 5-1 講義 | `src/data/charts/romanceRemediesData.ts`    | `ROMANCE_FENG_SHUI_DATA`                         |
+| 飛星桃花     | 5-2 講義 | `src/data/lecture/lectureData.ts`           | `LECTURE_DATA.FLYING_STARS_ROMANCE`              |
+| 十神相處策略 | 5-2 講義 | `src/data/charts/spouseGuidelines.ts`       | `PARTNER_TEN_GODS_TRAITS`                        |
+| 夫妻宮沖刑   | 5-1 講義 | `src/data/charts/spouseGuidelines.ts`       | `SPOUSE_STAR_CLASHES`                            |
 
 #### 人際篇 (06_人際)
 
@@ -406,12 +406,12 @@
 | ---------------------------- | -------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 大運流年補運架構（靜態速查） | 大運流年補運架構/ ＋ 課程逐字稿 2-1-1～2-1-3 | `src/data/rules/dayunLiunian.ts`       | `DAYUN_LIUNIAN_GUIDES`（2026-10-27 重構：分支語義 remedyAlways / remedyWhenDayunGood / remedyWhenDayunBad；金日主濕土例外 note；喜忌方向由 `fiveElementsBalance.getLiunianAndRemedy` 程序化產生，單一來源） |
 | 大運流年斷應                 | 大運流年補運架構/                            | `src/data/rules/timelineGuidelines.ts` | `TIMELINE_GUIDELINES`                                                                                                                                                                                       |
-| 大運排法                     | 大運流年補運架構/                            | `src/dayun.ts`                         | `calculateDaYun()`                                                                                                                                                                                          |
-| 流年斷應                     | 2000-2030 流年五行對照表                     | `src/dayun.ts`                         | `getLiuNian()`, `getFutureLiuNian()`                                                                                                                                                                        |
-| 大運品質判斷                 | 大運流年補運架構/                            | `src/dayun.ts`                         | `getDaYunQuality()`                                                                                                                                                                                         |
+| 大運排法                     | 大運流年補運架構/                            | `packages/core/src/dayun.ts`           | `calculateDaYun()`                                                                                                                                                                                          |
+| 流年斷應                     | 2000-2030 流年五行對照表                     | `packages/core/src/dayun.ts`           | `getLiuNian()`, `getFutureLiuNian()`                                                                                                                                                                        |
+| 大運品質判斷                 | 大運流年補運架構/                            | `packages/core/src/dayun.ts`           | `getDaYunQuality()`                                                                                                                                                                                         |
 | 太歲判斷                     | 天干地支含刑沖破害                           | `src/data/rules/taiSui.ts`             | `checkTaiSui()`, `getTaiSuiAdvice()`                                                                                                                                                                        |
 | 每日流日分析                 | 5-2 講義                                     | `src/data/rules/dailyFlowDays.ts`      | `checkDayType()`                                                                                                                                                                                            |
-| 每日能量分析                 | 5-2 講義                                     | `src/dailyAnalysis.ts`                 | `getDailyEnergy()`                                                                                                                                                                                          |
+| 每日能量分析                 | 5-2 講義                                     | `packages/core/src/dailyAnalysis.ts`   | `getDailyEnergy()`                                                                                                                                                                                          |
 
 **大運流年補運 Domain Rule（徐玉蘭口徑，2.5 補運架構十張表）**：
 身強補運只有一組（耗洩：財、官殺、食傷），大運好壞流年好壞都不改；身弱補運**看大運不看流年**——
@@ -430,9 +430,9 @@
 | 十神關係 | 1-6、2-0 五行關係十神表 | `src/data/core/tenGodRelationships.ts`  | `DAY_MASTER_RELATIONS`               |
 | 十神特質 | 十神.docx               | `src/data/lecture/tenGodTraits.ts`      | `TEN_GOD_TRAITS`                     |
 | 地支互動 | 1-2 地支互動表講義      | `src/data/core/earthlyBranchTraits.ts`  | `BRANCH_INTERACTIONS`                |
-| 命盤計算 | 1-1, 1-2                | `src/paipan.ts`                         | `calculateChart()`                   |
-| 格局判定 | 定格局.docx             | `src/pattern.ts`                        | `determinePattern()`                 |
-| 合化條件 | 天干地支合化條件.docx   | `src/pattern.ts`                        | `STEM_HARMONIES`, `BRANCH_HARMONIES` |
+| 命盤計算 | 1-1, 1-2                | `packages/core/src/paipan.ts`           | `calculateChart()`                   |
+| 格局判定 | 定格局.docx             | `packages/core/src/pattern.ts`          | `determinePattern()`                 |
+| 合化條件 | 天干地支合化條件.docx   | `packages/core/src/pattern.ts`          | `STEM_HARMONIES`, `BRANCH_HARMONIES` |
 
 ---
 
@@ -471,7 +471,7 @@
 | 3   | 2026 飛星          | `src/data/charts/fengShui2026.ts`        | ⚠️ 07_軟裝風水 無內容 | 應更新 07_軟裝風水.md           |
 | 4   | 大運流年補運架構   | `src/data/rules/dayunLiunian.ts`         | ⚠️ 08_大運流年 無內容 | 應更新 08_大運流年.md           |
 | 5   | 每日流日分析       | `src/data/rules/dailyFlowDays.ts`        | ⚠️ 無對應 Wiki        | 應新增至 05_健康 或 08_大運流年 |
-| 6   | 每日能量分析       | `src/dailyAnalysis.ts`                   | ⚠️ 無對應 Wiki        | 應新增至 05_健康 或 08_大運流年 |
+| 6   | 每日能量分析       | `packages/core/src/dailyAnalysis.ts`     | ⚠️ 無對應 Wiki        | 應新增至 05_健康 或 08_大運流年 |
 | 7   | 太歲判斷           | `src/data/rules/taiSui.ts`               | ⚠️ 無對應 Wiki        | 應新增至 08_大運流年            |
 | 8   | 合盤五行互補       | `src/data/rules/partnerMatching.ts`      | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md           |
 | 9   | 十神相處策略       | `src/data/charts/spouseGuidelines.ts`    | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md           |
@@ -724,12 +724,12 @@ D:\徐玉蘭\八字\
 
 | 程式檔案                                 | 對應 Wiki 頁面       |
 | ---------------------------------------- | -------------------- |
-| `src/constants.ts`                       | 01_基礎理論          |
-| `src/paipan.ts`                          | 01_基礎理論          |
-| `src/pattern.ts`                         | 01_基礎理論          |
-| `src/dayun.ts`                           | 08_大運流年          |
-| `src/matchmaking.ts`                     | 04_感情姻緣          |
-| `src/dailyAnalysis.ts`                   | 05_健康, 08_大運流年 |
+| `packages/core/src/constants.ts`         | 01_基礎理論          |
+| `packages/core/src/paipan.ts`            | 01_基礎理論          |
+| `packages/core/src/pattern.ts`           | 01_基礎理論          |
+| `packages/core/src/dayun.ts`             | 08_大運流年          |
+| `src/matchmaking.ts`（真實實作）         | 04_感情姻緣          |
+| `packages/core/src/dailyAnalysis.ts`     | 05_健康, 08_大運流年 |
 | `src/data/core/dayMasterTraits.ts`       | 01_基礎理論          |
 | `src/data/core/earthlyBranchTraits.ts`   | 01_基礎理論          |
 | `src/data/core/fiveElementsBalance.ts`   | 01_基礎理論          |
@@ -840,7 +840,7 @@ _最後更新：2026-06-05_
 | 2026 飛星        | `src/data/charts/fengShui2026.ts`        | ⚠️ 07_軟裝風水 無內容 | 應更新 07_軟裝風水.md           |
 | 大運流年補運架構 | `src/data/rules/dayunLiunian.ts`         | ⚠️ 08_大運流年 無內容 | 應更新 08_大運流年.md           |
 | 每日流日分析     | `src/data/rules/dailyFlowDays.ts`        | ⚠️ 無對應 Wiki        | 應新增至 05_健康 或 08_大運流年 |
-| 每日能量分析     | `src/dailyAnalysis.ts`                   | ⚠️ 無對應 Wiki        | 應新增至 05_健康 或 08_大運流年 |
+| 每日能量分析     | `packages/core/src/dailyAnalysis.ts`     | ⚠️ 無對應 Wiki        | 應新增至 05_健康 或 08_大運流年 |
 | 太歲判斷         | `src/data/rules/taiSui.ts`               | ⚠️ 無對應 Wiki        | 應新增至 08_大運流年            |
 | 合盤五行互補     | `src/data/rules/partnerMatching.ts`      | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md           |
 | 十神相處策略     | `src/data/charts/spouseGuidelines.ts`    | ⚠️ 04_感情姻緣 無內容 | 應更新 04_感情姻緣.md           |
