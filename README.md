@@ -64,14 +64,14 @@ flowchart LR
 
 ### 技術組成
 
-| 區域     | 技術與責任                                                                                                 |
-| -------- | ---------------------------------------------------------------------------------------------------------- |
-| Web UI   | React 19、TypeScript、Vite、Tailwind CSS、Motion、Recharts                                                 |
-| 命理核心 | `@bezi/core`、`lunar-javascript`；排盤、格局、大運、流年與圖表轉換                                         |
-| API      | Express、短期授權、輸入驗證、限流、SSE 串流                                                                |
-| AI 安全  | Server-side Evidence Bundle、知識檢索引用溯源、決定性事實核對、缺資料時 fail closed                        |
-| 儲存     | 瀏覽器 LocalStorage／IndexedDB；伺服器 SQLite 範例 Evidence                                                |
-| 品質     | TypeScript、Vitest 195 測試、Node API tests 26 項、Playwright 30 案、知識／事實評測腳本、GitHub Actions CI |
+| 區域     | 技術與責任                                                                                                                  |
+| -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Web UI   | React 19、TypeScript、Vite、Tailwind CSS、Motion、Recharts                                                                  |
+| 命理核心 | `@bezi/core`、`lunar-javascript`；排盤、格局、大運、流年與圖表轉換                                                          |
+| API      | Express、短期授權、輸入驗證、限流、SSE 串流                                                                                 |
+| AI 安全  | Server-side Evidence Bundle、知識檢索引用溯源、決定性事實核對、缺資料時 fail closed                                         |
+| 儲存     | 瀏覽器 LocalStorage／IndexedDB；伺服器 SQLite 範例 Evidence                                                                 |
+| 品質     | TypeScript、Vitest 200 測試、Node API tests 27 項、Playwright 30 案、知識／事實評測腳本、講義 drift 檢查、GitHub Actions CI |
 
 ## 本機執行
 
@@ -151,7 +151,7 @@ npm start
 # TypeScript 靜態檢查
 npm run lint
 
-# Vitest 單元測試（24 檔、195 測試）
+# Vitest 單元測試（26 檔、200 測試）
 npm test
 
 # API integration tests（7 檔、27 測試：chat 驗證、CORS、dev-auth、evidence/knowledge pipeline、evidence ownership、rate limit）
