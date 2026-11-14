@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "SYNTHETIC_DEMO",
+  "observations": [
+    {
+      "id": "SYN-01",
+      "observedDirection": "positive",
+      "observedAt": "2027-03-01T00:00:00+08:00",
+      "source": "synthetic mock fixture"
+    },
+    {
+      "id": "SYN-02",
+      "observedDirection": "positive",
+      "observedAt": "2027-03-01T00:00:00+08:00",
+      "source": "synthetic mock fixture"
+    },
+    {
+      "id": "SYN-03",
+      "observedDirection": "neutral",
+      "observedAt": "2027-03-01T00:00:00+08:00",
+      "source": "synthetic mock fixture"
+    },
+    {
+      "id": "SYN-04",
+      "observedDirection": null,
+      "observedAt": null,
+      "source": null
+    },
+    {
+      "id": "SYN-05",
+      "observedDirection": null,
+      "observedAt": null,
+      "source": null
+    }
+  ]
+}

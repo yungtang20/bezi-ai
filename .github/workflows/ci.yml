@@ -38,6 +38,11 @@ jobs:
     - name: Test Lecture Drift Gate
       run: node --test tests/lecture-drift-gate.test.mjs
 
+    - name: Validate SHA-256 Locked Blind Evaluation Contract
+      run: |
+        node --test tests/blind-eval-contract.test.mjs
+        node scripts/eval-blind-contract.mjs
+
     - name: Run Unit Tests
       run: npm test
     - name: Run API Integration Tests

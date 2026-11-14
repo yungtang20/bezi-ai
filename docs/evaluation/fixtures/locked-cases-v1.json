@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "lockedAt": "2026-11-15T00:00:00+08:00",
+  "purpose": "SYNTHETIC_PROTOCOL_TEST_ONLY",
+  "sourceStatus": "SYNTHETIC_NOT_TEACHER_VERIFIED",
+  "rule": "Compare predictions to observations recorded after each forecast window closes; report missing separately.",
+  "splits": {
+    "calibration": [],
+    "holdout": [
+      "SYN-01",
+      "SYN-02",
+      "SYN-03",
+      "SYN-04",
+      "SYN-05"
+    ]
+  },
+  "cases": [
+    {
+      "id": "SYN-01",
+      "category": "career",
+      "windowStart": "2026-12-01",
+      "windowEnd": "2026-12-31",
+      "predictedDirection": "positive",
+      "evidence": "synthetic template, not teacher-backed"
+    },
+    {
+      "id": "SYN-02",
+      "category": "wealth",
+      "windowStart": "2026-12-01",
+      "windowEnd": "2026-12-31",
+      "predictedDirection": "negative",
+      "evidence": "synthetic template, not teacher-backed"
+    },
+    {
+      "id": "SYN-03",
+      "category": "relationship",
+      "windowStart": "2027-01-01",
+      "windowEnd": "2027-01-31",
+      "predictedDirection": "neutral",
+      "evidence": "synthetic template, not teacher-backed"
+    },
+    {
+      "id": "SYN-04",
+      "category": "career",
+      "windowStart": "2027-01-01",
+      "windowEnd": "2027-01-31",
+      "predictedDirection": "positive",
+      "evidence": "synthetic template, not teacher-backed"
+    },
+    {
+      "id": "SYN-05",
+      "category": "general",
+      "windowStart": "2027-02-01",
+      "windowEnd": "2027-02-28",
+      "predictedDirection": "negative",
+      "evidence": "synthetic template, not teacher-backed"
+    }
+  ]
+}
