@@ -48,6 +48,9 @@ jobs:
     - name: Run API Integration Tests
       run: npm run test:api
 
+    - name: Deterministic AI Error Injection
+      run: npm run eval:ai-factual
+
     - name: Build Production Bundle
       run: npm run build
       env:

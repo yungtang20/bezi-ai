@@ -126,6 +126,8 @@ try {
   // 案例 2：含錯回答 → 管線抓到錯誤
   const bad = await chat('請分析，故意錯誤測試。');
   assert(bad.status === 200, `案例2 HTTP 200（實際 ${bad.status}）`);
+  assert(!bad.sse.text.includes('日主為甲'), '案例2 原始錯誤日主不得流向使用者');
+  assert(bad.sse.text.includes('命盤事實核對未通過'), '案例2 應提供透明拒答');
   assert(!!bad.sse.factCheck, '案例2 SSE 含 factCheck');
   if (bad.sse.factCheck) {
     const fc = bad.sse.factCheck;
