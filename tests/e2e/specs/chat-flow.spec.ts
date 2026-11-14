@@ -260,8 +260,16 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
     };
   }), undefined, { timeout: 30000 });
 
-  // 重進頁面從持久化紀錄計算 streak（不依賴提交時是否發生自動格局切換）。
+  // 實際記錄換頁前/後 origin 與 DB 內容，避免跨來源切換誤判持久化缺陷。
+  const beforeUrl = page.url();
+  const beforeDatabases = await page.evaluate(async () => (await indexedDB.databases()).map(db => db.name));
+  console.log('[CHECKIN-BEFORE-NAV]', JSON.stringify({ url: beforeUrl, databases: beforeDatabases }));
   await page.goto('/');
+  console.log('[CHECKIN-AFTER-NAV]', JSON.stringify({
+    url: page.url(),
+    origin: await page.evaluate(() => location.origin),
+    databases: await page.evaluate(async () => (await indexedDB.databases()).map(db => db.name)),
+  }));
   await page.getByRole('button', { name: '探索' }).first().click();
   await page.getByRole('button', { name: /近期日子/ }).click();
 
