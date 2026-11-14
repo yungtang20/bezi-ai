@@ -36,6 +36,7 @@ import {
   formatKnowledgeForPrompt,
 } from './src/ai/knowledge/retriever';
 import type { KnowledgeItem } from './src/ai/knowledge/types';
+import { ModelCallBudget } from './src/ai/modelBudget';
 
 // [AI MOD] CORS 中介程式：僅允許相同 origin 或明確允許的來源。
 // 預設 fail closed（向後相容於同源），可透過 ALLOWED_ORIGINS 環境變數限制跨來源。
@@ -145,6 +146,19 @@ if (explicitDevAuthBypass !== undefined)
 // 每 60 秒 per-IP 最多 30 次 /api/chat 請求；一般聊天不會超，可擋惡意刷量。
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
+
+// 模型提供者呼叫的跨路由總預算：含失敗輸出後的補救重試；單實例 in-memory。
+function positiveBoundedInt(raw: string | undefined, fallback: number): number {
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? Math.min(n, 10_000) : fallback;
+}
+const modelCallBudget = new ModelCallBudget({
+  maxCallsPerClientPerWindow: positiveBoundedInt(process.env.BEZI_MODEL_MAX_CALLS_PER_WINDOW, 20),
+  maxGlobalCallsPerWindow: positiveBoundedInt(process.env.BEZI_MODEL_MAX_GLOBAL_CALLS_PER_WINDOW, 80),
+  maxActivePerClient: positiveBoundedInt(process.env.BEZI_MODEL_MAX_ACTIVE_PER_CLIENT, 2),
+  maxActiveGlobal: positiveBoundedInt(process.env.BEZI_MODEL_MAX_ACTIVE_GLOBAL, 8),
+});
+class ModelBudgetExceededError extends Error {}
 // 輸入上限（防止用超長內容灌爆 LLM API 額度）
 const MAX_MESSAGES = 50;
 const MAX_MSG_CONTENT_LEN = 8000;
@@ -667,7 +681,7 @@ function createChatHandler(systemPrompt: string) {
         baseURL: agnesBaseUrl,
       });
 
-      // [誠實重試] 模型偶發輸出未通過結構化驗證（缺 JSON footer、sourceId 不合規定）時，
+      // [誠實重試] 模型偶發輸出未通過 JSON 結構與來源引用驗證時，
       // 追加重試指令再給模型一次機會；重試仍失敗才誠實拒答。dev fixture 模式不重試（mock 測試須保持單次呼叫）。
       const callModelOnce = async (withCorrection: boolean) => {
         const modelMessages = withCorrection
@@ -676,11 +690,16 @@ function createChatHandler(systemPrompt: string) {
               {
                 role: 'user' as const,
                 content:
-                  '你上一則回覆未通過結構化驗證（缺少 JSON code fence，或 claims 的 sourceIds 引用了未提供的來源）。請依系統提示的引用規則重新回覆一次，格式與 footer 欄位不得更動，且 sourceIds 只能使用實際提供給你的編號。',
+                  '你上一則回覆未通過結構化驗證。請只輸出單一 JSON 物件，包含 status/answer/claims/limitations/nextQuestions；claims 的 text 必須逐字出現在 answer 中，sourceIds 只能使用本次提供的真實來源編號。不得輸出 Markdown code fence 或舊版 insight/terms/advice footer。',
               },
             ]
           : openAiMessages;
-        const completion = await openai.chat.completions.create({
+        const releaseBudget = modelCallBudget.tryAcquire(
+          req.ip || req.socket.remoteAddress || 'unknown'
+        );
+        if (!releaseBudget) throw new ModelBudgetExceededError();
+        try {
+          const completion = await openai.chat.completions.create({
           model: agnesModel,
           messages: modelMessages,
           temperature: 1,
@@ -694,7 +713,10 @@ function createChatHandler(systemPrompt: string) {
           const content = chunk.choices[0]?.delta?.content || '';
           if (content) raw += content;
         }
-        return raw;
+          return raw;
+        } finally {
+          releaseBudget();
+        }
       };
 
       const validateAttempt = (
@@ -795,6 +817,10 @@ function createChatHandler(systemPrompt: string) {
 
       res.end();
     } catch (err: unknown) {
+      if (err instanceof ModelBudgetExceededError) {
+        writeSseContent(res, '目前 AI 呼叫量已達短時間或同時處理上限，請稍後再試。');
+        return res.end();
+      }
       console.error('[SERVER ERROR]:', err);
       res.write(`data: ${JSON.stringify(formatErrorResponse(err))}\n\n`);
       res.end();
