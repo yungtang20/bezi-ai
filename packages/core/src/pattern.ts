@@ -3,14 +3,29 @@
 // 來源講義：定格局.pdf（10頁）、天干地支合化條件.pdf（2頁）、天干地支含刑沖破害.pdf（10頁）
 
 import { BaziChart } from './paipan';
-import { GAN_TO_ELEMENT, ELEMENT_GENERATES, ELEMENT_CONTROLS, ZHI_TO_ELEMENT } from './constants';
+import {
+  GAN_TO_ELEMENT,
+  ELEMENT_GENERATES,
+  ELEMENT_CONTROLS,
+  ELEMENT_CONTROLLED_BY,
+  ZHI_TO_ELEMENT,
+} from './constants';
 
 // ==================== 基礎對應表 ====================
 
 export const ZHI_TYPE: Record<string, string> = {
-  '寅': '長生', '申': '長生', '巳': '長生', '亥': '長生',
-  '子': '帝旺', '午': '帝旺', '卯': '帝旺', '酉': '帝旺',
-  '辰': '墓庫', '戌': '墓庫', '丑': '墓庫', '未': '墓庫',
+  寅: '長生',
+  申: '長生',
+  巳: '長生',
+  亥: '長生',
+  子: '帝旺',
+  午: '帝旺',
+  卯: '帝旺',
+  酉: '帝旺',
+  辰: '墓庫',
+  戌: '墓庫',
+  丑: '墓庫',
+  未: '墓庫',
 };
 
 // ==================== 藏干（依照講義精確百分比） ====================
@@ -19,28 +34,65 @@ export const ZHI_TYPE: Record<string, string> = {
 // [AI MOD] 內部型別，不 export
 interface HiddenStemRatio {
   gan: string;
-  ratio: number;  // 百分比
+  ratio: number; // 百分比
 }
 
 // [AI MOD] 內部常數，不 export（外部使用 ZHI_HIDDEN）
 const ZHI_HIDDEN_DETAIL: Record<string, HiddenStemRatio[]> = {
-  '子': [{ gan: '癸', ratio: 100 }],
-  '丑': [{ gan: '己', ratio: 34 }, { gan: '辛', ratio: 33 }, { gan: '癸', ratio: 33 }],
-  '寅': [{ gan: '甲', ratio: 50 }, { gan: '丙', ratio: 40 }, { gan: '戊', ratio: 10 }],
-  '卯': [{ gan: '乙', ratio: 100 }],
-  '辰': [{ gan: '戊', ratio: 33 }, { gan: '乙', ratio: 33 }, { gan: '癸', ratio: 33 }],
-  '巳': [{ gan: '丙', ratio: 50 }, { gan: '戊', ratio: 40 }, { gan: '庚', ratio: 10 }],
-  '午': [{ gan: '丁', ratio: 50 }, { gan: '己', ratio: 50 }],
-  '未': [{ gan: '己', ratio: 40 }, { gan: '丁', ratio: 40 }, { gan: '乙', ratio: 20 }],
-  '申': [{ gan: '庚', ratio: 50 }, { gan: '壬', ratio: 40 }, { gan: '戊', ratio: 10 }],
-  '酉': [{ gan: '辛', ratio: 100 }],
-  '戌': [{ gan: '戊', ratio: 45 }, { gan: '辛', ratio: 10 }, { gan: '丁', ratio: 45 }],
-  '亥': [{ gan: '壬', ratio: 60 }, { gan: '甲', ratio: 40 }],
+  子: [{ gan: '癸', ratio: 100 }],
+  丑: [
+    { gan: '己', ratio: 34 },
+    { gan: '辛', ratio: 33 },
+    { gan: '癸', ratio: 33 },
+  ],
+  寅: [
+    { gan: '甲', ratio: 50 },
+    { gan: '丙', ratio: 40 },
+    { gan: '戊', ratio: 10 },
+  ],
+  卯: [{ gan: '乙', ratio: 100 }],
+  辰: [
+    { gan: '戊', ratio: 33 },
+    { gan: '乙', ratio: 33 },
+    { gan: '癸', ratio: 33 },
+  ],
+  巳: [
+    { gan: '丙', ratio: 50 },
+    { gan: '戊', ratio: 40 },
+    { gan: '庚', ratio: 10 },
+  ],
+  午: [
+    { gan: '丁', ratio: 50 },
+    { gan: '己', ratio: 50 },
+  ],
+  未: [
+    { gan: '己', ratio: 40 },
+    { gan: '丁', ratio: 40 },
+    { gan: '乙', ratio: 20 },
+  ],
+  申: [
+    { gan: '庚', ratio: 50 },
+    { gan: '壬', ratio: 40 },
+    { gan: '戊', ratio: 10 },
+  ],
+  酉: [{ gan: '辛', ratio: 100 }],
+  戌: [
+    { gan: '戊', ratio: 45 },
+    { gan: '辛', ratio: 10 },
+    { gan: '丁', ratio: 45 },
+  ],
+  亥: [
+    { gan: '壬', ratio: 60 },
+    { gan: '甲', ratio: 40 },
+  ],
 };
 
 // 簡易藏干列表（向後相容 paipan.ts 使用）
 export const ZHI_HIDDEN: Record<string, string[]> = Object.fromEntries(
-  Object.entries(ZHI_HIDDEN_DETAIL).map(([zhi, stems]) => [zhi, stems.map(s => s.gan)])
+  Object.entries(ZHI_HIDDEN_DETAIL).map(([zhi, stems]) => [
+    zhi,
+    stems.map((s) => s.gan),
+  ])
 );
 
 // ==================== 濕土 / 燥土 ====================
@@ -51,7 +103,6 @@ const WET_SOIL = ['丑', '辰'];
 function isWetSoil(zhi: string): boolean {
   return WET_SOIL.includes(zhi);
 }
-
 
 /**
  * 濕土（含天干）：地支辰、丑，以及天干「己」。
@@ -71,14 +122,22 @@ export function isWetEarth(source?: string): boolean {
 
 interface Harmony {
   pair: [string, string];
-  result: string;  // 合化五行
-  requiredMonth?: string[];  // 需在辰戌丑未月（僅天干五合）
+  result: string; // 合化五行
+  requiredMonth?: string[]; // 需在辰戌丑未月（僅天干五合）
 }
 
-function findHarmonyInList(list: Harmony[], a: string, b: string): Harmony | null {
-  return list.find(h =>
-    (h.pair[0] === a && h.pair[1] === b) || (h.pair[0] === b && h.pair[1] === a)
-  ) || null;
+function findHarmonyInList(
+  list: Harmony[],
+  a: string,
+  b: string
+): Harmony | null {
+  return (
+    list.find(
+      (h) =>
+        (h.pair[0] === a && h.pair[1] === b) ||
+        (h.pair[0] === b && h.pair[1] === a)
+    ) || null
+  );
 }
 
 const STEM_HARMONIES: Harmony[] = [
@@ -94,12 +153,12 @@ function findStemHarmony(gan1: string, gan2: string): Harmony | null {
 }
 
 const BRANCH_HARMONIES: Harmony[] = [
-  { pair: ['子', '丑'], result: '土' },   // 合化濕土
-  { pair: ['寅', '亥'], result: '木' },   // 合化木
-  { pair: ['卯', '戌'], result: '火' },   // 合化火
-  { pair: ['辰', '酉'], result: '金' },   // 合化金
-  { pair: ['巳', '申'], result: '水' },   // 合化水
-  { pair: ['午', '未'], result: '火' },   // 合化燥火
+  { pair: ['子', '丑'], result: '土' }, // 合化濕土
+  { pair: ['寅', '亥'], result: '木' }, // 合化木
+  { pair: ['卯', '戌'], result: '火' }, // 合化火
+  { pair: ['辰', '酉'], result: '金' }, // 合化金
+  { pair: ['巳', '申'], result: '水' }, // 合化水
+  { pair: ['午', '未'], result: '火' }, // 合化燥火
 ];
 
 function findBranchHarmony(zhi1: string, zhi2: string): Harmony | null {
@@ -133,8 +192,12 @@ export const TRIAD_MEETINGS: TriadFormation[] = [
 // 來源：天干地支含刑沖破害.pdf P8
 
 const OPPOSING_PAIRS: [string, string][] = [
-  ['子', '午'], ['丑', '未'], ['寅', '申'],
-  ['卯', '酉'], ['辰', '戌'], ['巳', '亥'],
+  ['子', '午'],
+  ['丑', '未'],
+  ['寅', '申'],
+  ['卯', '酉'],
+  ['辰', '戌'],
+  ['巳', '亥'],
 ];
 
 // ==================== 地支相刑 ====================
@@ -142,22 +205,22 @@ const OPPOSING_PAIRS: [string, string][] = [
 
 // 三刑組合
 const THREE_PUNISHMENTS: string[][] = [
-  ['寅', '巳', '申'],  // 無恩之刑
-  ['丑', '戌', '未'],  // 恃勢之刑
+  ['寅', '巳', '申'], // 無恩之刑
+  ['丑', '戌', '未'], // 恃勢之刑
 ];
 
 // 相刑組合（力量較弱）
 const MUTUAL_PUNISHMENTS: [string, string][] = [
-  ['子', '卯'],   // 恩愛之刑
-  ['辰', '辰'],   // 自刑
-  ['午', '午'],   // 自刑
-  ['酉', '酉'],   // 自刑
-  ['亥', '亥'],   // 自刑
-  ['寅', '巳'],   // 力量較大
-  ['巳', '申'],   // 力量較大
-  ['未', '丑'],   // 力量較大
-  ['未', '戌'],   // 力量較大
-  ['戌', '丑'],   // 力量較大
+  ['子', '卯'], // 恩愛之刑
+  ['辰', '辰'], // 自刑
+  ['午', '午'], // 自刑
+  ['酉', '酉'], // 自刑
+  ['亥', '亥'], // 自刑
+  ['寅', '巳'], // 力量較大
+  ['巳', '申'], // 力量較大
+  ['未', '丑'], // 力量較大
+  ['未', '戌'], // 力量較大
+  ['戌', '丑'], // 力量較大
 ];
 
 // [AI MOD] 通用配對檢查（合并 hasPair / findHarmPair / findBreakPair）
@@ -174,8 +237,8 @@ function hasPair(pairs: [string, string][], a: string, b: string): boolean {
 
 interface TombActivation {
   zhi: string;
-  trigger: string[];  // 觸發的天干
-  result: string;     // 成為什麼庫
+  trigger: string[]; // 觸發的天干
+  result: string; // 成為什麼庫
 }
 
 const TOMB_ACTIVATIONS: TombActivation[] = [
@@ -192,13 +255,13 @@ const TOMB_ACTIVATIONS: TombActivation[] = [
 
 export interface PatternResult {
   pattern: '身強' | '身弱' | '從強' | '從弱';
-  favorable: string[];      // 喜用神
-  unfavorable: string[];    // 忌神
-  score: number;            // 0-100 強弱分數
-  isContinuum: boolean;     // 徐玉蘭口徑：40–55% 連續體地帶，不硬貼標籤，以定盤為準
+  favorable: string[]; // 喜用神
+  unfavorable: string[]; // 忌神
+  score: number; // 0-100 強弱分數
+  isContinuum: boolean; // 徐玉蘭口徑：40–55% 連續體地帶，不硬貼標籤，以定盤為準
   weakestElement: string;
   weakestElements: string[]; // [AI MOD] 所有最弱五行（含被旺神重剋者，可能多個）
-  reason?: string;          // 判斷理由（前端顯示用）
+  reason?: string; // 判斷理由（前端顯示用）
 }
 
 export interface PatternScores {
@@ -218,7 +281,11 @@ interface TenGodCount {
 // ==================== 輔助函式 ====================
 
 /** 判斷某五行是否為日主的「印比」（生我或同我） */
-function isSupporting(dayElement: string, other: string, source?: string): boolean {
+function isSupporting(
+  dayElement: string,
+  other: string,
+  source?: string
+): boolean {
   // 徐玉蘭口徑（1-4 [07:14]-[07:18]）：土生金須區分濕土燥土——
   // 「濕土能生金，燥土比較無法生金」。金日主只認辰、丑（濕土）與天干己（濕土）為印，
   // 未、戌、戊（燥土）不列為生扶。source 傳入實際的干或支字才判斷得出濕燥。
@@ -226,10 +293,12 @@ function isSupporting(dayElement: string, other: string, source?: string): boole
   return other === dayElement || ELEMENT_GENERATES[other] === dayElement;
 }
 
-
 /** 取得生我的五行（印星五行） */
 function getGeneratingElement(dayElement: string): string {
-  return Object.entries(ELEMENT_GENERATES).find(([_, v]) => v === dayElement)?.[0] || '';
+  return (
+    Object.entries(ELEMENT_GENERATES).find(([_, v]) => v === dayElement)?.[0] ||
+    ''
+  );
 }
 
 // ==================== 刑沖合掃描 ====================
@@ -237,8 +306,8 @@ function getGeneratingElement(dayElement: string): string {
 
 interface PillarInteraction {
   type: '刑' | '沖' | '合' | '害' | '破';
-  pillars: [number, number];  // 柱位索引 0=年 1=月 2=日 3=時
-  result?: string;  // 合化後的五行
+  pillars: [number, number]; // 柱位索引 0=年 1=月 2=日 3=時
+  result?: string; // 合化後的五行
   description: string;
 }
 
@@ -249,7 +318,7 @@ interface PillarInteraction {
 function scanInteractions(chart: BaziChart): {
   interactions: PillarInteraction[];
   damagedPillars: Set<number>;
-  harmonyResults: Map<number, string>;  // 柱位 → 合化後五行
+  harmonyResults: Map<number, string>; // 柱位 → 合化後五行
 } {
   const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
@@ -259,8 +328,12 @@ function scanInteractions(chart: BaziChart): {
 
   // 所有柱位配對（只算相鄰+年日、月時，共6組）
   const pairs: [number, number][] = [
-    [0, 1], [1, 2], [2, 3],  // 相鄰
-    [0, 2], [1, 3], [0, 3],  // 間隔
+    [0, 1],
+    [1, 2],
+    [2, 3], // 相鄰
+    [0, 2],
+    [1, 3],
+    [0, 3], // 間隔
   ];
 
   for (const [i, j] of pairs) {
@@ -271,21 +344,22 @@ function scanInteractions(chart: BaziChart): {
     if (!zhiA || !zhiB || !ganA || !ganB) continue;
 
     // 1. 刑（最高優先級）
-    const isPunishment = MUTUAL_PUNISHMENTS.some(p =>
-      (p[0] === zhiA && p[1] === zhiB) || (p[0] === zhiB && p[1] === zhiA)
+    const isPunishment = MUTUAL_PUNISHMENTS.some(
+      (p) =>
+        (p[0] === zhiA && p[1] === zhiB) || (p[0] === zhiB && p[1] === zhiA)
     );
-    const isThreePunishment = THREE_PUNISHMENTS.some(triad =>
-      triad.includes(zhiA) && triad.includes(zhiB)
+    const isThreePunishment = THREE_PUNISHMENTS.some(
+      (triad) => triad.includes(zhiA) && triad.includes(zhiB)
     );
     if (isPunishment || isThreePunishment) {
       interactions.push({
         type: '刑',
         pillars: [i, j],
-        description: `${zhiA}${zhiB}相刑`
+        description: `${zhiA}${zhiB}相刑`,
       });
       damagedPillars.add(i);
       damagedPillars.add(j);
-      continue;  // 刑優先，跳過後續判斷
+      continue; // 刑優先，跳過後續判斷
     }
 
     // 2. 沖
@@ -293,11 +367,11 @@ function scanInteractions(chart: BaziChart): {
       interactions.push({
         type: '沖',
         pillars: [i, j],
-        description: `${zhiA}${zhiB}相沖`
+        description: `${zhiA}${zhiB}相沖`,
       });
       damagedPillars.add(i);
       damagedPillars.add(j);
-      continue;  // 沖優先於合
+      continue; // 沖優先於合
     }
 
     // 3. 合（地支六合）
@@ -311,14 +385,14 @@ function scanInteractions(chart: BaziChart): {
         const resultGans = Object.entries(GAN_TO_ELEMENT)
           .filter(([_, el]) => el === resultElement)
           .map(([gan, _]) => gan);
-        const hasTouGan = resultGans.some(gan => gans.includes(gan));
+        const hasTouGan = resultGans.some((gan) => gans.includes(gan));
 
         // 檢查化神是否被剋
-        const controllingElement = ELEMENT_CONTROLS[resultElement];
+        const controllingElement = ELEMENT_CONTROLLED_BY[resultElement];
         const controllingGans = Object.entries(GAN_TO_ELEMENT)
           .filter(([_, el]) => el === controllingElement)
           .map(([gan, _]) => gan);
-        const isControlled = controllingGans.some(gan => gans.includes(gan));
+        const isControlled = controllingGans.some((gan) => gans.includes(gan));
 
         if (hasTouGan && !isControlled) {
           // 合化成功
@@ -326,7 +400,7 @@ function scanInteractions(chart: BaziChart): {
             type: '合',
             pillars: [i, j],
             result: resultElement,
-            description: `${zhiA}${zhiB}合化${resultElement}`
+            description: `${zhiA}${zhiB}合化${resultElement}`,
           });
           harmonyResults.set(i, resultElement);
           harmonyResults.set(j, resultElement);
@@ -335,7 +409,7 @@ function scanInteractions(chart: BaziChart): {
           interactions.push({
             type: '合',
             pillars: [i, j],
-            description: `${zhiA}${zhiB}合絆（不合化）`
+            description: `${zhiA}${zhiB}合絆（不合化）`,
           });
           damagedPillars.add(i);
           damagedPillars.add(j);
@@ -354,7 +428,7 @@ function scanInteractions(chart: BaziChart): {
         type: '合',
         pillars: [i, j],
         result: stemHarmony.result,
-        description: `${gans[i]}${gans[j]}合化${stemHarmony.result}`
+        description: `${gans[i]}${gans[j]}合化${stemHarmony.result}`,
       });
     }
   }
@@ -367,7 +441,7 @@ function scanInteractions(chart: BaziChart): {
 interface CombinedFormation {
   type: '三合' | '半合' | '三會' | '暗拱';
   branches: string[];
-  missing?: string;  // 半合/暗拱缺少的地支
+  missing?: string; // 半合/暗拱缺少的地支
   result: string;
   pillarIndices: number[];
 }
@@ -378,9 +452,9 @@ function scanCombinedFormations(chart: BaziChart): CombinedFormation[] {
 
   // 三會局（最優先，力量最大）
   for (const meeting of TRIAD_MEETINGS) {
-    const found = meeting.branches.filter(b => zhis.includes(b));
+    const found = meeting.branches.filter((b) => zhis.includes(b));
     if (found.length === 3) {
-      const indices = meeting.branches.map(b => zhis.indexOf(b));
+      const indices = meeting.branches.map((b) => zhis.indexOf(b));
       formations.push({
         type: '三會',
         branches: meeting.branches,
@@ -392,9 +466,9 @@ function scanCombinedFormations(chart: BaziChart): CombinedFormation[] {
 
   // 三合局
   for (const group of TRIAD_GROUPS) {
-    const found = group.branches.filter(b => zhis.includes(b));
+    const found = group.branches.filter((b) => zhis.includes(b));
     if (found.length === 3) {
-      const indices = group.branches.map(b => zhis.indexOf(b));
+      const indices = group.branches.map((b) => zhis.indexOf(b));
       formations.push({
         type: '三合',
         branches: group.branches,
@@ -403,8 +477,8 @@ function scanCombinedFormations(chart: BaziChart): CombinedFormation[] {
       });
     } else if (found.length === 2) {
       // 半合或暗拱
-      const missing = group.branches.find(b => !zhis.includes(b));
-      const indices = found.map(b => zhis.indexOf(b));
+      const missing = group.branches.find((b) => !zhis.includes(b));
+      const indices = found.map((b) => zhis.indexOf(b));
       formations.push({
         type: '半合',
         branches: found,
@@ -430,13 +504,20 @@ interface TombInfo {
 
 function checkTombActivation(chart: BaziChart): TombInfo[] {
   const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
-  const allGans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
+  const allGans = [
+    chart.year.gan,
+    chart.month.gan,
+    chart.day.gan,
+    chart.hour.gan,
+  ];
   const tombs: TombInfo[] = [];
 
   zhis.forEach((zhi, idx) => {
-    const activation = TOMB_ACTIVATIONS.find(a => a.zhi === zhi);
+    const activation = TOMB_ACTIVATIONS.find((a) => a.zhi === zhi);
     if (activation) {
-      const hasTrigger = activation.trigger.some(gan => allGans.includes(gan));
+      const hasTrigger = activation.trigger.some((gan) =>
+        allGans.includes(gan)
+      );
       tombs.push({
         zhi,
         pillarIndex: idx,
@@ -458,7 +539,7 @@ interface TouGanInfo {
   zhi: string;
   hiddenStem: string;
   appearsInGan: boolean;
-  ganPosition?: number;  // 出現在哪個柱位的天干
+  ganPosition?: number; // 出現在哪個柱位的天干
 }
 
 function checkTouGan(chart: BaziChart): TouGanInfo[] {
@@ -468,7 +549,7 @@ function checkTouGan(chart: BaziChart): TouGanInfo[] {
 
   zhis.forEach((zhi) => {
     const hiddenStems = ZHI_HIDDEN[zhi] || [];
-    hiddenStems.forEach(hGan => {
+    hiddenStems.forEach((hGan) => {
       const pos = gans.indexOf(hGan);
       result.push({
         zhi,
@@ -491,9 +572,12 @@ function checkTouGan(chart: BaziChart): TouGanInfo[] {
  * 檢查是否存在貪生忘剋的組合
  * 回傳被化解的相剋關係
  */
-function checkShengWangKe(chart: BaziChart): { from: number; to: number; via: number; element: string }[] {
+function checkShengWangKe(
+  chart: BaziChart
+): { from: number; to: number; via: number; element: string }[] {
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
-  const resolved: { from: number; to: number; via: number; element: string }[] = [];
+  const resolved: { from: number; to: number; via: number; element: string }[] =
+    [];
 
   // 簡化版：檢查天干
   // 徐玉蘭口徑（1-3 [31:41]）：位置限定——只有「日柱旁邊」的柱（月柱 i=1、時柱 i=2）的貪生忘剋才成立
@@ -513,7 +597,10 @@ function checkShengWangKe(chart: BaziChart): { from: number; to: number; via: nu
           const elK = GAN_TO_ELEMENT[gans[k]];
           if (!elK) continue;
           // i 生 k, k 生 j → 貪生忘剋
-          if (ELEMENT_GENERATES[elI] === elK && ELEMENT_GENERATES[elK] === elJ) {
+          if (
+            ELEMENT_GENERATES[elI] === elK &&
+            ELEMENT_GENERATES[elK] === elJ
+          ) {
             resolved.push({ from: i, to: j, via: k, element: elK });
           }
         }
@@ -530,17 +617,27 @@ function checkShengWangKe(chart: BaziChart): { from: number; to: number; via: nu
  * 根據加權分數，初始化四格局的起始分數
  */
 export function initPatternScores(weightedScore: number): PatternScores {
-  if (weightedScore > 80) return { strong: 20, weak: 20, followStrong: 80, followWeak: 20 };
-  if (weightedScore < 20) return { strong: 20, weak: 20, followStrong: 20, followWeak: 80 };
-  if (weightedScore >= 45) return { strong: 80, weak: 20, followStrong: 30, followWeak: 10 };
+  if (weightedScore > 80)
+    return { strong: 20, weak: 20, followStrong: 80, followWeak: 20 };
+  if (weightedScore < 20)
+    return { strong: 20, weak: 20, followStrong: 20, followWeak: 80 };
+  if (weightedScore >= 45)
+    return { strong: 80, weak: 20, followStrong: 30, followWeak: 10 };
   return { strong: 20, weak: 80, followStrong: 10, followWeak: 30 };
 }
 
 /**
  * 取得當前最高分的格局名稱
  */
-export function getPrimaryPattern(scores: PatternScores): '身強' | '身弱' | '從強' | '從弱' {
-  const max = Math.max(scores.strong, scores.weak, scores.followStrong, scores.followWeak);
+export function getPrimaryPattern(
+  scores: PatternScores
+): '身強' | '身弱' | '從強' | '從弱' {
+  const max = Math.max(
+    scores.strong,
+    scores.weak,
+    scores.followStrong,
+    scores.followWeak
+  );
   if (scores.strong === max) return '身強';
   if (scores.weak === max) return '身弱';
   if (scores.followStrong === max) return '從強';
@@ -558,7 +655,10 @@ export const PATTERN_CONTINUUM_NOTE =
  * 顯示用的格局標籤：連續體時加註「偏平衡」，避免把工具分數講成定論。
  * 若定盤（scores）已把格局改成別格，則以定盤為準，不加註。
  */
-export function getPatternLabel(computed: PatternResult, primaryPattern?: string): string {
+export function getPatternLabel(
+  computed: PatternResult,
+  primaryPattern?: string
+): string {
   const label = primaryPattern ?? computed.pattern;
   if (!computed.isContinuum || label !== computed.pattern) return label;
   return `${label}（偏平衡）`;
@@ -633,19 +733,19 @@ function findWeakestElement(chart: BaziChart): string[] {
  * 計算命盤中各五行總量（僅含天干與地支本氣，不數支藏干，維持八字為整數個數）
  */
 function getAllElementsInChart(chart: BaziChart): Record<string, number> {
-  const count: Record<string, number> = { '木': 0, '火': 0, '土': 0, '金': 0, '水': 0 };
+  const count: Record<string, number> = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
 
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
   const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
 
   // 天干
-  gans.forEach(g => {
+  gans.forEach((g) => {
     const e = GAN_TO_ELEMENT[g];
     if (e) count[e]++;
   });
 
   // 地支：僅計算地支本氣，不數支藏干
-  zhis.forEach(z => {
+  zhis.forEach((z) => {
     const main = ZHI_TO_ELEMENT[z];
     if (main) count[main]++;
   });
@@ -706,7 +806,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
   for (let i = 0; i < 4; i++) {
     const ganEl = GAN_TO_ELEMENT[gans[i]];
     const zhiMain = ZHI_TO_ELEMENT[zhis[i]];
-    const hiddenEls = (ZHI_HIDDEN[zhis[i]] || []).map(h => GAN_TO_ELEMENT[h]);
+    const hiddenEls = (ZHI_HIDDEN[zhis[i]] || []).map((h) => GAN_TO_ELEMENT[h]);
 
     // 檢查此柱是否被合化
     const harmonyResult = harmonyResults.get(i);
@@ -718,7 +818,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
       // 合化後的新屬性
       if (isSupporting(dayElement, harmonyResult)) {
         ganSupport += ganWeights[i];
-        reasons.push(`P${i+1}天干合化${harmonyResult}（印比）→ 負變正加分`);
+        reasons.push(`P${i + 1}天干合化${harmonyResult}（印比）→ 負變正加分`);
       }
     } else if (!isDamaged) {
       if (isSupporting(dayElement, ganEl, gans[i])) {
@@ -736,7 +836,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
     if (harmonyResult) {
       if (isSupporting(dayElement, harmonyResult)) {
         zhiSupport += zhiWeights[i];
-        reasons.push(`P${i+1}地支合化${harmonyResult}（印比）→ 負變正加分`);
+        reasons.push(`P${i + 1}地支合化${harmonyResult}（印比）→ 負變正加分`);
       }
     } else if (!isDamaged) {
       if (zhiSupporting) {
@@ -748,7 +848,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
       // 藏干加分（濕燥看「所在的地支」，不看藏干本身：未中的己土仍是燥土裡的火土）
       hiddenEls.forEach((h) => {
         if (isSupporting(dayElement, h, zhis[i])) {
-          zhiSupport += zhiWeights[i] * 0.3;  // 藏干權重較低
+          zhiSupport += zhiWeights[i] * 0.3; // 藏干權重較低
         }
       });
     }
@@ -759,9 +859,12 @@ export function determinePattern(chart: BaziChart): PatternResult {
   // 7. 三合/三會加分（只計算對日主加分的）
   for (const formation of formations) {
     if (isSupporting(dayElement, formation.result)) {
-      const bonus = formation.type === '三會' ? 15 : (formation.type === '三合' ? 10 : 5);
+      const bonus =
+        formation.type === '三會' ? 15 : formation.type === '三合' ? 10 : 5;
       positiveScore += bonus;
-      reasons.push(`${formation.type}(${formation.branches.join('')})→${formation.result}（印比）+${bonus}`);
+      reasons.push(
+        `${formation.type}(${formation.branches.join('')})→${formation.result}（印比）+${bonus}`
+      );
     }
   }
 
@@ -775,7 +878,11 @@ export function determinePattern(chart: BaziChart): PatternResult {
       // 庫被啟動，檢查啟動後的五行是否為日主加分
       const actualElement = tomb.tombType.replace('庫', '');
       // 金庫（丑）：對金日主而言是「同我」；金日主 + 濕土（丑辰）→ 印（濕土生金）
-      const actualSupporting = isSupporting(dayElement, actualElement, tomb.zhi);
+      const actualSupporting = isSupporting(
+        dayElement,
+        actualElement,
+        tomb.zhi
+      );
       if (actualSupporting) {
         const zhiMainEl = ZHI_TO_ELEMENT[tomb.zhi];
         const mainSupporting = isSupporting(dayElement, zhiMainEl, tomb.zhi);
@@ -795,7 +902,9 @@ export function determinePattern(chart: BaziChart): PatternResult {
       const hElement = GAN_TO_ELEMENT[tg.hiddenStem];
       if (isSupporting(dayElement, hElement, tg.hiddenStem)) {
         positiveScore += 3;
-        reasons.push(`${tg.zhi}藏${tg.hiddenStem}透干於P${tg.ganPosition!+1}+3`);
+        reasons.push(
+          `${tg.zhi}藏${tg.hiddenStem}透干於P${tg.ganPosition! + 1}+3`
+        );
       }
     }
   }
@@ -803,21 +912,28 @@ export function determinePattern(chart: BaziChart): PatternResult {
   // 10. 貪生忘剋（化解扣分）
   for (const swk of shengWangKe) {
     negativeScore -= 2;
-    reasons.push(`貪生忘剋：P${swk.from+1}→P${swk.via+1}→P${swk.to+1}（化解${swk.element}相剋）`);
+    reasons.push(
+      `貪生忘剋：P${swk.from + 1}→P${swk.via + 1}→P${swk.to + 1}（化解${swk.element}相剋）`
+    );
   }
 
   // 11. 最終分數
-  const scale = isHourEmpty ? (105 / 80) : 1;
+  const scale = isHourEmpty ? 105 / 80 : 1;
   const scaledPositive = positiveScore * scale;
   const scaledNegative = negativeScore * scale;
-  const finalScore = Math.max(0, Math.min(100, scaledPositive - scaledNegative));
+  const finalScore = Math.max(
+    0,
+    Math.min(100, scaledPositive - scaledNegative)
+  );
 
   // 12. 判定格局
   let pattern: '身強' | '身弱' | '從強' | '從弱';
   let reason: string;
 
   // 從格嚴格判斷：需檢查是否有根（金日主的根須考慮濕土生金：丑辰算根、未戌不算）
-  const hasRoot = zhis.some(z => (z ? isSupporting(dayElement, ZHI_TO_ELEMENT[z], z) : false));
+  const hasRoot = zhis.some((z) =>
+    z ? isSupporting(dayElement, ZHI_TO_ELEMENT[z], z) : false
+  );
 
   if (finalScore > 80 && !hasRoot) {
     pattern = '從強';
@@ -861,12 +977,17 @@ export function determinePattern(chart: BaziChart): PatternResult {
 
 // ==================== 用神判斷 ====================
 
-export function getFavorableElements(dayMaster: string, pattern: string): { favorable: string[]; unfavorable: string[] } {
+export function getFavorableElements(
+  dayMaster: string,
+  pattern: string
+): { favorable: string[]; unfavorable: string[] } {
   const dayElement = GAN_TO_ELEMENT[dayMaster];
   const generateMe = getGeneratingElement(dayElement);
 
   const supports = [generateMe, dayElement].filter(Boolean);
-  const others = ['木', '火', '土', '金', '水'].filter(e => !supports.includes(e));
+  const others = ['木', '火', '土', '金', '水'].filter(
+    (e) => !supports.includes(e)
+  );
 
   // 來源：定格局.pdf P3
   // 身強：喜用神（剋我、我剋、我生）
@@ -910,32 +1031,40 @@ export function countTenGods(chart: BaziChart): TenGodCount[] {
 // 來源：定格局.docx P2 ＋ 課程逐字稿 1-3 [38:44]（徐玉蘭口徑）
 // 五行特別旺的年份：金水→2020/2021；木→2023/2024；火土→2013/2014/2015/2018/2025
 // 從格與一般格要用「同一批年份」分辨（1-3 [56:32]）——光看分數分不出從強與身強。
-const YEAR_CHECK_MAP: Record<string, { strong: number[]; weak: number[]; followStrong: number[]; followWeak: number[] }> = {
-  '金': {
+const YEAR_CHECK_MAP: Record<
+  string,
+  {
+    strong: number[];
+    weak: number[];
+    followStrong: number[];
+    followWeak: number[];
+  }
+> = {
+  金: {
     strong: [2020, 2021],
     weak: [2013, 2014, 2015, 2018, 2025],
     followStrong: [2020, 2021],
     followWeak: [2013, 2014, 2015, 2018, 2025],
   },
-  '木': {
+  木: {
     strong: [2023, 2024],
     weak: [2013, 2014, 2015, 2018, 2025],
     followStrong: [2020, 2021],
     followWeak: [2013, 2014, 2015, 2018, 2025],
   },
-  '水': {
+  水: {
     strong: [2020, 2021],
     weak: [2013, 2014, 2015, 2018, 2025],
     followStrong: [2020, 2021],
     followWeak: [2013, 2014, 2015, 2018, 2025],
   },
-  '火': {
+  火: {
     strong: [2013, 2014, 2015, 2018, 2025],
     weak: [2023, 2024],
     followStrong: [2013, 2014, 2015, 2018, 2025],
     followWeak: [2018, 2025],
   },
-  '土': {
+  土: {
     strong: [2013, 2014, 2015, 2018, 2025],
     weak: [2023, 2024],
     followStrong: [2013, 2014, 2015, 2018, 2025],
@@ -943,15 +1072,18 @@ const YEAR_CHECK_MAP: Record<string, { strong: number[]; weak: number[]; followS
   },
 };
 
-export function getCheckYears(dayMasterElement: string, initialPattern: string): number[] {
+export function getCheckYears(
+  dayMasterElement: string,
+  initialPattern: string
+): number[] {
   const map = YEAR_CHECK_MAP[dayMasterElement];
   if (!map) return [];
 
   const patternKeyMap: Record<string, keyof typeof map> = {
-    '身強': 'strong',
-    '身弱': 'weak',
-    '從強': 'followStrong',
-    '從弱': 'followWeak'
+    身強: 'strong',
+    身弱: 'weak',
+    從強: 'followStrong',
+    從弱: 'followWeak',
   };
 
   const key = patternKeyMap[initialPattern] || 'strong';
