@@ -400,3 +400,20 @@ test('授權後呼叫分流端點取得 SSE 回應並通過 grounding 驗證', a
     expect(body).toContain('[DONE]');
   }
 });
+
+test('selected birth-city longitude reaches session Evidence from the real UI (#42)', async ({ page, context }) => {
+  await seedChart(context);
+  await context.addInitScript(() => {
+    localStorage.setItem('bezi_longitude', '台北');
+  });
+  const evidenceRequest = page.waitForRequest(
+    request => new URL(request.url()).pathname === '/api/evidence/current',
+    { timeout: 30000 }
+  );
+  await openChat(page);
+  const request = await evidenceRequest;
+  const payload = request.postDataJSON() as { birthDate: string; birthTime: string; gender: string; longitude?: number };
+  expect(payload.birthDate).toBe('1990-01-01');
+  expect(payload.longitude).toBe(121.5);
+  await expect(page.getByText('已連結目前命盤 Evidence')).toBeVisible();
+});
