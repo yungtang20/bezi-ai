@@ -708,22 +708,9 @@ function createChatHandler(systemPrompt: string) {
           parsedOutput = null;
         }
         if (!parsedOutput && parsedResponse.metadataValid) {
-          const sourceIds = evidenceBundle.items.map((item) => item.sourceId);
-          parsedOutput = {
-            status: 'answered',
-            answer: parsedResponse.content,
-            claims: parsedResponse.metadata.insight
-              ? [
-                  {
-                    text: parsedResponse.metadata.insight,
-                    sourceIds,
-                    confidence: 'low',
-                  },
-                ]
-              : [],
-            limitations: evidenceBundle.limitations,
-            nextQuestions: [],
-          };
+          // [#44] Legacy Markdown + footer 的 insight/terms/advice 並無 claim→sourceIds 對應。
+          // 不能把 footer insight 假裝成已被全部 Evidence 支持；讓下一段驗證失敗並誠實重試。
+          parsedOutput = null;
         }
         if (!parsedOutput && DEV_FIXTURE_ENABLED && rawOutput.trim()) {
           // Dev-only adapter: Agnes may return Markdown in smoke tests; production still requires the JSON schema.
