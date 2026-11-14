@@ -263,6 +263,20 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
   // 實際記錄換頁前/後 origin 與 DB 內容，避免跨來源切換誤判持久化缺陷。
   const beforeUrl = page.url();
   const beforeDatabases = await page.evaluate(async () => (await indexedDB.databases()).map(db => db.name));
+  // 原始測試資料以外的哨兵存入不影響業務的 patternScores key，作為 IDB 導頁持久化對照。
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('BaziJournalDB', 5);
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction('patternScores', 'readwrite');
+        tx.objectStore('patternScores').put({ id: '__e2e_idb_probe__', scores: { checked: true } });
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      };
+    });
+  });
   console.log('[CHECKIN-BEFORE-NAV]', JSON.stringify({ url: beforeUrl, databases: beforeDatabases }));
   await page.goto('/');
   console.log('[CHECKIN-AFTER-NAV]', JSON.stringify({
@@ -274,6 +288,16 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
   await page.getByRole('button', { name: /近期日子/ }).click();
 
   const checkinSnapshot = await page.evaluate(async () => {
+    const markerSurvived = await new Promise<boolean>((resolve) => {
+      const open = indexedDB.open('BaziJournalDB', 5);
+      open.onerror = () => resolve(false);
+      open.onsuccess = () => {
+        const db = open.result;
+        const req = db.transaction('patternScores', 'readonly').objectStore('patternScores').get('__e2e_idb_probe__');
+        req.onsuccess = () => { const found = Boolean(req.result); db.close(); resolve(found); };
+        req.onerror = () => { db.close(); resolve(false); };
+      };
+    });
     const logDates = await new Promise<string[]>((resolve, reject) => {
       const request = indexedDB.open('BaziJournalDB', 5);
       request.onerror = () => reject(request.error);
@@ -290,7 +314,7 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
     });
     const now = new Date();
     const localToday = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
-    return { localToday, logDates };
+    return { localToday, logDates, markerSurvived };
   });
   console.log('[CHECKIN-E2E] ' + JSON.stringify(checkinSnapshot));
   expect(checkinSnapshot.logDates).toHaveLength(1);
