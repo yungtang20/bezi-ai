@@ -241,3 +241,28 @@ test('current evidence uses selected true-solar longitude and rejects invalid lo
   assert.equal(ordinary.bazi.day, '丙午');
   assert.equal(ordinary.bazi.dayMaster, '丙');
 });
+
+
+test('AI answer with valid source but wrong chart fact is withheld (#43)', async () => {
+  mockOutputFactory = () => ({
+    status: 'answered',
+    answer: '日主為甲。適合向東方發展。',
+    claims: [{ text: '日主為甲', sourceIds: ['sql:demo-001'], confidence: 'high' }],
+    limitations: [], nextQuestions: [],
+  });
+  const body = await post({ messages: [{ role: 'user', content: '我的日主是什麼？' }], record_id: 'demo-001' });
+  assert.doesNotMatch(body, /日主為甲/, 'must not reveal a factual mismatch');
+  assert.match(body, /命盤事實核對未通過|與已驗證命盤不一致/);
+});
+
+test('AI answer with valid chart fact remains available (#43)', async () => {
+  mockOutputFactory = () => ({
+    status: 'answered',
+    answer: '日主為戊。',
+    claims: [{ text: '日主為戊', sourceIds: ['sql:demo-001'], confidence: 'high' }],
+    limitations: [], nextQuestions: [],
+  });
+  const body = await post({ messages: [{ role: 'user', content: '我的日主是什麼？' }], record_id: 'demo-001' });
+  assert.match(body, /日主為戊/);
+  assert.doesNotMatch(body, /命盤事實核對未通過/);
+});
