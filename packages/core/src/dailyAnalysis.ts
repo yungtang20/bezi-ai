@@ -2,7 +2,12 @@
 import { Solar } from 'lunar-javascript';
 import { BaziChart } from './paipan';
 import { PartnerInfo } from './types';
-import { GAN_TO_ELEMENT, ZHI_TO_ELEMENT, getTenGod as getTenGodForDaYun, getTenGodType } from './constants';
+import {
+  GAN_TO_ELEMENT,
+  ZHI_TO_ELEMENT,
+  getTenGod as getTenGodForDaYun,
+  getTenGodType,
+} from './constants';
 import { checkDayType } from './data/rules/dailyFlowDays';
 import { LECTURE_DATA } from './data/lecture/lectureData';
 
@@ -11,13 +16,13 @@ export interface DailyEnergy {
   extremeType: string;
   theoreticalOutcome: string; // 順利/平穩/不順
   theoreticalExplanation: string; // 新增：解釋原因
-  dayGanZhi: string;          // 今日干支
-  dayGan: string;             // [AI MOD] 日干（每日一句/明日預告用）
-  dayZhi: string;             // [AI MOD] 日支
-  lunarDate: string;          // 農曆日期
-  solarDate: string;          // 國曆日期 (Added)
-  dayTenGodType: string;      // 新增：財星 / 官殺 / 食傷 / 比劫 / 印星
-  dayTypes: string[];         // 從 dailyFlowDays 獲取
+  dayGanZhi: string; // 今日干支
+  dayGan: string; // [AI MOD] 日干（每日一句/明日預告用）
+  dayZhi: string; // [AI MOD] 日支
+  lunarDate: string; // 農曆日期
+  solarDate: string; // 國曆日期 (Added)
+  dayTenGodType: string; // 新增：財星 / 官殺 / 食傷 / 比劫 / 印星
+  dayTypes: string[]; // 從 dailyFlowDays 獲取
   isWeaknessDay?: boolean;
   weaknessType?: string;
 }
@@ -44,12 +49,16 @@ export function getDailyEnergy(
 
   // ---- 極端能量日判斷 ----
   const extremeDayMap: Record<string, string[]> = {
-    '甲': ['甲寅', '乙卯'], '乙': ['甲寅', '乙卯'],
-    '丙': ['丙午', '丁巳'], '丁': ['丙午', '丁巳'],
-    '戊': ['戊辰', '戊戌', '己丑', '己未'],
-    '己': ['戊辰', '戊戌', '己丑', '己未'],
-    '庚': ['庚申', '辛酉'], '辛': ['庚申', '辛酉'],
-    '壬': ['壬子', '癸亥'], '癸': ['壬子', '癸亥'],
+    甲: ['甲寅', '乙卯'],
+    乙: ['甲寅', '乙卯'],
+    丙: ['丙午', '丁巳'],
+    丁: ['丙午', '丁巳'],
+    戊: ['戊辰', '戊戌', '己丑', '己未'],
+    己: ['戊辰', '戊戌', '己丑', '己未'],
+    庚: ['庚申', '辛酉'],
+    辛: ['庚申', '辛酉'],
+    壬: ['壬子', '癸亥'],
+    癸: ['壬子', '癸亥'],
   };
 
   const extremeDays = extremeDayMap[chart.dayMaster] || [];
@@ -59,24 +68,40 @@ export function getDailyEnergy(
   const dayGanElement = GAN_TO_ELEMENT[dayGan];
   const dayZhiElement = ZHI_TO_ELEMENT[dayZhi] || GAN_TO_ELEMENT[dayZhi];
   const dayGod = getTenGodForDaYun(chart.dayMaster, dayGan);
-  
+
   let theoreticalOutcome = '平穩';
   let totalScore = 0;
   const explanationParts: string[] = [];
 
   // 五行影響
-  const evalElement = (element: string | undefined, label: string, score: number): [number, string] => {
+  const evalElement = (
+    element: string | undefined,
+    label: string,
+    score: number
+  ): [number, string] => {
     if (!element) return [0, ''];
-    if (favorable.includes(element)) return [score, `${label}「${element}」為您的喜用神(+${score})`];
-    if (unfavorable.includes(element)) return [-score, `${label}「${element}」為您的忌神(-${score})`];
+    if (favorable.includes(element))
+      return [score, `${label}「${element}」為您的喜用神(+${score})`];
+    if (unfavorable.includes(element))
+      return [-score, `${label}「${element}」為您的忌神(-${score})`];
     return [0, ''];
   };
 
-  const [ganScore, ganExpl] = evalElement(dayGanElement, `今日天干${dayGan}`, 1.0);
-  if (ganExpl) { totalScore += ganScore; explanationParts.push(ganExpl); }
+  const [ganScore, ganExpl] = evalElement(
+    dayGanElement,
+    `今日天干${dayGan}`,
+    1.0
+  );
+  if (ganExpl) {
+    totalScore += ganScore;
+    explanationParts.push(ganExpl);
+  }
 
   const [zhiScore, zhiExpl] = evalElement(dayZhiElement, `地支${dayZhi}`, 2.0);
-  if (zhiExpl) { totalScore += zhiScore; explanationParts.push(zhiExpl); }
+  if (zhiExpl) {
+    totalScore += zhiScore;
+    explanationParts.push(zhiExpl);
+  }
 
   // 十神影響 (根據格局喜忌)
   const dayGodType = getTenGodType(dayGod);
@@ -90,10 +115,11 @@ export function getDailyEnergy(
     { threshold: 0.5, outcome: '小吉' },
     { threshold: -0.5, outcome: '平穩' },
     { threshold: -1.5, outcome: '較差' },
-    { threshold: -Infinity, outcome: '不順' }
+    { threshold: -Infinity, outcome: '不順' },
   ];
-  
-  theoreticalOutcome = scoreThresholds.find(t => totalScore >= t.threshold)?.outcome || '平穩';
+
+  theoreticalOutcome =
+    scoreThresholds.find((t) => totalScore >= t.threshold)?.outcome || '平穩';
 
   // 如果今天是極端能量日，且日主五行與喜用神相關，可升級為大好/大壞
   if (isExtremeDay) {
@@ -111,9 +137,11 @@ export function getDailyEnergy(
 
   // ---- 最弱五行被剋流日判斷 ----
   const weakControlDaysMap: Record<string, string[]> = {
-    '金': ['丙寅', '丙午', '丙戌', '丁巳', '丁未'], '木': ['庚申', '辛酉', '辛丑'],
-    '水': ['戊辰', '戊戌', '戊午', '己未', '己丑', '己巳'], '火': ['壬申', '壬子', '壬辰', '癸亥', '癸酉', '癸丑'],
-    '土': ['甲子', '甲寅', '甲辰', '乙卯', '乙亥', '乙未'],
+    金: ['丙寅', '丙午', '丙戌', '丁巳', '丁未'],
+    木: ['庚申', '辛酉', '辛丑'],
+    水: ['戊辰', '戊戌', '戊午', '己未', '己丑', '己巳'],
+    火: ['壬申', '壬子', '壬辰', '癸亥', '癸酉', '癸丑'],
+    土: ['甲子', '甲寅', '甲辰', '乙卯', '乙亥', '乙未'],
   };
   const myWeakDays = weakControlDaysMap[weakestElement] || [];
   const isWeaknessDay = myWeakDays.includes(dayPillar);
@@ -122,7 +150,9 @@ export function getDailyEnergy(
     isExtremeDay,
     extremeType: isExtremeDay ? `日主${chart.dayMaster}的極端能量日` : '',
     isWeaknessDay,
-    weaknessType: isWeaknessDay ? `最弱五行「${weakestElement}」受重剋流日` : '',
+    weaknessType: isWeaknessDay
+      ? `最弱五行「${weakestElement}」受重剋流日`
+      : '',
     theoreticalOutcome,
     theoreticalExplanation: explanationParts.join('，') + '。',
     dayGanZhi: `${baZi.getYearGan()}${baZi.getYearZhi()}年 ${baZi.getMonthGan()}${baZi.getMonthZhi()}月 ${dayPillar}日`,
@@ -131,26 +161,13 @@ export function getDailyEnergy(
     lunarDate: `${lunar.getYearInChinese()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`,
     solarDate: `${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日`,
     dayTenGodType,
-    dayTypes
+    dayTypes,
   };
 }
 
-// 檢查是否為易犯小人日
-const VILLAIN_DAYS: Record<string, string[]> = {
-  '金': ['庚申', '辛酉', '辛丑'],
-  '火': ['丙午', '丁巳', '丁未', '丙戌'],
-  '木': ['甲寅', '乙卯', '乙未'],
-  '水': ['壬子', '癸亥', '癸丑'],
-  '土': ['戊辰', '戊戌', '己未', '己丑'],
-};
-
-// [AI MOD] 內部使用，不 export
-function checkVillainDay(dayPillar: string, dayMaster: string): boolean {
-  const el = GAN_TO_ELEMENT[dayMaster];
-  const days = VILLAIN_DAYS[el] || [];
-  return days.includes(dayPillar);
-}
-
+// 犯小人日判斷一律走 checkDayType（單一來源）。
+// 原本這裡另有一份 VILLAIN_DAYS 表與 checkVillainDay()，和 dailyFlowDays.ts 重複，
+// 兩份各自維護會漂移，已移除。
 
 // [AI MOD] 內部型別，不 export
 interface UpcomingDay {
@@ -161,21 +178,36 @@ interface UpcomingDay {
 
 /** 地支六沖對照表 */
 const CHONG_MAP: Record<string, string> = {
-  '子': '午', '午': '子', '寅': '申', '申': '寅', '辰': '戌', '戌': '辰',
-  '丑': '未', '未': '丑', '卯': '酉', '酉': '卯', '巳': '亥', '亥': '巳',
+  子: '午',
+  午: '子',
+  寅: '申',
+  申: '寅',
+  辰: '戌',
+  戌: '辰',
+  丑: '未',
+  未: '丑',
+  卯: '酉',
+  酉: '卯',
+  巳: '亥',
+  亥: '巳',
 };
 
 /** 健康警示日：各五行日主的極端能量日 */
 const HEALTH_WARNING_DAYS: Record<string, string[]> = {
-  '木': ['甲寅', '乙卯'], '火': ['丙午', '丁巳'],
-  '土': ['戊辰', '己丑', '戊戌', '己未'], '金': ['庚申', '辛酉'], '水': ['壬子', '癸亥'],
+  木: ['甲寅', '乙卯'],
+  火: ['丙午', '丁巳'],
+  土: ['戊辰', '己丑', '戊戌', '己未'],
+  金: ['庚申', '辛酉'],
+  水: ['壬子', '癸亥'],
 };
 
 /** 弱五行受剋流日 */
 const WEAK_CONTROL_DAYS: Record<string, string[]> = {
-  '金': ['丙寅', '丙午', '丙戌', '丁巳', '丁未'], '木': ['庚申', '辛酉', '辛丑'],
-  '水': ['戊辰', '戊戌', '戊午', '己未', '己丑', '己巳'], '火': ['壬申', '壬子', '壬辰', '癸亥', '癸酉', '癸丑'],
-  '土': ['甲子', '甲寅', '甲辰', '乙卯', '乙亥', '乙未'],
+  金: ['丙寅', '丙午', '丙戌', '丁巳', '丁未'],
+  木: ['庚申', '辛酉', '辛丑'],
+  水: ['戊辰', '戊戌', '戊午', '己未', '己丑', '己巳'],
+  火: ['壬申', '壬子', '壬辰', '癸亥', '癸酉', '癸丑'],
+  土: ['甲子', '甲寅', '甲辰', '乙卯', '乙亥', '乙未'],
 };
 
 /** 檢查地支是否與命盤年柱或日柱相沖 */
@@ -187,20 +219,30 @@ function hasChartChong(zhi: string, chart: BaziChart): boolean {
 /** 檢查地支是否與任何伴侶命盤相沖 */
 function hasPartnerChong(zhi: string, partners: PartnerInfo[]): boolean {
   const chong = CHONG_MAP[zhi];
-  return partners.some(p => p.chart && (chong === p.chart.year.zhi || chong === p.chart.day.zhi));
+  return partners.some(
+    (p) => p.chart && (chong === p.chart.year.zhi || chong === p.chart.day.zhi)
+  );
 }
 
 /** 通用 combo 日檢查（wealth/career/romance 共用邏輯） */
 function matchComboDay(
-  category: string, ganZhi: string, comboMap: Record<string, { combos: string[] }>,
-  myChong: boolean, partnerChong: boolean,
+  category: string,
+  ganZhi: string,
+  comboMap: Record<string, { combos: string[] }>,
+  myChong: boolean,
+  partnerChong: boolean
 ): boolean {
-  return !!(comboMap[category]?.combos.includes(ganZhi) && !myChong && !partnerChong);
+  return !!(
+    comboMap[category]?.combos.includes(ganZhi) &&
+    !myChong &&
+    !partnerChong
+  );
 }
 
 export function getUpcomingDatesForCategory(
   chart: BaziChart,
-  category: 'wealth' | 'career' | 'romance' | 'health_warning' | 'move_in' | 'villain',
+  category:
+    'wealth' | 'career' | 'romance' | 'health_warning' | 'move_in' | 'villain',
   favorable: string[],
   unfavorable: string[],
   weakestElement: string = '',
@@ -212,11 +254,22 @@ export function getUpcomingDatesForCategory(
   const myEl = GAN_TO_ELEMENT[chart.dayMaster];
   if (!myEl) return results;
 
-  const myRomanceMap = LECTURE_DATA.ROMANCE_DAYS[chart.gender as '男' | '女'][myEl as keyof typeof LECTURE_DATA.ROMANCE_DAYS['男']];
-  const myCareerMap = LECTURE_DATA.CAREER_DAYS[myEl as keyof typeof LECTURE_DATA.CAREER_DAYS];
-  const myWealthMap = LECTURE_DATA.ROMANCE_DAYS['男'][myEl as keyof typeof LECTURE_DATA.ROMANCE_DAYS['男']];
+  const myRomanceMap =
+    LECTURE_DATA.ROMANCE_DAYS[chart.gender as '男' | '女'][
+      myEl as keyof (typeof LECTURE_DATA.ROMANCE_DAYS)['男']
+    ];
+  const myCareerMap =
+    LECTURE_DATA.CAREER_DAYS[myEl as keyof typeof LECTURE_DATA.CAREER_DAYS];
+  const myWealthMap =
+    LECTURE_DATA.ROMANCE_DAYS['男'][
+      myEl as keyof (typeof LECTURE_DATA.ROMANCE_DAYS)['男']
+    ];
 
-  const comboMap = { wealth: myWealthMap, career: myCareerMap, romance: myRomanceMap };
+  const comboMap = {
+    wealth: myWealthMap,
+    career: myCareerMap,
+    romance: myRomanceMap,
+  };
   const myHealthDays = HEALTH_WARNING_DAYS[myEl] || [];
   const myWeakDays = WEAK_CONTROL_DAYS[weakestElement] || [];
 
@@ -247,10 +300,19 @@ export function getUpcomingDatesForCategory(
       isFavExt = false;
     } else if (category === 'move_in') {
       const isAlmanacGood = solar.getLunar().getDayYi().includes('入宅');
-      isMatch = isAlmanacGood && !myChong && !partnerChong && !unfavorable.includes(zhiEl);
+      isMatch =
+        isAlmanacGood &&
+        !myChong &&
+        !partnerChong &&
+        !unfavorable.includes(zhiEl);
       isFavExt = false;
     } else if (category === 'villain') {
-      isMatch = checkVillainDay(ganZhi, chart.dayMaster);
+      isMatch = checkDayType(
+        ganZhi[0],
+        ganZhi[1],
+        chart.dayMaster,
+        chart.gender
+      ).includes('犯小人日');
       isFavExt = false;
     }
 
@@ -267,7 +329,3 @@ export function getUpcomingDatesForCategory(
 
   return results;
 }
-
-
-
-
