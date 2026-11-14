@@ -49,6 +49,7 @@ export default function AIChatPanel({ bazi }: AIChatPanelProps) {
     const currentRecord = await createCurrentEvidence({
       birthDate: `${chart.birthYear}-${String(chart.birthMonth).padStart(2, '0')}-${String(chart.birthDay).padStart(2, '0')}`,
       birthTime: chart.birthHour < 0 ? '' : String(chart.birthHour),
+      longitude: chart.birthLongitude,
       gender: chart.gender === '男' ? 'male' : 'female',
     });
     setRecords((previous) => [

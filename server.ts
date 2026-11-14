@@ -311,6 +311,7 @@ interface CurrentEvidenceInput {
   birthDate?: string;
   birthTime?: string;
   gender?: 'male' | 'female';
+  longitude?: number;
 }
 
 function buildComputedEvidence(
@@ -322,6 +323,11 @@ function buildComputedEvidence(
   )
     return null;
   if (input.gender !== 'male' && input.gender !== 'female') return null;
+  // 客戶端僅提交出生地經度，命盤本身仍必須由伺服器引擎重算。
+  if (
+    input.longitude !== undefined &&
+    (typeof input.longitude !== 'number' || !Number.isFinite(input.longitude) || Math.abs(input.longitude) > 180)
+  ) return null;
   if (
     input.birthTime !== undefined &&
     input.birthTime !== '' &&
@@ -349,7 +355,8 @@ function buildComputedEvidence(
     day,
     hour,
     input.gender === 'male' ? '男' : '女',
-    unknownHour
+    unknownHour,
+    input.longitude
   );
   const fiveElements = Object.fromEntries(
     getFiveElementData(chart).map((item) => {

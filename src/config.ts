@@ -42,7 +42,7 @@ export async function fetchChatRecords(): Promise<ChatRecordSummary[]> {
   return (await response.json() as ChatRecordSummary[]).map(record => ({ ...record, source: record.source || 'demo' }));
 }
 
-export async function createCurrentEvidence(input: { birthDate: string; birthTime: string; gender: 'male' | 'female' }): Promise<ChatRecordSummary> {
+export async function createCurrentEvidence(input: { birthDate: string; birthTime: string; gender: 'male' | 'female'; longitude?: number }): Promise<ChatRecordSummary> {
   const response = await fetch('/api/evidence/current', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getChatAuthHeaders() },
