@@ -793,7 +793,17 @@ function createChatHandler(systemPrompt: string) {
           console.log(
             `[SERVER] factCheck verdict=${factCheck.verdict} checked=${factCheck.checked} failed=${factCheck.failed}`
           );
-        writeSseContent(res, answerText, factCheck ?? undefined);
+        // [#43] 事實核對不是裝飾性徽章：若確定與伺服器命盤不符，不可放行原回答。
+        // 不在錯誤答案上做原地修改，避免在語意不明的情況下生成另一個錯誤結論。
+        if (factCheck?.failed && factCheck.failed > 0) {
+          writeSseContent(
+            res,
+            '這次 AI 回答與已驗證命盤不一致，命盤事實核對未通過，已停止顯示原始回答。請重新提問。',
+            factCheck
+          );
+        } else {
+          writeSseContent(res, answerText, factCheck ?? undefined);
+        }
       }
 
       res.end();
