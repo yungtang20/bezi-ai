@@ -260,6 +260,19 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
     };
   }), undefined, { timeout: 30000 });
 
+  async function snapshotDailyStore(): Promise<Array<{ id?: number; date: string; createdAt?: string }>> {
+    return page.evaluate(async () => new Promise((resolve, reject) => {
+      const r = indexedDB.open('BaziJournalDB', 5);
+      r.onerror = () => reject(r.error);
+      r.onsuccess = () => {
+        const db = r.result;
+        const q = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs').getAll();
+        q.onsuccess = () => { db.close(); resolve(q.result); };
+        q.onerror = () => { db.close(); reject(q.error); };
+      };
+    }));
+  }
+  console.log('[CHECKIN-BEFORE-SENTINEL]', JSON.stringify(await snapshotDailyStore()));
   // 實際記錄換頁前/後 origin 與 DB 內容，避免跨來源切換誤判持久化缺陷。
   const beforeUrl = page.url();
   const beforeDatabases = await page.evaluate(async () => (await indexedDB.databases()).map(db => db.name));
@@ -283,6 +296,7 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
       };
     });
   });
+  console.log('[CHECKIN-AFTER-SENTINEL]', JSON.stringify(await snapshotDailyStore()));
   console.log('[CHECKIN-BEFORE-NAV]', JSON.stringify({ url: beforeUrl, databases: beforeDatabases }));
   await page.goto('/');
   console.log('[CHECKIN-AFTER-NAV]', JSON.stringify({
