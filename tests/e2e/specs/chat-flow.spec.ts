@@ -199,12 +199,6 @@ test('分享今日運勢可產出 PNG 圖檔並提供 LINE 分享', async ({
 });
 
 test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context }) => {
-  page.on('console', msg => {
-    if (msg.type() === 'error' || msg.text().includes('handleCheckIn')) {
-      console.log('[CHECKIN-BROWSER-CONSOLE]', msg.type(), msg.text());
-    }
-  });
-  page.on('pageerror', error => console.log('[CHECKIN-PAGEERROR]', error.message));
   await seedChart(context);
   await page.goto('/');
   await page.waitForTimeout(1500);
@@ -249,111 +243,40 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
     .getByRole('button', { name: /記錄今天的能量|記錄這天的能量/ })
     .click();
 
-  // 真正驗證 IndexedDB 的保存成功，避免格局自動切換時的 reload 遮蔽持久化結果。
-  // 原測試假設提交後仍停在同一頁，但 autoSwitched 會觸發 window.location.reload。
-  await page.waitForFunction(async () => new Promise<boolean>((resolve) => {
+  // #52 新增打卡：先確認真正提交，再用完全重新載入驗證持久化。
+  // 不使用 async page.waitForFunction：該 API 的 predicate 回傳 Promise 本身可能被視為 truthy。
+  const today = await page.evaluate(() => {
+    const now = new Date();
+    return [
+      now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+    ].join('-');
+  });
+  const savedDates = () => page.evaluate(async () => new Promise<string[]>((resolve, reject) => {
     const open = indexedDB.open('BaziJournalDB', 5);
-    open.onerror = () => resolve(false);
+    open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const db = open.result;
       const request = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs').getAll();
       request.onsuccess = () => {
-        const saved = request.result as Array<{ date: string }>;
+        const records = request.result as Array<{ date: string }>;
         db.close();
-        resolve(saved.length === 1);
+        resolve(records.map(record => record.date));
       };
-      request.onerror = () => { db.close(); resolve(false); };
+      request.onerror = () => { db.close(); reject(request.error); };
     };
-  }), undefined, { timeout: 30000 });
-
-  async function snapshotDailyStore(): Promise<Array<{ id?: number; date: string; createdAt?: string }>> {
-    return page.evaluate(async () => new Promise((resolve, reject) => {
-      const r = indexedDB.open('BaziJournalDB', 5);
-      r.onerror = () => reject(r.error);
-      r.onsuccess = () => {
-        const db = r.result;
-        const q = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs').getAll();
-        q.onsuccess = () => { db.close(); resolve(q.result); };
-        q.onerror = () => { db.close(); reject(q.error); };
-      };
-    }));
-  }
-  console.log('[CHECKIN-BEFORE-SENTINEL]', JSON.stringify(await snapshotDailyStore()));
-  // 實際記錄換頁前/後 origin 與 DB 內容，避免跨來源切換誤判持久化缺陷。
-  const beforeUrl = page.url();
-  const beforeDatabases = await page.evaluate(async () => (await indexedDB.databases()).map(db => db.name));
-  // 原始測試資料以外的哨兵存入不影響業務的 patternScores key，作為 IDB 導頁持久化對照。
-  await page.evaluate(async () => {
-    await new Promise<void>((resolve, reject) => {
-      const open = indexedDB.open('BaziJournalDB', 5);
-      open.onerror = () => reject(open.error);
-      open.onsuccess = () => {
-        const db = open.result;
-        const tx = db.transaction(['patternScores', 'dailyLogs'], 'readwrite');
-        tx.objectStore('patternScores').put({ id: '__e2e_idb_probe__', scores: { checked: true } });
-        // 同一 dailyLogs store 加一筆明確 key 的測試哨兵，區分整個 store 與自動 key 的既有打卡。
-        tx.objectStore('dailyLogs').put({
-          id: 8888, date: '2099-01-01', health: null, career: null, romance: null,
-          wealth: null, family: null, friends: null, note: 'e2e-sentinel',
-          theoreticalOutcome: '平穩', createdAt: '2099-01-01T00:00:00.000Z',
-        });
-        tx.oncomplete = () => { db.close(); resolve(); };
-        tx.onerror = () => { db.close(); reject(tx.error); };
-      };
-    });
-  });
-  console.log('[CHECKIN-AFTER-SENTINEL]', JSON.stringify(await snapshotDailyStore()));
-  console.log('[CHECKIN-BEFORE-NAV]', JSON.stringify({ url: beforeUrl, databases: beforeDatabases }));
-  await page.goto('/');
-  console.log('[CHECKIN-AFTER-NAV]', JSON.stringify({
-    url: page.url(),
-    origin: await page.evaluate(() => location.origin),
-    databases: await page.evaluate(async () => (await indexedDB.databases()).map(db => db.name)),
   }));
+
+  await expect.poll(savedDates, { timeout: 15_000, message: '打卡應完成 IndexedDB 寫入' }).toEqual([today]);
+  await page.reload();
   await page.getByRole('button', { name: '探索' }).first().click();
   await page.getByRole('button', { name: /近期日子/ }).click();
-
-  const checkinSnapshot = await page.evaluate(async () => {
-    const markerSurvived = await new Promise<boolean>((resolve) => {
-      const open = indexedDB.open('BaziJournalDB', 5);
-      open.onerror = () => resolve(false);
-      open.onsuccess = () => {
-        const db = open.result;
-        const req = db.transaction('patternScores', 'readonly').objectStore('patternScores').get('__e2e_idb_probe__');
-        req.onsuccess = () => { const found = Boolean(req.result); db.close(); resolve(found); };
-        req.onerror = () => { db.close(); resolve(false); };
-      };
-    });
-    const logDates = await new Promise<string[]>((resolve, reject) => {
-      const request = indexedDB.open('BaziJournalDB', 5);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const db = request.result;
-        const all = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs').getAll();
-        all.onerror = () => { db.close(); reject(all.error); };
-        all.onsuccess = () => {
-          const dates = (all.result as Array<{ date: string }>).map(row => row.date);
-          db.close();
-          resolve(dates);
-        };
-      };
-    });
-    const now = new Date();
-    const localToday = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
-    return { localToday, logDates, markerSurvived };
-  });
-  console.log('[CHECKIN-E2E] ' + JSON.stringify(checkinSnapshot));
-  expect(checkinSnapshot.logDates).toHaveLength(1);
-  if (checkinSnapshot.logDates.includes(checkinSnapshot.localToday)) {
-    await expect(page.getByText('連續 1 天', { exact: true }).first()).toBeVisible({ timeout: 20000 });
-  } else {
-    // 留存舊日打卡不是連續「今日」：仍須顯示累積紀錄，但不得捏造今日 streak。
-    await expect(page.getByText(/已累積 1 天紀錄/)).toBeVisible();
-  }
   await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
+  await expect.poll(savedDates, { timeout: 15_000, message: '重新載入仍應保留打卡紀錄' }).toEqual([today]);
+  await expect(page.getByText('連續 1 天', { exact: true }).first()).toBeVisible();
   if (evaluableDay) {
-    // 一個打卡領域只計一筆，不因為十神日型有多個候選領域就膨脹分母。
-    await expect(page.getByText(/[01]\/1 筆方向吻合/)).toBeVisible();
+    // 只有一筆樣本時顯示累積進度 1/3 筆，而不是不可靠的百分比。
+    await expect(page.getByText('1/3 筆', { exact: true })).toBeVisible();
   } else {
     await expect(page.getByText(/感受就能開始計算吻合度/)).toBeVisible();
   }

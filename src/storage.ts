@@ -96,7 +96,13 @@ export async function saveDailyLog(log: DailyLog): Promise<void> {
     const s = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
     return storeGet<DailyLog>(s.index('date'), log.date);
   })();
-  const saved = { ...existing, ...log, id: log.id ?? existing?.id };
+  // 自動遞增 keyPath 不可包含 id: undefined；否則 IndexedDB 會丟 DataError。
+  // 新紀錄省略 id 以讓 key generator 配號，修改同一天紀錄則保留原 id。
+  const { id: suppliedId, ...fields } = log;
+  const resolvedId = suppliedId ?? existing?.id;
+  const saved: DailyLog = resolvedId === undefined
+    ? { ...existing, ...fields }
+    : { ...existing, ...fields, id: resolvedId };
   // 等待 transaction 真正 commit 才回報已儲存；request onsuccess 並非持久化完成。
   // 避免打卡觸發自動格局切換與 window.reload 時，尚未提交的寫入遭中斷。
   const tx = db.transaction('dailyLogs', 'readwrite');
