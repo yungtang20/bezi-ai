@@ -243,18 +243,41 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
     .getByRole('button', { name: /記錄今天的能量|記錄這天的能量/ })
     .click();
 
-  // 打卡成功 → 出現連續天數
-  await expect(page.getByText(/已連續打卡 1 天/)).toBeVisible({
-    timeout: 20000,
+  // #52 新增打卡：先確認真正提交，再用完全重新載入驗證持久化。
+  // 不使用 async page.waitForFunction：該 API 的 predicate 回傳 Promise 本身可能被視為 truthy。
+  const today = await page.evaluate(() => {
+    const now = new Date();
+    return [
+      now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+    ].join('-');
   });
-  await expect(
-    page.getByRole('heading', { name: '近期紀錄吻合度' })
-  ).toBeVisible();
+  const savedDates = () => page.evaluate(async () => new Promise<string[]>((resolve, reject) => {
+    const open = indexedDB.open('BaziJournalDB', 5);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const request = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs').getAll();
+      request.onsuccess = () => {
+        const records = request.result as Array<{ date: string }>;
+        db.close();
+        resolve(records.map(record => record.date));
+      };
+      request.onerror = () => { db.close(); reject(request.error); };
+    };
+  }));
+
+  await expect.poll(savedDates, { timeout: 15_000, message: '打卡應完成 IndexedDB 寫入' }).toEqual([today]);
+  await page.reload();
+  await page.getByRole('button', { name: '探索' }).first().click();
+  await page.getByRole('button', { name: /近期日子/ }).click();
+  await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
+  await expect.poll(savedDates, { timeout: 15_000, message: '重新載入仍應保留打卡紀錄' }).toEqual([today]);
+  await expect(page.getByText('連續 1 天', { exact: true }).first()).toBeVisible();
   if (evaluableDay) {
-    // 單筆樣本只顯示累積狀態，不把 1 筆資料包裝成百分比結論
-    await expect(page.getByText(/1\/3 筆/)).toBeVisible();
+    // 只有一筆樣本時顯示累積進度 1/3 筆，而不是不可靠的百分比。
+    await expect(page.getByText('1/3 筆', { exact: true })).toBeVisible();
   } else {
-    // 平穩日：二元感受不計入 → 顯示該日型應記錄領域的引導文案
     await expect(page.getByText(/感受就能開始計算吻合度/)).toBeVisible();
   }
 });
@@ -399,4 +422,21 @@ test('授權後呼叫分流端點取得 SSE 回應並通過 grounding 驗證', a
     expect(body).toContain('身強');
     expect(body).toContain('[DONE]');
   }
+});
+
+test('selected birth-city longitude reaches session Evidence from the real UI (#42)', async ({ page, context }) => {
+  await seedChart(context);
+  await context.addInitScript(() => {
+    localStorage.setItem('bezi_longitude', '台北');
+  });
+  const evidenceRequest = page.waitForRequest(
+    request => new URL(request.url()).pathname === '/api/evidence/current',
+    { timeout: 30000 }
+  );
+  await openChat(page);
+  const request = await evidenceRequest;
+  const payload = request.postDataJSON() as { birthDate: string; birthTime: string; gender: string; longitude?: number };
+  expect(payload.birthDate).toBe('1990-01-01');
+  expect(payload.longitude).toBe(121.5);
+  await expect(page.getByText('已連結目前命盤 Evidence')).toBeVisible();
 });

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "UNOBSERVED_TEMPLATE",
+  "observations": [
+    {
+      "id": "SYN-01",
+      "observedDirection": null,
+      "observedAt": null,
+      "source": null
+    },
+    {
+      "id": "SYN-02",
+      "observedDirection": null,
+      "observedAt": null,
+      "source": null
+    },
+    {
+      "id": "SYN-03",
+      "observedDirection": null,
+      "observedAt": null,
+      "source": null
+    },
+    {
+      "id": "SYN-04",
+      "observedDirection": null,
+      "observedAt": null,
+      "source": null
+    },
+    {
+      "id": "SYN-05",
+      "observedDirection": null,
+      "observedAt": null,
+      "source": null
+    }
+  ]
+}

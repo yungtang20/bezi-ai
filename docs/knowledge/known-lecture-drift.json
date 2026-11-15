@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "lockedAt": "2026-11-15",
+  "baselineCommit": "7bc1b085615814605e9da380a2c0b34760df5246",
+  "notes": "僅凍結既存兩處文字差異，非徐玉蘭老師口徑認證。任何新增/變動的差異 CI 失敗。原教材未核定時不得擅自改寫任一來源。",
+  "known": [
+    {
+      "path": "LECTURE_DATA.WEAK_WEALTH_FIX.比肩劫財多",
+      "frontend": "從朋友處得財，留意合夥失財，建議獨資或採合作分潤",
+      "core": "從朋友處得財 ⚠️ 留意合夥失財，建議獨資或採合作分潤",
+      "sourceStatus": "UNKNOWN",
+      "sourceEvidence": "2026-11-14 GitHub Actions 43569838996 drift log；原講義權威版本未核定"
+    },
+    {
+      "path": "LECTURE_DATA.BREAK_WEALTH_FIX.2",
+      "frontend": "積極補充用神能量：當財星/用神被沖合剋時，多補充用神(身強可補財星能量)。財位風水為另一輔助系統：財位補「我剋」的財星五行，風水佈置只看流日與命主五行，不考慮身強身弱、不混用八字忌神",
+      "core": "積極補充用神能量：當財星/用神被沖合剋時，多補充用神(身強可補財星能量)，並加強風水財位佈置",
+      "sourceStatus": "UNKNOWN",
+      "sourceEvidence": "2026-11-14 GitHub Actions 43569838996 drift log；原講義權威版本未核定"
+    }
+  ]
+}

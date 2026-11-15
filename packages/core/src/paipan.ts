@@ -59,6 +59,8 @@ export interface BaziChart {
   trueSolarMonth?: number;
   trueSolarDay?: number;
   trueSolarHour?: number;
+  /** 出生地經度（僅有效真太陽時校正時保留，以便 AI Evidence 重新排盤）。 */
+  birthLongitude?: number;
 }
 
 // [AI MOD] 內部型別，不 export
@@ -152,7 +154,7 @@ export function calculateChart(
     zodiac,
     // [P2] 有調整才記錄（無 longitude 時 undefined，完全不相等於原行為）
     ...(longitude !== undefined && !isHourUnknown
-      ? { trueSolarYear: effYear, trueSolarMonth: effMonth, trueSolarDay: effDay, trueSolarHour: effHour }
+      ? { trueSolarYear: effYear, trueSolarMonth: effMonth, trueSolarDay: effDay, trueSolarHour: effHour, birthLongitude: longitude }
       : {}),
   };
 }

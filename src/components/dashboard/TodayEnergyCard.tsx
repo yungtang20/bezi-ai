@@ -252,7 +252,7 @@ export default function TodayEnergyCard({
               <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-400/30">
                 {report.samples < 7
                   ? `${report.matches}/${report.samples} 同方向・初步`
-                  : `近期吻合 ${report.accuracy}%`}
+                  : `近期紀錄吻合 ${report.accuracy}%`}
               </span>
             )}
           </div>
