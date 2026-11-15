@@ -199,6 +199,12 @@ test('分享今日運勢可產出 PNG 圖檔並提供 LINE 分享', async ({
 });
 
 test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context }) => {
+  page.on('console', msg => {
+    if (msg.type() === 'error' || msg.text().includes('handleCheckIn')) {
+      console.log('[CHECKIN-BROWSER-CONSOLE]', msg.type(), msg.text());
+    }
+  });
+  page.on('pageerror', error => console.log('[CHECKIN-PAGEERROR]', error.message));
   await seedChart(context);
   await page.goto('/');
   await page.waitForTimeout(1500);
