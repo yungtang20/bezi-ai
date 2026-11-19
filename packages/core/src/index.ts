@@ -4,5 +4,6 @@ export * from './paipan';
 export * from './pattern';
 export * from './dayun';
 export * from './dailyAnalysis';
+export * from './data/rules/dailyFlowDays';
 export * from './chartTransform';
 export * from './trueSolarTime';

@@ -18,6 +18,13 @@ import {
   AppNotification,
 } from '../storage';
 import {
+  addDaysToDateKey,
+  compareDateKeys,
+  isFutureDateKey,
+  isValidDateKey,
+  todayKey,
+} from '../lib/civilDate';
+import {
   adjustScores,
   checkAutoSwitch,
   calculateAccuracy,
@@ -97,26 +104,20 @@ export default function RecordPage({
   const [dailyEnergy, setDailyEnergy] = useState<DailyEnergy | null>(null); // For theoretical outcome
   const [localScores, setLocalScores] = useState<PatternScores | null>(scores);
 
-  const todayDateStr = new Date().toISOString().split('T')[0];
+  const todayDateStr = todayKey();
 
   useEffect(() => {
     if (scores && !localScores) {
       setLocalScores(scores);
     }
   }, [scores]);
-
   const canEdit = (dateStr: string): boolean => {
-    const logDate = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    logDate.setHours(0, 0, 0, 0);
-
-    const diffTime = today.getTime() - logDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    return diffDays >= 0 && diffDays <= 2;
+    if (!isValidDateKey(dateStr)) return false;
+    return (
+      !isFutureDateKey(dateStr, todayDateStr) &&
+      compareDateKeys(addDaysToDateKey(todayDateStr, -2), dateStr) <= 0
+    );
   };
-
   useEffect(() => {
     if (bazi && localScores) {
       const pattern = getPrimaryPattern(localScores);

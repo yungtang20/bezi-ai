@@ -18,6 +18,11 @@ import ShareImage from '../share/ShareImage';
 import DailyShareCard from '../share/DailyShareCard';
 import { DailyVerseHero, QuickCheckIn, deriveLogOutcome } from './DailyVerse';
 import { trackProductEvent } from '../../lib/productEvents';
+import {
+  buildSevenDayForecast,
+  forecastSummary,
+  type DayForecast,
+} from '../../lib/sevenDayForecast';
 
 interface TodayEnergyCardProps {
   chart: BaziChart;
@@ -175,6 +180,10 @@ export default function TodayEnergyCard({
   useEffect(() => {
     trackProductEvent('daily_checkin_viewed');
   }, []);
+  const sevenDayForecast: DayForecast[] = useMemo(
+    () => buildSevenDayForecast({ chart, logs: logs as never }),
+    [chart, logs]
+  );
 
   const handleCaptureReady = useCallback(
     async (element: HTMLElement) => {
@@ -341,6 +350,62 @@ export default function TodayEnergyCard({
             className="flex items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2 text-xs font-bold text-zinc-200 transition-colors disabled:opacity-50"
           >
             <Share2 size={13} /> {isSharing ? '產生中' : '分享'}
+            <section
+              className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3"
+              aria-label="未來七天趨勢"
+            >
+              <h3 className="text-xs tracking-widest text-zinc-400 mb-2">
+                未來七天趨勢 · {forecastSummary(sevenDayForecast)}
+              </h3>
+              <div className="flex gap-1 overflow-x-auto pb-2 no-scrollbar">
+                {sevenDayForecast.map((day) => {
+                  const trendColor =
+                    day.trend === 'favorable'
+                      ? 'border-amber-500/30 text-amber-300 bg-amber-500/10'
+                      : day.trend === 'unfavorable'
+                        ? 'border-rose-500/30 text-rose-300 bg-rose-500/10'
+                        : 'border-zinc-500/20 text-zinc-400 bg-zinc-900/50';
+                  const isToday = day.dateKey === today;
+                  return (
+                    <button
+                      key={day.dateKey}
+                      className={`flex flex-col items-center gap-1 min-w-[72px] px-2 py-2 rounded-lg border ${trendColor} hover:bg-white/10 transition-colors ${
+                        isToday ? 'ring-1 ring-white/40' : ''
+                      }`}
+                      aria-pressed={isToday}
+                    >
+                      <span className="text-[10px] text-zinc-500">
+                        {day.monthDay}
+                      </span>
+                      <span className="text-[9px] text-zinc-400">
+                        {day.weekday.slice(2)}
+                      </span>
+                      <span className="text-[10px] font-bold text-zinc-200">
+                        {day.dayTenGodType.slice(0, 1)}
+                      </span>
+                      <span
+                        className={`text-[9px] font-medium ${trendColor.split(' ').pop() ?? 'text-zinc-400'}`}
+                      >
+                        {day.trendLabel}
+                      </span>
+                      {day.domains.length > 0 && (
+                        <span className="text-[9px] text-zinc-500">
+                          {day.domains.map((d) => d.label).join('、')}
+                        </span>
+                      )}
+                      {day.uncertainty.length > 0 && (
+                        <span
+                          className="text-[9px] text-amber-400/80"
+                          title={day.uncertainty.join('；')}
+                        >
+                          ⚠
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           </button>
         </div>
 

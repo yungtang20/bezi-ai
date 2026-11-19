@@ -13,6 +13,7 @@ import {
 } from '../dailyAnalysis';
 import { getDailyLog, getMonthLogs } from '../storage';
 import { submitCheckIn } from '../lib/checkInSubmit';
+import { todayKey } from '../lib/civilDate';
 import { useCheckInStats } from '../hooks/useCheckInStats';
 import {
   CATEGORY_LABELS,
@@ -77,16 +78,13 @@ export default function DailyForecastPage({
   const [overrideOutcome, setOverrideOutcome] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [canCheckIn, setCanCheckIn] = useState(false);
   const [monthAccuracy, setMonthAccuracy] = useState<number | null>(null);
   const [monthCategoryStats, setMonthCategoryStats] = useState<
     { name: string; score: number }[]
   >([]);
-  const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
-    const d = new Date();
-    const tzOffset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
-  });
+  const [selectedDateStr, setSelectedDateStr] = useState<string>(todayKey);
 
   if (!chart || !scores)
     return (
@@ -222,7 +220,8 @@ export default function DailyForecastPage({
 
     try {
       // [AI MOD] 共用 submit 邏輯（與首頁快速打卡同一套：存 log → 調格局分數 → 自動切格局通知）
-      const { autoSwitched } = await submitCheckIn(scores, {
+      // P0-1：未來日期不寫入，回傳 { ok: false, reason: 'FUTURE_DATE' }。
+      const result = await submitCheckIn(scores, {
         date: selectedDateStr,
         theoreticalOutcome:
           overrideOutcome || dailyEnergy?.theoreticalOutcome || '平穩',
@@ -230,6 +229,14 @@ export default function DailyForecastPage({
         feedback: categoryFeedback,
         note,
       });
+      setSubmitError(null);
+      if (!result.ok) {
+        setSubmitError(
+          `${result.date} 尚未到來，不得寫入打卡紀錄（今日 ${result.today}）。`
+        );
+        return;
+      }
+      const { autoSwitched } = result;
       if (autoSwitched) window.location.reload();
       setIsSubmitted(true);
       void refreshStats();
@@ -237,7 +244,6 @@ export default function DailyForecastPage({
       console.error('[AI MOD] handleCheckIn failed:', e);
     }
   };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-2xl mx-auto pb-8">
       <div className="flex justify-between items-center mb-4 md:hidden">

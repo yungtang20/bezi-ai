@@ -139,21 +139,25 @@ export function QuickCheckIn({
       const fields = QUICK_FIELDS[energy.dayTenGodType] ?? [];
       const feedback: Record<string, 'good' | 'bad' | null> = {};
       for (const f of fields) feedback[f] = choice;
-      const { autoSwitched } = await submitCheckIn(scores, {
+      const result = await submitCheckIn(scores, {
         date: today,
         theoreticalOutcome: energy.theoreticalOutcome,
         dayTenGodType: energy.dayTenGodType,
         feedback,
       });
+      if (!result.ok) {
+        console.error('[AI MOD] quick check-in rejected:', result);
+        setIsSubmitting(false);
+        return;
+      }
       trackProductEvent('quick_checkin_saved');
       onSubmitted();
-      if (autoSwitched) window.location.reload();
+      if (result.autoSwitched) window.location.reload();
     } catch (e) {
       console.error('[AI MOD] quick check-in failed:', e);
       setIsSubmitting(false);
     }
   };
-
   if (checkedToday) {
     return (
       <div
