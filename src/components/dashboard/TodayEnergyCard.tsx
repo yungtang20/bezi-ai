@@ -3,6 +3,7 @@
 // 資料來源：getDailyEnergy（packages/core/dailyAnalysis），僅唯讀呈現，不含新領域規則。
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Share2 } from 'lucide-react';
+import { useDialog } from '../../lib/useDialog';
 import { BaziChart } from '../../paipan';
 import {
   PatternScores,
@@ -117,6 +118,7 @@ export default function TodayEnergyCard({
   const [lineShareUrl, setLineShareUrl] = useState<string | null>(null);
   const [showSharePreview, setShowSharePreview] = useState(false);
   const [sharePrivateDetails, setSharePrivateDetails] = useState(false);
+  const shareDialogRef = useDialog(showSharePreview);
   // [AI MOD] 連續打卡 + 準確率（每日回訪的回饋）
   const {
     streak,
@@ -355,60 +357,62 @@ export default function TodayEnergyCard({
           <p className="text-[11px] text-rose-400 mt-2">{shareError}</p>
         )}
 
-        {showSharePreview && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-label="分享前預覽"
-          >
-            <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
-              <h3 className="text-base font-bold text-white">分享前隱私預覽</h3>
-              <div className="mt-3 rounded-xl border border-amber-400/20 bg-gradient-to-br from-emerald-950 to-zinc-950 p-3">
-                <p className="text-[10px] tracking-widest text-amber-300/80">
-                  BEZI · 今日觀察
-                </p>
-                <p className="mt-2 text-sm font-bold text-white">
-                  {dateLabel} · {meta.label}
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-300">
-                  {meta.advice}
-                </p>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                預設只分享日期、今日方向與一般建議，不包含姓名、日主、喜用神或最弱五行。
+        <dialog
+          ref={shareDialogRef}
+          aria-label="分享前預覽"
+          onClose={() => setShowSharePreview(false)}
+          onClick={(event) => {
+            if (event.target === shareDialogRef.current)
+              setShowSharePreview(false);
+          }}
+          className="share-dialog"
+        >
+          <div className="w-full rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
+            <h3 className="text-base font-bold text-white">分享前隱私預覽</h3>
+            <div className="mt-3 rounded-xl border border-amber-400/20 bg-gradient-to-br from-emerald-950 to-zinc-950 p-3">
+              <p className="text-[10px] tracking-widest text-amber-300/80">
+                BEZI · 今日觀察
               </p>
-              <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
-                <input
-                  type="checkbox"
-                  checked={sharePrivateDetails}
-                  onChange={(event) =>
-                    setSharePrivateDetails(event.target.checked)
-                  }
-                  className="mt-0.5"
-                />
-                <span>我了解公開風險，仍要顯示姓名與命盤細節</span>
-              </label>
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => setShowSharePreview(false)}
-                  className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSharePreview(false);
-                    setShareTarget(true);
-                  }}
-                  className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-zinc-950"
-                >
-                  產生分享圖
-                </button>
-              </div>
+              <p className="mt-2 text-sm font-bold text-white">
+                {dateLabel} · {meta.label}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-300">
+                {meta.advice}
+              </p>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+              預設只分享日期、今日方向與一般建議，不包含姓名、日主、喜用神或最弱五行。
+            </p>
+            <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
+              <input
+                type="checkbox"
+                checked={sharePrivateDetails}
+                onChange={(event) =>
+                  setSharePrivateDetails(event.target.checked)
+                }
+                className="mt-0.5"
+              />
+              <span>我了解公開風險，仍要顯示姓名與命盤細節</span>
+            </label>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setShowSharePreview(false)}
+                className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  setShowSharePreview(false);
+                  setShareTarget(true);
+                }}
+                className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-zinc-950"
+              >
+                產生分享圖
+              </button>
             </div>
           </div>
-        )}
+        </dialog>
 
         {/* [AI MOD] 分享圖（離屏擷取） */}
         <ShareImage active={shareTarget} onReady={handleCaptureReady}>

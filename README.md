@@ -232,7 +232,7 @@ bezi-ai/
 Bezi 的命理斷法**不是泛泛的網路八字**，而是對齊徐玉蘭 Master Hsu 的教學體系（官方網站 [masterhsu.com.tw](https://www.masterhsu.com.tw/)、知識衛星課程「人生八字應用課」與「風水磁場順心術」、YouTube 頻道 [@masterhsutalk](https://www.youtube.com/@masterhsutalk)）：
 
 - **四層讀盤序**：找日主 → 定格局 → 抓用神 → 疊大運流年，UI 流程即按此設計。
-- **格局加權**：年干 5%、年支 20%、月干 35%、日支 20%、時支 10%（七字計分，日干不計）；含貪生忘剋（限日柱旁）、透干成庫、40–55% 連續體不硬貼標籤。
+- **格局加權**：預設純生扶口徑——天干各 5%（年/月/日/時）、地支 年20% 月35% 日20% 時10%，日干不計、不扣分、不含藏干；`PatternResult.score_pre_combination` 回傳此純生扶預先分數（對齊技能 `score_before_combinations`，0–100；時柱空亡 0–85 不 scale），`final score` 另加透干/成庫/三合三會等正調整。扣分（貪生忘剋）、計入日干、藏干可經 `PatternScoringOptions`（`deductNonSupport` / `countDayStem` / `countHiddenStems`，皆預設 false）開啟。40–55% 連續體不硬貼標籤。此兩分數會顯示於 Dashboard 格局徽章與校準面板，並由 server 注入 `[命盤資訊]` system 訊息給 AI。
 - **定盤**：分數只是工具，定盤（流年體感回測）才是裁判——app 內「兩個年份校準題」與打卡回饋就是這一步的產品化。
 - **用神與補運**：一般格局求平衡、從格求順勢；大運前五年走天干、後五年走地支；起運歲數不採計。
 - **寵物與五行**：寵物在八字當「食神傷官」看，挑選以命盤所需五行對應動物屬性（貓兔木火、狗火土、缺金水選鳥倉鼠蛇魚龜）；責任心永遠比開運更重要。

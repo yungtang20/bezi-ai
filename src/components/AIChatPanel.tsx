@@ -20,6 +20,7 @@ import {
   type ChatRecordSummary,
 } from '../config';
 import { trackProductEvent } from '../lib/productEvents';
+import { isImeCompositionEnter } from '../lib/imeEnter';
 
 interface AIChatPanelProps {
   bazi?: BaziDisplay | null;
@@ -403,6 +404,7 @@ export default function AIChatPanel({ bazi }: AIChatPanelProps) {
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
+              if (isImeCompositionEnter(event)) return;
               event.preventDefault();
               submit();
             }

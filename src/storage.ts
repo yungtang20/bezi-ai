@@ -96,8 +96,14 @@ export async function saveDailyLog(log: DailyLog): Promise<void> {
     const s = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
     return storeGet<DailyLog>(s.index('date'), log.date);
   })();
-  const saved = { ...existing, ...log, id: log.id ?? existing?.id };
-  const wStore = db.transaction('dailyLogs', 'readwrite').objectStore('dailyLogs');
+  const saved = { ...existing, ...log };
+  // autoIncrement keyPath：id 為 undefined 時不得留下 own property，
+  // 否則 put 評估 keyPath 得到 undefined（非法 key）→ DataError，首次打卡會靜默失敗。
+  const nextId = log.id ?? existing?.id;
+  if (nextId !== undefined) saved.id = nextId;
+  const wStore = db
+    .transaction('dailyLogs', 'readwrite')
+    .objectStore('dailyLogs');
   await storePut(wStore, saved);
 }
 
@@ -200,7 +206,9 @@ export async function getAllNotifications(): Promise<AppNotification[]> {
 export async function markNotificationRead(createdAt: string): Promise<void> {
   const db = await openDB();
   const all = await (async () => {
-    const s = db.transaction('notifications', 'readonly').objectStore('notifications');
+    const s = db
+      .transaction('notifications', 'readonly')
+      .objectStore('notifications');
     return storeGetAll<AppNotification>(s);
   })();
   const target = all.find((n) => n.createdAt === createdAt);

@@ -97,6 +97,19 @@ export default function CalibrationPanel({
               </span>
             </div>
             <div className="flex justify-between items-start mb-2">
+              <span className="text-xs text-zinc-400">純生扶分數</span>
+              <span className="text-sm font-bold text-zinc-200">
+                {patternResult.score_pre_combination}
+              </span>
+            </div>
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-xs text-zinc-400">綜合分數</span>
+              <span className="text-sm font-bold text-white">
+                {patternResult.score}
+                {patternResult.isContinuum ? '（連續體）' : ''}
+              </span>
+            </div>
+            <div className="flex justify-between items-start mb-2">
               <span className="text-xs text-zinc-400">偏好方向</span>
               <span className="text-sm font-bold text-zinc-200">
                 {patternResult.favorable.join('、')}

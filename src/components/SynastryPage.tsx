@@ -12,6 +12,7 @@ import {
 } from './synastry/useSynastryLogic';
 import ShareImage from './share/ShareImage';
 import SynastryShareCard from './share/SynastryShareCard';
+import { useDialog } from '../lib/useDialog';
 
 interface Props {
   myChart: BaziChart | null;
@@ -57,6 +58,8 @@ export default function SynastryPage({
     handleCaptureReady,
     handleShare,
   } = useSynastryLogic({ myChart, myName });
+
+  const shareDialogRef = useDialog(showSharePreview);
 
   return (
     <div className="w-full max-w-4xl mx-auto pt-8 pb-32 px-4 md:px-0 text-zen-text text-sm animate-in fade-in duration-500">
@@ -541,51 +544,53 @@ export default function SynastryPage({
               </div>
 
               {/* [AI MOD] 分享圖（離屏擷取） */}
-              {showSharePreview && (
-                <div
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label="合盤分享前預覽"
-                >
-                  <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
-                    <h3 className="text-base font-bold text-white">
-                      分享前隱私預覽
-                    </h3>
-                    <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                      預設只分享匿名契合度與摘要，不包含雙方姓名、日主或日柱。
-                    </p>
-                    <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
-                      <input
-                        type="checkbox"
-                        checked={sharePrivateDetails}
-                        onChange={(event) =>
-                          setSharePrivateDetails(event.target.checked)
-                        }
-                        className="mt-0.5"
-                      />
-                      <span>我已取得對方同意，仍要顯示雙方姓名與命盤細節</span>
-                    </label>
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        onClick={() => setShowSharePreview(false)}
-                        className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300"
-                      >
-                        取消
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowSharePreview(false);
-                          setShareTarget(true);
-                        }}
-                        className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-zinc-950"
-                      >
-                        產生分享圖
-                      </button>
-                    </div>
+              <dialog
+                ref={shareDialogRef}
+                aria-label="合盤分享前預覽"
+                onClose={() => setShowSharePreview(false)}
+                onClick={(event) => {
+                  if (event.target === shareDialogRef.current)
+                    setShowSharePreview(false);
+                }}
+                className="share-dialog"
+              >
+                <div className="w-full rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl">
+                  <h3 className="text-base font-bold text-white">
+                    分享前隱私預覽
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                    預設只分享匿名契合度與摘要，不包含雙方姓名、日主或日柱。
+                  </p>
+                  <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={sharePrivateDetails}
+                      onChange={(event) =>
+                        setSharePrivateDetails(event.target.checked)
+                      }
+                      className="mt-0.5"
+                    />
+                    <span>我已取得對方同意，仍要顯示雙方姓名與命盤細節</span>
+                  </label>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => setShowSharePreview(false)}
+                      className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSharePreview(false);
+                        setShareTarget(true);
+                      }}
+                      className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-zinc-950"
+                    >
+                      產生分享圖
+                    </button>
                   </div>
                 </div>
-              )}
+              </dialog>
               <ShareImage active={shareTarget} onReady={handleCaptureReady}>
                 <SynastryShareCard
                   myName={myName || '我'}

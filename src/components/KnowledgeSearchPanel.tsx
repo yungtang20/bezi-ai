@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getChatAuthHeaders, getChatRecordId } from '../config';
+import { isImeCompositionEnter } from '../lib/imeEnter';
 
 // 知識索引項目介面
 interface KnowledgeItem {
@@ -545,17 +546,11 @@ export default function KnowledgeSearchPanel() {
       return searchableText.includes(trimmed);
     });
 
-    const grouped: Record<string, KnowledgeItem[]> = {};
-    matched.forEach((item) => {
-      if (!grouped[item.category]) {
-        grouped[item.category] = [];
-      }
-      grouped[item.category].push(item);
-    });
+    const grouped = Object.groupBy(matched, (item) => item.category);
 
     return Object.entries(grouped).map(([category, items]) => ({
       category,
-      items,
+      items: items ?? [],
     }));
   }, [debouncedQuery]);
 
@@ -935,6 +930,8 @@ export default function KnowledgeSearchPanel() {
                                               e.key === 'Enter' &&
                                               !e.shiftKey
                                             ) {
+                                              if (isImeCompositionEnter(e))
+                                                return;
                                               e.preventDefault();
                                               handleFollowUp(item);
                                             }

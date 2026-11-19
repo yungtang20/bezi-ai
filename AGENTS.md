@@ -30,6 +30,7 @@ Agent OS Compatibility: **Agent OS Core v0.1.0**（Policy Precedence 與 Decisio
 - **XSS 防護**：前端渲染 AI 回應必須經 DOMPurify sanitize。
 - **API key 安全**：嚴禁硬編碼憑證；僅支援後端環境變數（`AGNES_API_KEY`，見 `.env.example`）。
 - **Rate limiting / input sanitization**：`/api/chat` 必須校驗請求頻率、訊息長度與筆數上限。
+- **Browser Support**：最低支援 Chrome 117+ / Edge 117+ / Firefox 119+ / Safari 17.4+（以 `Object.groupBy` Baseline 2024 上限為準）。不引進 polyfill；`build.target: 'es2024'`。Vite 6.4.3 不支援 `baseline-widely-available`（該字串為 Vite 7 專用）。
 - AI 回應渲染的原始來源以 `LLM_WIKI.md` 為 domain rule provenance。
 
 # Role Mapping

@@ -20,78 +20,79 @@ src/calibration.ts → （真實實作）
 
 ## 1. `@bezi/core/paipan` — 排盤
 
-| 匯出 | 簽名 | 職責 |
-|------|------|------|
-| `calculateChart` | `(year, month, day, hour: number, gender: '男'\|'女', isHourUnknown?: boolean) => BaziChart` | 核心排盤：四柱、日主、生肖 |
-| `translateGanZhi` | `(ganZhi: string) => string` | 干支中文名稱轉換 |
-| `ZHI_HIDE_GAN` | `Record<string, string[]>` | 地支藏干表（= ZHI_HIDDEN） |
-| `getHiddenTenGodsForZhi` | `(zhi: string, dayMaster: string) => string[]` | 地支藏干對應十神 |
-| `DAY_MASTER_PERSONALITY` | `Record<string, string>` | 日主性格描述 |
-| `BaziChart` | interface | 四柱 + dayMaster + gender + 生日 + zodiac |
+| 匯出                     | 簽名                                                                                         | 職責                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `calculateChart`         | `(year, month, day, hour: number, gender: '男'\|'女', isHourUnknown?: boolean) => BaziChart` | 核心排盤：四柱、日主、生肖                |
+| `translateGanZhi`        | `(ganZhi: string) => string`                                                                 | 干支中文名稱轉換                          |
+| `ZHI_HIDE_GAN`           | `Record<string, string[]>`                                                                   | 地支藏干表（= ZHI_HIDDEN）                |
+| `getHiddenTenGodsForZhi` | `(zhi: string, dayMaster: string) => string[]`                                               | 地支藏干對應十神                          |
+| `DAY_MASTER_PERSONALITY` | `Record<string, string>`                                                                     | 日主性格描述                              |
+| `BaziChart`              | interface                                                                                    | 四柱 + dayMaster + gender + 生日 + zodiac |
 
 **邊界規則**：`Pillar` 型別**未導出**（內部型別）— 外部僅能透過 `BaziChart` 存取柱位。
 
 ## 2. `@bezi/core/pattern` — 格局判定
 
-| 匯出 | 簽名 | 職責 |
-|------|------|------|
-| `determinePattern` | `(chart: BaziChart) => PatternResult` | 判定身強/身弱/從強/從弱 + 喜忌神 |
-| `getFavorableElements` | `(dayMaster, pattern) => { favorable, unfavorable }` | 喜用神查表 |
-| `countTenGods` | `(chart) => TenGodCount[]` | 十神統計（`TenGodCount` 內部型別） |
-| `getCheckYears` | `(dayMasterElement, initialPattern) => number[]` | 格局反轉驗證年 |
-| `initPatternScores` / `getPrimaryPattern` | — | 校準用分數結構 |
-| `PatternResult` | interface | `{ pattern, favorable, unfavorable, score, weakestElement(s), reason? }` |
-| 常數 | `ZHI_TYPE`、`ZHI_HIDDEN`、`TRIAD_GROUPS`、`TRIAD_MEETINGS` | 地支刑沖合會表 |
+| 匯出                                                 | 簽名                                                                   | 職責                                                                                                         |
+| ---------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `determinePattern`                                   | `(chart: BaziChart, options?: PatternScoringOptions) => PatternResult` | 判定身強/身弱/從強/從弱 + 喜忌神（options 預設純生扶口徑）                                                   |
+| `getFavorableElements`                               | `(dayMaster, pattern) => { favorable, unfavorable }`                   | 喜用神查表                                                                                                   |
+| `countTenGods`                                       | `(chart) => TenGodCount[]`                                             | 十神統計（`TenGodCount` 內部型別）                                                                           |
+| `getCheckYears`                                      | `(dayMasterElement, initialPattern) => number[]`                       | 格局反轉驗證年                                                                                               |
+| `initPatternScoresFromPattern` / `getPrimaryPattern` | —                                                                      | 校準用分數結構（種子直接取自權威格局）                                                                       |
+| `PatternResult`                                      | interface                                                              | `{ pattern, favorable, unfavorable, score, score_pre_combination, isContinuum, weakestElement(s), reason? }` |
+| `PatternScoringOptions`                              | interface                                                              | `{ deductNonSupport?, countDayStem?, countHiddenStems? }`（皆預設 false）                                    |
+| 常數                                                 | `ZHI_TYPE`、`ZHI_HIDDEN`、`TRIAD_GROUPS`、`TRIAD_MEETINGS`             | 地支刑沖合會表                                                                                               |
 
 ## 3. `@bezi/core/dayun` — 大運流年
 
-| 匯出 | 簽名 | 職責 |
-|------|------|------|
-| `calculateDaYun` | `(chart) => DaYun[]` | 十年大運序列 |
-| `getDaYunQuality` | `(gan, zhi, favorable, unfavorable) => '好運'\|'壞運'\|'平運'` | 大運吉凶 |
-| `getLiuNian` | `(year, dayMaster?) => LiuNian` | 單一流年 |
-| `getFutureLiuNian` | `(startYear, count, dayMaster) => LiuNian[]` | 未來 N 年流年 |
-| re-export | `checkTaiSui`、`getTenGodForDaYun` | 太歲、十神 |
-| `DaYun` / `LiuNian` | interface | 干支、十神、五行、起訖年 |
+| 匯出                | 簽名                                                           | 職責                     |
+| ------------------- | -------------------------------------------------------------- | ------------------------ |
+| `calculateDaYun`    | `(chart) => DaYun[]`                                           | 十年大運序列             |
+| `getDaYunQuality`   | `(gan, zhi, favorable, unfavorable) => '好運'\|'壞運'\|'平運'` | 大運吉凶                 |
+| `getLiuNian`        | `(year, dayMaster?) => LiuNian`                                | 單一流年                 |
+| `getFutureLiuNian`  | `(startYear, count, dayMaster) => LiuNian[]`                   | 未來 N 年流年            |
+| re-export           | `checkTaiSui`、`getTenGodForDaYun`                             | 太歲、十神               |
+| `DaYun` / `LiuNian` | interface                                                      | 干支、十神、五行、起訖年 |
 
 ## 4. `@bezi/core/dailyAnalysis` — 流日能量
 
-| 匯出 | 簽名 | 職責 |
-|------|------|------|
-| `getDailyEnergy` | `(chart, weakestElement, favorable, unfavorable, primaryPattern, targetDate?) => DailyEnergy` | 單日極端日/衰弱日判定 |
-| `getUpcomingDatesForCategory` | `(chart, category, favorable, unfavorable, …) => UpcomingDay[]` | 掃描未來特定主題日（wealth/career/romance/health_warning/move_in/villain） |
-| `DailyEnergy` | interface | 極端日型別、理論結果、十神型別 |
+| 匯出                          | 簽名                                                                                          | 職責                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `getDailyEnergy`              | `(chart, weakestElement, favorable, unfavorable, primaryPattern, targetDate?) => DailyEnergy` | 單日極端日/衰弱日判定                                                      |
+| `getUpcomingDatesForCategory` | `(chart, category, favorable, unfavorable, …) => UpcomingDay[]`                               | 掃描未來特定主題日（wealth/career/romance/health_warning/move_in/villain） |
+| `DailyEnergy`                 | interface                                                                                     | 極端日型別、理論結果、十神型別                                             |
 
 ## 5. `src/matchmaking` — 合盤（真實實作）
 
-| 匯出 | 簽名 | 職責 |
-|------|------|------|
-| `checkSanHui` / `checkSanHe` | `(zhi1, zhi2) => string \| null` | 三會/三合 |
-| `checkLiuChong` / `checkLiuHe` | `(z1, z2) => …` | 六沖/六合 |
-| `checkXiangXing` | `(zhi1, zhi2) => string \| null` | 相刑 |
-| `checkLiuPo` / `checkLiuHai` | `(z1, z2) => …` | 六破/六害 |
-| `checkMutualComplement` | `(myChart, pChart) => …` | 五行互補 |
-| `checkDayStructureSimilarity` | `(chart1, chart2) => …` | 日柱結構相似度 |
-| `checkCommonSpouseElement` | `(c1, c2) => string \| null` | 共同配偶星五行 |
-| `checkSpouseStar` | `(myChart, partnerChart) => string \| null` | 配偶星互見 |
-| `PartnerChart` | interface | 合盤用命盤 |
+| 匯出                           | 簽名                                        | 職責           |
+| ------------------------------ | ------------------------------------------- | -------------- |
+| `checkSanHui` / `checkSanHe`   | `(zhi1, zhi2) => string \| null`            | 三會/三合      |
+| `checkLiuChong` / `checkLiuHe` | `(z1, z2) => …`                             | 六沖/六合      |
+| `checkXiangXing`               | `(zhi1, zhi2) => string \| null`            | 相刑           |
+| `checkLiuPo` / `checkLiuHai`   | `(z1, z2) => …`                             | 六破/六害      |
+| `checkMutualComplement`        | `(myChart, pChart) => …`                    | 五行互補       |
+| `checkDayStructureSimilarity`  | `(chart1, chart2) => …`                     | 日柱結構相似度 |
+| `checkCommonSpouseElement`     | `(c1, c2) => string \| null`                | 共同配偶星五行 |
+| `checkSpouseStar`              | `(myChart, partnerChart) => string \| null` | 配偶星互見     |
+| `PartnerChart`                 | interface                                   | 合盤用命盤     |
 
 ## 6. `src/calibration` — 校準（真實實作）
 
-| 匯出 | 簽名 | 職責 |
-|------|------|------|
-| `adjustScores` | `(scores: PatternScores, log: DailyLog, dayTenGodType?) => PatternScores` | 依日誌調整格局分數 |
-| `checkAutoSwitch` | `(scores) => string \| null` | 自動切換格局建議 |
-| `calculateAccuracy` | `(logs) => number` | 歷史準確率 |
+| 匯出                | 簽名                                                                      | 職責               |
+| ------------------- | ------------------------------------------------------------------------- | ------------------ |
+| `adjustScores`      | `(scores: PatternScores, log: DailyLog, dayTenGodType?) => PatternScores` | 依日誌調整格局分數 |
+| `checkAutoSwitch`   | `(scores) => string \| null`                                              | 自動切換格局建議   |
+| `calculateAccuracy` | `(logs) => number`                                                        | 歷史準確率         |
 
 ## 7. 共用型別 — `@bezi/core/types`
 
-| 型別 | 定義 |
-|------|------|
-| `BaziDisplay` | `{ year, month, day, time, chart }` |
-| `PartnerInfo` | 合盤夥伴（全 optional） |
-| `FiveElement` | `'木'\|'火'\|'土'\|'金'\|'水'` |
-| `SynastryDetail` | `{ factor, desc, advice? }` |
+| 型別             | 定義                                |
+| ---------------- | ----------------------------------- |
+| `BaziDisplay`    | `{ year, month, day, time, chart }` |
+| `PartnerInfo`    | 合盤夥伴（全 optional）             |
+| `FiveElement`    | `'木'\|'火'\|'土'\|'金'\|'水'`      |
+| `SynastryDetail` | `{ factor, desc, advice? }`         |
 
 另有知識層共用型別 `src/data/core/types.ts`：`HeavenlyStem`、`EarthlyBranch`、`YinYang`、`DayMasterStrength`。
 
@@ -106,12 +107,12 @@ src/calibration.ts → （真實實作）
 
 ## 對應測試
 
-| Module | 測試檔（tests/unit/） |
-|--------|----------------------|
-| paipan | `paipan.test.ts` |
-| pattern | `pattern.test.ts` |
-| dayun | `dayun.test.ts` |
-| dailyAnalysis | `dailyAnalysis.test.ts` |
-| matchmaking | `matchmaking.test.ts` |
-| calibration | `calibration.test.ts` |
-| constants/十神 | `constants.test.ts` |
+| Module         | 測試檔（tests/unit/）   |
+| -------------- | ----------------------- |
+| paipan         | `paipan.test.ts`        |
+| pattern        | `pattern.test.ts`       |
+| dayun          | `dayun.test.ts`         |
+| dailyAnalysis  | `dailyAnalysis.test.ts` |
+| matchmaking    | `matchmaking.test.ts`   |
+| calibration    | `calibration.test.ts`   |
+| constants/十神 | `constants.test.ts`     |

@@ -4,8 +4,14 @@
 // 格局判定用 packages/core determinePattern（引擎既有邏輯，與前端同一學派）。
 
 import type { EvidenceData } from '../../lib/evidence/provider';
-import { determinePattern, type BaziChart } from '../../../packages/core/src/index';
-import { GAN_TO_ELEMENT, getTenGod } from '../../../packages/core/src/constants';
+import {
+  determinePattern,
+  type BaziChart,
+} from '../../../packages/core/src/index';
+import {
+  GAN_TO_ELEMENT,
+  getTenGod,
+} from '../../../packages/core/src/constants';
 import { ZHI_HIDE_GAN } from '../../../packages/core/src/paipan';
 import type { ChartContext } from './types';
 
@@ -23,18 +29,22 @@ function buildPillarFromGanZhi(ganZhi: string, dayMaster: string) {
     zhi,
     hiddenGan,
     tenGod: getTenGod(dayMaster, gan),
-    hiddenTenGods: hiddenGan.map(h => getTenGod(dayMaster, h)),
+    hiddenTenGods: hiddenGan.map((h) => getTenGod(dayMaster, h)),
   };
 }
 
 export function buildChartContext(evidence: EvidenceData): ChartContext | null {
   const bazi = evidence?.bazi;
-  if (!bazi || typeof bazi.dayMaster !== 'string' || !bazi.dayMaster) return null;
+  if (!bazi || typeof bazi.dayMaster !== 'string' || !bazi.dayMaster)
+    return null;
 
   const dayElement = GAN_TO_ELEMENT[bazi.dayMaster] || null;
   if (!dayElement) return null;
 
   let pattern: string | null = null;
+  let patternScore: number | null = null;
+  let patternScorePreCombination: number | null = null;
+  let patternContinuum = false;
   if (bazi.time !== '時辰未知') {
     try {
       const year = buildPillarFromGanZhi(bazi.year, bazi.dayMaster);
@@ -43,14 +53,29 @@ export function buildChartContext(evidence: EvidenceData): ChartContext | null {
       const hour = buildPillarFromGanZhi(bazi.time, bazi.dayMaster);
       if (year && month && day) {
         const chart = {
-          year, month, day,
-          hour: hour || { gan: '', zhi: '', hiddenGan: [], tenGod: '', hiddenTenGods: [] },
+          year,
+          month,
+          day,
+          hour: hour || {
+            gan: '',
+            zhi: '',
+            hiddenGan: [],
+            tenGod: '',
+            hiddenTenGods: [],
+          },
           dayMaster: bazi.dayMaster,
           gender: bazi.gender === '男' ? '男' : '女',
-          birthYear: 2000, birthMonth: 1, birthDay: 1, birthHour: 12,
+          birthYear: 2000,
+          birthMonth: 1,
+          birthDay: 1,
+          birthHour: 12,
           zodiac: '',
         } as BaziChart;
-        pattern = determinePattern(chart).pattern;
+        const pr = determinePattern(chart);
+        pattern = pr.pattern;
+        patternScore = pr.score;
+        patternScorePreCombination = pr.score_pre_combination;
+        patternContinuum = pr.isContinuum;
       }
     } catch {
       pattern = null;
@@ -61,6 +86,9 @@ export function buildChartContext(evidence: EvidenceData): ChartContext | null {
     dayMaster: bazi.dayMaster,
     dayElement,
     pattern,
+    patternScore,
+    patternScorePreCombination,
+    patternContinuum,
     tenGods: evidence.tenGods || {},
     fiveElements: evidence.fiveElements || {},
     gender: bazi.gender || '',

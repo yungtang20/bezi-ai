@@ -268,6 +268,10 @@ export default function Dashboard({
                         {getPatternLabel(patternResult, primaryPattern)}
                       </span>
                     </div>
+                    <p className="text-[10px] text-zinc-500 leading-snug max-w-[260px] text-right">
+                      純生扶 {patternResult.score_pre_combination}｜綜合{' '}
+                      {patternResult.score}
+                    </p>
                     {patternResult.isContinuum && (
                       <p className="text-[10px] text-zinc-500 leading-snug max-w-[260px] text-right">
                         {PATTERN_CONTINUUM_NOTE}
