@@ -159,10 +159,10 @@ npm start
 # TypeScript 靜態檢查
 npm run lint
 
-# Vitest 單元測試（2026-11-15 commit 3556305 的 CI：27 檔、205 測試）
+# Vitest 單元測試（2026-11-19 本機 HEAD d402119：28 檔、211 測試）
 npm test
 
-# API integration tests（2026-11-15 commit 3556305 的 CI：8 檔、35 測試，含模型呼叫預算）
+# API integration tests（8 檔、35 測試，含模型呼叫預算）
 npm run test:api
 
 # 知識管線 × 真實模型評測（需 .env.local 的真實 Agnes key）
@@ -171,7 +171,7 @@ node scripts/eval-knowledge-real.mjs
 # AI 事實核對評測（mock Agnes 注入已知對／錯答案，不需真實 key）
 npm run eval:ai-factual
 
-# 建置後執行完整瀏覽器流程（onboarding/chat/stress 30 案）與 production smoke
+# 建置後執行完整瀏覽器流程（onboarding/chat/stress 含參數化共 33 案）與 production smoke
 npm run build
 npm run test:e2e
 ```
@@ -220,9 +220,9 @@ bezi-ai/
 │  ├─ calibration.ts        # 打卡回饋 → 格局分數調整
 │  └─ storage.ts            # 瀏覽器 local-first 儲存
 ├─ tests/
-│  ├─ unit/                 # Vitest 單元（26 檔、200 測試，含 golden 回歸與講義對齊 pin）
-│  ├─ api-*.test.mjs        # API 整合（7 檔、27 測試）
-│  └─ e2e/specs/            # Playwright E2E（4 套、30 案）
+│  ├─ unit/                 # Vitest 單元（28 檔、211 測試，含 golden 回歸與講義對齊 pin）
+│  ├─ api-*.test.mjs        # API 整合（8 檔、35 測試）
+│  └─ e2e/specs/            # Playwright E2E（4 套，含參數化共 33 案）
 ├─ scripts/
 │  ├─ eval-ai-factual.mjs   # AI 事實核對評測（mock 注入已知對／錯答案）
 │  ├─ eval-knowledge-real.mjs  # 知識管線 × 真實模型評測（引用溯源誠實度）
@@ -230,7 +230,7 @@ bezi-ai/
 ├─ server.ts                # Express API、授權、限流、知識管線與 Agnes SSE proxy
 ├─ LLM_WIKI.md              # 命理知識來源與規則索引（domain rule provenance）
 ├─ Dockerfile / render.yaml # 單一 image 部署（Render）
-└─ .github/workflows/ci.yml # lint + test + test:api + build + prod-smoke
+└─ .github/workflows/ci.yml # core tsc + lint + drift gate + blind-eval + test + test:api + eval:ai-factual + build + prod-smoke + chat-flow e2e
 ```
 
 ## 排盤方法與可重放的工程驗證
