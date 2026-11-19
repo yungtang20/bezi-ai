@@ -42,22 +42,55 @@ async function waitForApp(): Promise<void> {
 
 test.beforeAll(async () => {
   test.skip(!DIST_BUILT, '需先 npm run build');
-  // mock Agnes：SSE，含 structured JSON + footer（與 chat-flow 相同形狀）
+  // mock Agnes：SSE，回結構化 JSON（#43/#44 grounding 契約，與 chat-flow 相同形狀）。
+  // claims 的 sourceIds 必須 ⊆ validation bundle，否則 server fail-closed 拒答；
+  // 因此從 request body 的 Evidence Bundle system message 動態抽取真實 sourceId。
   mockAgnes = createServer((req, res) => {
     if (req.method !== 'POST' || req.url !== '/v1/chat/completions') {
       res.writeHead(404).end();
       return;
     }
-    req.resume();
-    // footer-only 形狀：server 的 validateAttempt 會從 metadata.insight 自動補 claims
-    // （sourceIds 取自 evidenceBundle），比硬編 sql:demo-001 更貼近真實契約。
-    const content =
-      '## 核心洞察\n\n目前命局呈現<term>大運</term>傾向。\n' +
-      '\n```json\n{"insight":"命局呈現身強傾向","terms":["大運"],"advice":["保持平衡"]}\n```';
-    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
-    res.end(
-      `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n`
-    );
+    let raw = '';
+    req.on('data', (chunk: Buffer) => {
+      raw += chunk.toString();
+    });
+    req.on('end', () => {
+      let sourceId = 'sql:demo-001';
+      try {
+        const body = JSON.parse(raw) as {
+          messages?: Array<{ role: string; content: string }>;
+        };
+        for (const message of body.messages ?? []) {
+          if (message.role !== 'system') continue;
+          // Evidence Bundle 以 JSON.stringify(evidenceBundle) 整包推送，內含 items[].sourceId。
+          if (!message.content.startsWith('{')) continue;
+          const bundle = JSON.parse(message.content) as {
+            items?: Array<{ sourceId?: string }>;
+          };
+          const found = bundle.items?.find((item) =>
+            /^(sql|computed):current-/.test(item.sourceId ?? '')
+          )?.sourceId;
+          if (found) {
+            sourceId = found;
+            break;
+          }
+        }
+      } catch {
+        // 解析失敗沿用 sql:demo-001；server 仍會正確 fail-closed。
+      }
+      const answer = '目前命局呈現<term>大運</term>傾向，五行以金為重心。';
+      const structured = JSON.stringify({
+        status: 'answered',
+        answer,
+        claims: [{ text: answer, sourceIds: [sourceId], confidence: 'high' }],
+        limitations: [],
+        nextQuestions: [],
+      });
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end(
+        `data: ${JSON.stringify({ choices: [{ delta: { content: structured } }] })}\n\ndata: [DONE]\n\n`
+      );
+    });
   });
   await new Promise<void>((resolve) =>
     mockAgnes.listen(AGNES_PORT, '127.0.0.1', resolve)
