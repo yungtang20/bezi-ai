@@ -157,3 +157,53 @@ select option {
   background-color: #0f1a14;
   color: #f5f0e8;
 }
+
+/* ===== 原生 <dialog> 現代化（Modal / Drawer / 分享預覽） ===== */
+dialog {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* 置中 modal（系統設定） */
+.modal-dialog {
+  margin: auto;
+  width: calc(100vw - 2rem);
+  max-width: 28rem;
+}
+
+/* 置中分享預覽（窄版） */
+.share-dialog {
+  margin: auto;
+  width: calc(100vw - 2rem);
+  max-width: 24rem;
+}
+
+/* 右側抽屜（AI 問答） */
+.drawer-dialog {
+  margin: 0 0 0 auto;
+  width: 24rem;
+  max-width: 90vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-out, overlay 0.3s allow-discrete, display 0.3s allow-discrete;
+}
+.drawer-dialog[open] {
+  transform: translateX(0);
+}
+@starting-style {
+  .drawer-dialog[open] {
+    transform: translateX(100%);
+  }
+}
+.drawer-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}

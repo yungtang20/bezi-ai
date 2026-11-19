@@ -257,7 +257,11 @@ export interface PatternResult {
   pattern: '身強' | '身弱' | '從強' | '從弱';
   favorable: string[]; // 喜用神
   unfavorable: string[]; // 忌神
-  score: number; // 0-100 強弱分數
+  score: number; // 0-100 強弱分數（final，含透干/庫/合化等「負變正」正調整）
+  // 純生扶分數：僅計天干/地支「生我同我」原始正分（不含日主自身、不含藏干、
+  // 不扣分、不含合化/庫/透干等 final 調整）。全盤 0–100、時柱空亡 0–85（不 scale）。
+  // 與技能 strength.mjs 的 score_before_combinations 逐字對齊，供交叉稽核。
+  score_pre_combination: number;
   isContinuum: boolean; // 徐玉蘭口徑：40–55% 連續體地帶，不硬貼標籤，以定盤為準
   weakestElement: string;
   weakestElements: string[]; // [AI MOD] 所有最弱五行（含被旺神重剋者，可能多個）
@@ -269,6 +273,19 @@ export interface PatternScores {
   weak: number;
   followStrong: number;
   followWeak: number;
+}
+
+/**
+ * 計分選項（全部預設 false = 徐玉蘭口徑「只計算加分」純生扶口徑）。
+ * 逐項開啟即可還原舊版（負向扣分 / 日主自身 / 藏干）計分。
+ */
+export interface PatternScoringOptions {
+  /** 負向扣分（剋我、我剋、我生）。預設 false：只計算加分。 */
+  deductNonSupport?: boolean;
+  /** 是否計入日主自身（日干視為同我 +5）。預設 false：日主自身不計分。 */
+  countDayStem?: boolean;
+  /** 是否計入地支藏干。預設 false：僅本氣。 */
+  countHiddenStems?: boolean;
 }
 
 // [AI MOD] 內部型別，不 export
@@ -614,16 +631,26 @@ function checkShengWangKe(
 // ==================== 核心：格局判定 ====================
 
 /**
- * 根據加權分數，初始化四格局的起始分數
+ * 根據已判定的格局（determinePattern 的權威結果），初始化四格局的起始分數。
+ * 直接以格局為種子，避免用 final 分數二次套用區間（double-bracketing）。
+ * 種子值與舊版 threshold band（>80 從強 / <20 從弱 / >=45 身強 / else 身弱）一致，
+ * 以維持下游校準（applyCalibrationDelta）的語意不變。
  */
-export function initPatternScores(weightedScore: number): PatternScores {
-  if (weightedScore > 80)
-    return { strong: 20, weak: 20, followStrong: 80, followWeak: 20 };
-  if (weightedScore < 20)
-    return { strong: 20, weak: 20, followStrong: 20, followWeak: 80 };
-  if (weightedScore >= 45)
-    return { strong: 80, weak: 20, followStrong: 30, followWeak: 10 };
-  return { strong: 20, weak: 80, followStrong: 10, followWeak: 30 };
+export function initPatternScoresFromPattern(
+  pattern: PatternResult['pattern']
+): PatternScores {
+  switch (pattern) {
+    case '從強':
+      return { strong: 20, weak: 20, followStrong: 80, followWeak: 20 };
+    case '從弱':
+      return { strong: 20, weak: 20, followStrong: 20, followWeak: 80 };
+    case '身強':
+      return { strong: 80, weak: 20, followStrong: 30, followWeak: 10 };
+    case '身弱':
+      return { strong: 20, weak: 80, followStrong: 10, followWeak: 30 };
+    default:
+      return { strong: 20, weak: 80, followStrong: 10, followWeak: 30 };
+  }
 }
 
 /**
@@ -768,13 +795,22 @@ function getAllElementsInChart(chart: BaziChart): Record<string, number> {
  * 7. 貪生忘剋、透干、庫、三合半合三會
  * 8. 依總分判定格局
  */
-export function determinePattern(chart: BaziChart): PatternResult {
+export function determinePattern(
+  chart: BaziChart,
+  options: PatternScoringOptions = {}
+): PatternResult {
   const dayMaster = chart.dayMaster;
   const dayElement = GAN_TO_ELEMENT[dayMaster];
 
   const zhis = [chart.year.zhi, chart.month.zhi, chart.day.zhi, chart.hour.zhi];
   const gans = [chart.year.gan, chart.month.gan, chart.day.gan, chart.hour.gan];
   const isHourEmpty = !chart.hour.gan || !chart.hour.zhi;
+
+  const {
+    deductNonSupport = false,
+    countDayStem = false,
+    countHiddenStems = false,
+  } = options;
 
   // 權重（來源：定格局.docx P1 ＋ 課程逐字稿 1-3 [10:06]-[10:25]，徐玉蘭口徑）
   // 天干：5% 5% 5% 5%（年/月/日/時）
@@ -786,6 +822,24 @@ export function determinePattern(chart: BaziChart): PatternResult {
   let positiveScore = 0;
   let negativeScore = 0;
   const reasons: string[] = [];
+
+  // 純生扶預先分數（score_pre_combination）：
+  // 徐玉蘭「只計算加分」：天干「生我同我」+5（日主自身不計）、地支本氣 +權重（生我同我）。
+  // 不含藏干、不扣分、不含合化/庫/透干等 final 調整；時柱空亡時權重歸零（0–85，不 scale）。
+  // 權重與技能 strength.mjs 的 score_before_combinations 一致（gan [5,5,0,5] + zhi [20,35,20,10]）。
+  let preCombinationScore = 0;
+  for (let i = 0; i < 4; i++) {
+    if (i !== 2) {
+      const ganEl = GAN_TO_ELEMENT[gans[i]];
+      if (ganEl && isSupporting(dayElement, ganEl, gans[i])) {
+        preCombinationScore += ganWeights[i];
+      }
+    }
+    const zhiMain = ZHI_TO_ELEMENT[zhis[i]];
+    if (zhiMain && isSupporting(dayElement, zhiMain, zhis[i])) {
+      preCombinationScore += zhiWeights[i];
+    }
+  }
 
   // 1. 掃描刑沖合
   const { damagedPillars, harmonyResults } = scanInteractions(chart);
@@ -822,9 +876,10 @@ export function determinePattern(chart: BaziChart): PatternResult {
       }
     } else if (!isDamaged) {
       if (isSupporting(dayElement, ganEl, gans[i])) {
-        ganSupport += ganWeights[i];
-      } else {
-        // 扣分項：剋我、我剋、我生
+        // 日主自身（i===2）預設不計分（countDayStem=false）；countDayStem=true 時視為同我 +5
+        if (i !== 2 || countDayStem) ganSupport += ganWeights[i];
+      } else if (deductNonSupport) {
+        // 扣分項：剋我、我剋、我生（僅在負向扣分模式）
         negativeScore += ganWeights[i] * 0.5;
       }
     }
@@ -841,16 +896,19 @@ export function determinePattern(chart: BaziChart): PatternResult {
     } else if (!isDamaged) {
       if (zhiSupporting) {
         zhiSupport += zhiWeights[i];
-      } else {
+      } else if (deductNonSupport) {
         negativeScore += zhiWeights[i] * 0.5;
       }
 
       // 藏干加分（濕燥看「所在的地支」，不看藏干本身：未中的己土仍是燥土裡的火土）
-      hiddenEls.forEach((h) => {
-        if (isSupporting(dayElement, h, zhis[i])) {
-          zhiSupport += zhiWeights[i] * 0.3; // 藏干權重較低
-        }
-      });
+      // 預設不計藏干（countHiddenStems=false，徐玉蘭「只計算加分」只認本氣）。
+      if (countHiddenStems) {
+        hiddenEls.forEach((h) => {
+          if (isSupporting(dayElement, h, zhis[i])) {
+            zhiSupport += zhiWeights[i] * 0.3; // 藏干權重較低
+          }
+        });
+      }
     }
 
     positiveScore += ganSupport + zhiSupport;
@@ -909,16 +967,21 @@ export function determinePattern(chart: BaziChart): PatternResult {
     }
   }
 
-  // 10. 貪生忘剋（化解扣分）
+  // 10. 貪生忘剋（化解扣分）— 僅在負向扣分模式有意義；
+  // 純加分模式下 negativeScore 恆為 0，減去 2 反而會讓 final 分數增加，故 gate 於 deductNonSupport。
   for (const swk of shengWangKe) {
-    negativeScore -= 2;
-    reasons.push(
-      `貪生忘剋：P${swk.from + 1}→P${swk.via + 1}→P${swk.to + 1}（化解${swk.element}相剋）`
-    );
+    if (deductNonSupport) {
+      negativeScore = Math.max(0, negativeScore - 2);
+      reasons.push(
+        `貪生忘剋：P${swk.from + 1}→P${swk.via + 1}→P${swk.to + 1}（化解${swk.element}相剋）`
+      );
+    }
   }
 
-  // 11. 最終分數
-  const scale = isHourEmpty ? 105 / 80 : 1;
+  // 11. 最終分數（時柱空亡時按「是否計入日主」調整總權重）
+  const totalWeight = countDayStem ? 105 : 100;
+  const hourEmptyTotal = countDayStem ? 90 : 85;
+  const scale = isHourEmpty ? totalWeight / hourEmptyTotal : 1;
   const scaledPositive = positiveScore * scale;
   const scaledNegative = negativeScore * scale;
   const finalScore = Math.max(
@@ -968,6 +1031,7 @@ export function determinePattern(chart: BaziChart): PatternResult {
     favorable,
     unfavorable,
     score: Math.round(finalScore),
+    score_pre_combination: Math.round(preCombinationScore),
     isContinuum,
     weakestElement: weakestElements[0] || '木',
     weakestElements,

@@ -31,6 +31,7 @@ import {
   getTenGodData,
 } from './packages/core/src/index';
 import { classifyQuery } from './src/ai/knowledge/classifier';
+import { buildChartContext } from './src/ai/knowledge/chartContext';
 import {
   retrieveKnowledge,
   formatKnowledgeForPrompt,
@@ -609,9 +610,14 @@ function createChatHandler(systemPrompt: string) {
         content: string;
       }> = [];
       openAiMessages.push({ role: 'system', content: systemPrompt });
+      const chartCtx = evidenceData ? buildChartContext(evidenceData) : null;
+      const patternScoreLine =
+        chartCtx && chartCtx.patternScore != null
+          ? `\n格局分數：純生扶 ${chartCtx.patternScorePreCombination} / 綜合 ${chartCtx.patternScore}${chartCtx.patternContinuum ? '（40-55 連續體，偏平衡，須以流年體感定盤）' : ''}，判定格局 ${chartCtx.pattern}`
+          : '';
       openAiMessages.push({
         role: 'system',
-        content: `[命盤資訊]\n${JSON.stringify(evidenceData)}`,
+        content: `[命盤資訊]\n${JSON.stringify(evidenceData)}${patternScoreLine}`,
       });
       openAiMessages.push({
         role: 'system',

@@ -8,13 +8,14 @@ import {
   type PatternResult,
   getFavorableElements,
   GAN_TO_ELEMENT,
-  initPatternScores,
+  initPatternScoresFromPattern,
   type PatternScores,
 } from '@bezi/core';
 import type { BaziDisplay } from '@bezi/core';
 import { cityLongitude } from '../lib/trueSolarCities';
 import { validateBirthInput } from '../utils/validation';
 import { trackProductEvent } from '../lib/productEvents';
+import { isImeCompositionEnter } from '../lib/imeEnter';
 import { CLIENT_CONFIG } from '../config';
 import { savePatternScores } from '../storage';
 
@@ -136,7 +137,7 @@ export function useBirthChart(
 
   const handleTimeKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !isImeCompositionEnter(e)) {
         e.preventDefault();
       }
     },
@@ -210,7 +211,7 @@ export function useBirthChart(
           cityLongitude(birthCity)
         );
         const patternResult = determinePattern(chart);
-        const scores = initPatternScores(patternResult.score);
+        const scores = initPatternScoresFromPattern(patternResult.pattern);
         const chartDisplay = {
           year: chart.year.gan + chart.year.zhi,
           month: chart.month.gan + chart.month.zhi,
@@ -304,7 +305,7 @@ export function useBirthChart(
       onChartReady?.(
         chartDisplay,
         patternResult,
-        initPatternScores(patternResult.score)
+        initPatternScoresFromPattern(patternResult.pattern)
       );
       return true;
     } catch (e: unknown) {

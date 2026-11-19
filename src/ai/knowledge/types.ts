@@ -3,15 +3,15 @@
 
 /** 查詢主題分類（對應 src/data 知識源分層與前端頁面分區） */
 export type QueryCategory =
-  | 'spouse'        // 感情姻緣
-  | 'wealth'        // 財運
-  | 'career'        // 事業
-  | 'health'        // 健康
-  | 'family'        // 家人/人際
+  | 'spouse' // 感情姻緣
+  | 'wealth' // 財運
+  | 'career' // 事業
+  | 'health' // 健康
+  | 'family' // 家人/人際
   | 'dayun_liunian' // 大運流年
-  | 'daily'         // 每日運勢
-  | 'general_bazi'  // 一般命盤解讀
-  | 'other';        // 無法分類
+  | 'daily' // 每日運勢
+  | 'general_bazi' // 一般命盤解讀
+  | 'other'; // 無法分類
 
 export interface QueryClassification {
   category: QueryCategory;
@@ -37,6 +37,12 @@ export interface ChartContext {
   dayElement: string;
   /** '身強' | '身弱' | '從強' | '從弱'；時辰未知時可能為 null */
   pattern: string | null;
+  /** 格局綜合分數 final（含透干/成庫/合化等正調整）；時辰未知時 null */
+  patternScore: number | null;
+  /** 純生扶預先分數 score_pre_combination（對齊技能 score_before_combinations）；時辰未知時 null */
+  patternScorePreCombination: number | null;
+  /** final 是否落在 40-55 連續體地帶 */
+  patternContinuum: boolean;
   /** 十神 → 數量（>0 者） */
   tenGods: Record<string, number>;
   /** 五行 → 相對值 */

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { adjustScores, checkAutoSwitch, calculateAccuracy } from '../../src/calibration';
+import {
+  adjustScores,
+  checkAutoSwitch,
+  calculateAccuracy,
+} from '../../src/calibration';
 import { PatternScores } from '../../src/pattern';
 import { DailyLog } from '../../src/storage';
 
@@ -77,8 +81,13 @@ describe('Calibration Module (scores adjustment, auto switch, accuracy)', () => 
 });
 
 describe('applyCalibrationDelta (快速校準 流年定盤 delta)', () => {
-  // 1985-02-03 02:00 男：日主癸水，引擎 68.5% 身強 → initPatternScores(69) = 身強80/身弱20/從強30
-  const waterChartScores: PatternScores = { strong: 80, weak: 20, followStrong: 30, followWeak: 10 };
+  // 身強起始分數：initPatternScoresFromPattern('身強') = 身強80/身弱20/從強30/從弱10
+  const waterChartScores: PatternScores = {
+    strong: 80,
+    weak: 20,
+    followStrong: 30,
+    followWeak: 10,
+  };
 
   it('身強 + 順利：從強與身弱並推（不預設答案），身強下降', () => {
     const next = applyCalibrationDelta(waterChartScores, '順利', '身強');
@@ -109,18 +118,30 @@ describe('applyCalibrationDelta (快速校準 流年定盤 delta)', () => {
   });
 
   it('平穩：分數完全不動', () => {
-    expect(applyCalibrationDelta(waterChartScores, '平穩', '身強')).toEqual(waterChartScores);
+    expect(applyCalibrationDelta(waterChartScores, '平穩', '身強')).toEqual(
+      waterChartScores
+    );
   });
 
   it('從強 + 不順：破格回擺身強（講義：從強走忌神=身強）', () => {
-    const cs: PatternScores = { strong: 20, weak: 20, followStrong: 80, followWeak: 20 };
+    const cs: PatternScores = {
+      strong: 20,
+      weak: 20,
+      followStrong: 80,
+      followWeak: 20,
+    };
     const next = applyCalibrationDelta(cs, '不順', '從強');
     expect(next.strong).toBe(35);
     expect(next.followStrong).toBe(65);
   });
 
   it('分數夾在 0~100 區間內', () => {
-    const maxed: PatternScores = { strong: 99, weak: 0, followStrong: 100, followWeak: 0 };
+    const maxed: PatternScores = {
+      strong: 99,
+      weak: 0,
+      followStrong: 100,
+      followWeak: 0,
+    };
     const next = applyCalibrationDelta(maxed, '不順', '從強');
     expect(next.strong).toBe(100); // min(100, 99+15)
     expect(next.followStrong).toBe(85);

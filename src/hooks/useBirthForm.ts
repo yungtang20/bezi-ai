@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { isImeCompositionEnter } from '../lib/imeEnter';
 
 // [AI MOD] 內部型別，不 export
 interface BirthFormData {
@@ -38,23 +39,29 @@ export function useBirthForm(): BirthFormData & BirthFormActions {
     setTimeout(() => timeInputRef.current?.focus(), 10);
   }, []);
 
-  const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
-    let formatted = digits;
-    if (digits.length >= 7) {
-      formatted = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
-    } else if (digits.length >= 5) {
-      formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`;
-    }
-    setBirthDate(formatted);
-    if (digits.length === 8) {
-      setTimeout(() => timeInputRef.current?.focus(), 10);
-    }
-  }, []);
+  const handleDateChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+      let formatted = digits;
+      if (digits.length >= 7) {
+        formatted = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+      } else if (digits.length >= 5) {
+        formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`;
+      }
+      setBirthDate(formatted);
+      if (digits.length === 8) {
+        setTimeout(() => timeInputRef.current?.focus(), 10);
+      }
+    },
+    []
+  );
 
   const parseHourInput = useCallback((input: string) => {
     const digits = input.replace(/\D/g, '').slice(0, 4);
-    const formatted = digits.length >= 3 ? `${digits.slice(0, 2)}:${digits.slice(2, 4)}` : digits;
+    const formatted =
+      digits.length >= 3
+        ? `${digits.slice(0, 2)}:${digits.slice(2, 4)}`
+        : digits;
     setBirthTimeInput(formatted);
 
     if (!digits) {
@@ -80,8 +87,9 @@ export function useBirthForm(): BirthFormData & BirthFormActions {
     setHourError('');
   }, []);
 
-  const handleTimeKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+  const handleTimeKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key !== 'Enter' || isImeCompositionEnter(e)) return;
       e.preventDefault();
       setTimeout(() => {
         const startBtn = document.getElementById('start-calculation-btn');
@@ -89,14 +97,34 @@ export function useBirthForm(): BirthFormData & BirthFormActions {
           startBtn.click();
         }
       }, 50);
-    }
-  }, []);
+    },
+    []
+  );
 
-  const isFormValid = !!(gender && birthDate && birthDate.length === 10 && !hourError);
+  const isFormValid = !!(
+    gender &&
+    birthDate &&
+    birthDate.length === 10 &&
+    !hourError
+  );
 
   return {
-    name, gender, birthDate, birthTime, birthTimeInput, hourError, isFormValid,
-    setName, setGender, setBirthDate, setBirthTime, setBirthTimeInput,
-    handleDateChange, parseHourInput, handleTimeKeyDown, timeInputRef, focusTimeInput,
+    name,
+    gender,
+    birthDate,
+    birthTime,
+    birthTimeInput,
+    hourError,
+    isFormValid,
+    setName,
+    setGender,
+    setBirthDate,
+    setBirthTime,
+    setBirthTimeInput,
+    handleDateChange,
+    parseHourInput,
+    handleTimeKeyDown,
+    timeInputRef,
+    focusTimeInput,
   };
 }

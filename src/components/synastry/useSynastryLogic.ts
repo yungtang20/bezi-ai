@@ -4,11 +4,7 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { BaziChart, calculateChart } from '../../paipan';
 import { PartnerChart } from '../../matchmaking';
-import {
-  getPartners,
-  savePartner,
-  deletePartner,
-} from '../../storage';
+import { getPartners, savePartner, deletePartner } from '../../storage';
 import {
   checkDayStructureSimilarity,
   checkCommonSpouseElement,
@@ -26,6 +22,7 @@ import { SynastryDetail } from '../../types';
 import { useShareImage } from '../../hooks/useShareImage';
 import { buildSynastryShareText, buildLineShareUrl } from '../../lib/shareText';
 import { trackProductEvent } from '../../lib/productEvents';
+import { isImeCompositionEnter } from '../../lib/imeEnter';
 
 export type RelationshipType = '伴侶' | '合作夥伴' | '家人' | '其他';
 
@@ -52,19 +49,23 @@ export interface SynastryAnalysis {
   spouseE: string | null;
   spouseS: string | null;
   daySim: string | null;
-  familyRoleInfo: {
-    tenGodType: string;
-    tenGodName: string;
-    parentInteraction: string;
-    childInteraction: string;
-  } | undefined;
+  familyRoleInfo:
+    | {
+        tenGodType: string;
+        tenGodName: string;
+        parentInteraction: string;
+        childInteraction: string;
+      }
+    | undefined;
   pMaxGodType: string;
-  matchingData: {
-    pros: string;
-    cons: string;
-    matching: string;
-    avoid: string;
-  } | undefined;
+  matchingData:
+    | {
+        pros: string;
+        cons: string;
+        matching: string;
+        avoid: string;
+      }
+    | undefined;
   scoreData: { score: number; details: SynastryDetail[] };
 }
 
@@ -111,7 +112,9 @@ export function useSynastryLogic({
   myName,
 }: SynastryLogicOptions): SynastryLogicResult {
   const [partners, setPartners] = useState<PartnerChart[]>([]);
-  const [selectedPartner, setSelectedPartner] = useState<PartnerChart | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<PartnerChart | null>(
+    null
+  );
   const [isAdding, setIsAdding] = useState(false);
   const [editingPartnerId, setEditingPartnerId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PartnerFormData>({
@@ -167,41 +170,48 @@ export function useSynastryLogic({
     [setFormData]
   );
 
-  const parseHourInput = useCallback((input: string) => {
-    let digits = input.replace(/\D/g, '');
-    if (digits.length > 4) {
-      digits = digits.slice(0, 4);
-    }
+  const parseHourInput = useCallback(
+    (input: string) => {
+      let digits = input.replace(/\D/g, '');
+      if (digits.length > 4) {
+        digits = digits.slice(0, 4);
+      }
 
-    let formatted = digits;
-    if (digits.length >= 3) {
-      formatted = `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
-    }
+      let formatted = digits;
+      if (digits.length >= 3) {
+        formatted = `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+      }
 
-    if (digits === '') {
-      setFormData((prev) => ({ ...prev, time: '', _timeInput: formatted }));
-      return;
-    }
-
-    const hourStr = digits.slice(0, 2);
-    const hour = parseInt(hourStr, 10);
-
-    if (isNaN(hour) || hour < 0 || hour > 23) {
-      setFormData((prev) => ({ ...prev, time: '', _timeInput: formatted }));
-      return;
-    }
-
-    if (digits.length >= 3) {
-      const minStr = digits.slice(2, 4);
-      const min = parseInt(minStr, 10);
-      if (min > 59) {
+      if (digits === '') {
         setFormData((prev) => ({ ...prev, time: '', _timeInput: formatted }));
         return;
       }
-    }
 
-    setFormData((prev) => ({ ...prev, time: hour.toString(), _timeInput: formatted }));
-  }, [setFormData]);
+      const hourStr = digits.slice(0, 2);
+      const hour = parseInt(hourStr, 10);
+
+      if (isNaN(hour) || hour < 0 || hour > 23) {
+        setFormData((prev) => ({ ...prev, time: '', _timeInput: formatted }));
+        return;
+      }
+
+      if (digits.length >= 3) {
+        const minStr = digits.slice(2, 4);
+        const min = parseInt(minStr, 10);
+        if (min > 59) {
+          setFormData((prev) => ({ ...prev, time: '', _timeInput: formatted }));
+          return;
+        }
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        time: hour.toString(),
+        _timeInput: formatted,
+      }));
+    },
+    [setFormData]
+  );
 
   const handleAdd = useCallback(async () => {
     if (!formData.name || !formData.date || !formData.time) {
@@ -220,7 +230,7 @@ export function useSynastryLogic({
         m,
         d,
         hour,
-        formData.gender === 'male' ? '男' : '女',
+        formData.gender === 'male' ? '男' : '女'
       );
 
       const newPartner: PartnerChart = {
@@ -245,7 +255,7 @@ export function useSynastryLogic({
       setEditingPartnerId(null);
       loadPartners();
     } catch (e) {
-      console.error("資料格式有誤或排盤失敗：" + String(e));
+      console.error('資料格式有誤或排盤失敗：' + String(e));
     }
   }, [
     formData,
@@ -256,14 +266,16 @@ export function useSynastryLogic({
     loadPartners,
   ]);
 
-  const handleEnterKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
-    if (e.key === 'Enter') {
+  const handleEnterKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLElement>) => {
+      if (e.key !== 'Enter' || isImeCompositionEnter(e)) return;
       e.preventDefault();
       setTimeout(() => {
         handleAdd();
       }, 50);
-    }
-  }, [handleAdd]);
+    },
+    [handleAdd]
+  );
 
   const handleCancel = useCallback(() => {
     setIsAdding(false);
@@ -295,15 +307,18 @@ export function useSynastryLogic({
     [setFormData, setEditingPartnerId, setIsAdding]
   );
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await deletePartner(id);
-      if (selectedPartner?.id === id) setSelectedPartner(null);
-      loadPartners();
-    } catch (e) {
-      console.error('[AI MOD] handleDelete failed:', e);
-    }
-  }, [selectedPartner, setSelectedPartner, loadPartners]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deletePartner(id);
+        if (selectedPartner?.id === id) setSelectedPartner(null);
+        loadPartners();
+      } catch (e) {
+        console.error('[AI MOD] handleDelete failed:', e);
+      }
+    },
+    [selectedPartner, setSelectedPartner, loadPartners]
+  );
 
   const handleCaptureReady = useCallback(
     async (element: HTMLElement) => {
@@ -314,14 +329,15 @@ export function useSynastryLogic({
       const scoreData = getCompatibilityScore(
         myChart,
         selectedPartner.chart,
-        selectedPartner.relationship,
+        selectedPartner.relationship
       );
-      const siteUrl = typeof window === 'undefined' ? '' : window.location.origin;
+      const siteUrl =
+        typeof window === 'undefined' ? '' : window.location.origin;
       const text = buildSynastryShareText(
         {
-          myName: sharePrivateDetails ? (myName || '我') : '我',
+          myName: sharePrivateDetails ? myName || '我' : '我',
           partnerName: sharePrivateDetails
-            ? (selectedPartner.name || 'TA')
+            ? selectedPartner.name || 'TA'
             : '夥伴',
           score: scoreData.score,
           myDayMaster: sharePrivateDetails ? myChart.dayMaster : '',
@@ -333,7 +349,7 @@ export function useSynastryLogic({
             : undefined,
           topDesc: sharePrivateDetails ? scoreData.details[0]?.desc : undefined,
         },
-        siteUrl,
+        siteUrl
       );
 
       const outcome = await share(element, {
@@ -375,8 +391,8 @@ export function useSynastryLogic({
     if (!myChart || !selectedPartner?.chart) return null;
     try {
       // ====== 1. 五行互補 (最強五行法) ======
-      const countMy = { '木': 0, '火': 0, '土': 0, '金': 0, '水': 0 };
-      const countP = { '木': 0, '火': 0, '土': 0, '金': 0, '水': 0 };
+      const countMy = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+      const countP = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
       const mapZhi = (zhi: string) => {
         const m: Record<string, string> = {
           寅: '木',
@@ -419,10 +435,12 @@ export function useSynastryLogic({
           if (el) countP[el as keyof typeof countP]++;
         }
       });
-      const myStrongest = Object.entries(countMy)
-        .sort((a, b) => b[1] - a[1])[0][0];
-      const partnerStrongest = Object.entries(countP)
-        .sort((a, b) => b[1] - a[1])[0][0];
+      const myStrongest = Object.entries(countMy).sort(
+        (a, b) => b[1] - a[1]
+      )[0][0];
+      const partnerStrongest = Object.entries(countP).sort(
+        (a, b) => b[1] - a[1]
+      )[0][0];
 
       // ====== 2. 十神特徵 (對方) ======
       const countPGods: Record<string, number> = {};
@@ -437,7 +455,10 @@ export function useSynastryLogic({
       // ====== 3. 姻緣與緣分匹配 (嚴格依照講義) ======
       const spouseE = checkCommonSpouseElement(myChart, selectedPartner.chart);
       const spouseS = checkSpouseStar(myChart, selectedPartner.chart);
-      const daySim = checkDayStructureSimilarity(myChart, selectedPartner.chart);
+      const daySim = checkDayStructureSimilarity(
+        myChart,
+        selectedPartner.chart
+      );
 
       const familyRoleInfo = getFamilyRole(pMaxGod);
       const pMaxGodType = getTenGodType(pMaxGod);
@@ -449,7 +470,7 @@ export function useSynastryLogic({
       const scoreData = getCompatibilityScore(
         myChart,
         selectedPartner.chart,
-        selectedPartner.relationship,
+        selectedPartner.relationship
       );
 
       return {

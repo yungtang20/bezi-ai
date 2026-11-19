@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig } from 'vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig(() => {
@@ -9,7 +9,16 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
-      ...(process.env.ANALYZE === 'true' ? [visualizer({ filename: 'dist/stats.html', open: false, gzipSize: true, brotliSize: true })] : []),
+      ...(process.env.ANALYZE === 'true'
+        ? [
+            visualizer({
+              filename: 'dist/stats.html',
+              open: false,
+              gzipSize: true,
+              brotliSize: true,
+            }),
+          ]
+        : []),
     ],
     resolve: {
       alias: {
@@ -31,6 +40,9 @@ export default defineConfig(() => {
       // 且 dev 模式不會觸發、只有 production bundle 會壞（E2E 抓不到）。
       // 改採 Vite 預設分包（route 層已由 React.lazy 自動切分），並以 chunkSizeWarningLimit 反映實際最大 chunk。
       chunkSizeWarningLimit: 900,
+      // 只支援 modern browser（Baseline 2024：Chrome 117+/Safari 17.4+/Firefox 119+/Edge 117+）。
+      // 程式碼使用 toSorted/Object.groupBy 等 ES2024 runtime API（詳見 AGENTS.md「Browser Support」）。
+      target: 'es2024',
     },
   };
 });

@@ -30,9 +30,7 @@ export default function WeeklyReviewCard({ logs }: WeeklyReviewCardProps) {
   );
 
   const bestCategory = useMemo(() => {
-    const sorted = [...categoryAccuracy].sort(
-      (a, b) => b.accuracy - a.accuracy
-    );
+    const sorted = categoryAccuracy.toSorted((a, b) => b.accuracy - a.accuracy);
     const best = sorted.find((c) => c.total > 0);
     return best ? { label: best.label, accuracy: best.accuracy } : null;
   }, [categoryAccuracy]);

@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { calculateChart } from '../../src/paipan';
-import { determinePattern, getCheckYears, type PatternResult } from '../../src/pattern';
+import {
+  determinePattern,
+  getCheckYears,
+  type PatternResult,
+} from '../../src/pattern';
 
 describe('Pattern Determination (Ge Ju)', () => {
   it('correctly determines pattern and favorable elements for a Bazi chart', () => {
@@ -13,14 +17,22 @@ describe('Pattern Determination (Ge Ju)', () => {
   });
 
   it('marks 40-55% scores as continuum (徐玉蘭口徑：分數只是工具，定盤才是裁判)', () => {
-    // 1968-09-02 16:00 男：庚金日主，實測分數 40（連續體下緣）
-    const chart = calculateChart(1968, 9, 2, 16, '男');
+    // 1960-02-10 14:00 男：戊土日主，純生扶 40 + 透干等正調整後 final=49（連續體地帶）
+    const chart = calculateChart(1960, 2, 10, 14, '男');
     const result: PatternResult = determinePattern(chart);
     expect(result.score).toBeGreaterThanOrEqual(40);
     expect(result.score).toBeLessThan(55);
     expect(result.isContinuum).toBe(true);
     // 連續體時 reason 必須標註不確定
     expect(result.reason).toContain('連續體');
+  });
+
+  it('exposes score_pre_combination as pure support score (對齊技能 score_before_combinations)', () => {
+    // demo-001（1984-03-25 10:00 男，甲子/丁卯/戊午/丁巳，戊土日主）：
+    // 純生扶 = 月干丁+5、日支午+20、時干丁+5、時支巳+10 = 40（不含日主自身、不扣分、不含藏干）
+    const chart = calculateChart(1984, 3, 25, 10, '男');
+    const result = determinePattern(chart);
+    expect(result.score_pre_combination).toBe(40);
   });
 
   it('does not mark scores outside 40-55% as continuum', () => {
