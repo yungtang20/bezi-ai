@@ -50,6 +50,7 @@ export default function AIChatPanel({ bazi }: AIChatPanelProps) {
     const currentRecord = await createCurrentEvidence({
       birthDate: `${chart.birthYear}-${String(chart.birthMonth).padStart(2, '0')}-${String(chart.birthDay).padStart(2, '0')}`,
       birthTime: chart.birthHour < 0 ? '' : String(chart.birthHour),
+      longitude: chart.birthLongitude,
       gender: chart.gender === '男' ? 'male' : 'female',
     });
     setRecords((previous) => [
@@ -369,7 +370,8 @@ export default function AIChatPanel({ bazi }: AIChatPanelProps) {
                           (f) =>
                             `${f.type}: ${f.claimed}（實際 ${f.actual ?? '未知'}）`
                         )
-                        .join('；') || '全部事實與命盤一致'
+                        .join('；') ||
+                      '本次可抽取的命盤事實與 Evidence 一致；未核對所有解讀與來源語意'
                     }
                   >
                     <CheckCircle2 className="h-3 w-3" />
@@ -379,6 +381,17 @@ export default function AIChatPanel({ bazi }: AIChatPanelProps) {
                       `，${message.factCheck.failed} 項待確認`}
                   </div>
                 )}
+              {message.role === 'assistant' &&
+                message.factCheck?.verdict === 'no_facts' && (
+                  <p className="text-[10px] text-zen-muted/70">
+                    本次回答沒有可自動核對的命盤事實。
+                  </p>
+                )}
+              {message.role === 'assistant' && message.status === 'done' && (
+                <p className="text-[10px] text-zen-muted/60">
+                  引用僅核對來源編號存在；部分命盤事實可機械核對，不代表每項解讀均受教材支持。
+                </p>
+              )}
               <span className="block pr-1 text-right text-[9px] text-zen-muted/30">
                 {new Date(message.createdAt).toLocaleTimeString([], {
                   hour: '2-digit',

@@ -62,13 +62,13 @@ export default function WeeklyReviewCard({ logs }: WeeklyReviewCardProps) {
           <div className="text-lg font-bold text-indigo-300">
             {report.samples >= 3 ? `${report.accuracy}%` : '—'}
           </div>
-          <div className="text-[10px] text-zinc-400">吻合度</div>
+          <div className="text-[10px] text-zinc-400">紀錄吻合度</div>
         </div>
       </div>
 
       {bestCategory && (
         <p className="mt-2.5 text-xs text-zinc-300">
-          這週感受最准的領域是「
+          這週紀錄方向最吻合的領域是「
           <span className="text-amber-300 font-bold">{bestCategory.label}</span>
           」（{bestCategory.accuracy}% 同方向）。
         </p>

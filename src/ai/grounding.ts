@@ -83,6 +83,8 @@ export function validateAIOutput(output: unknown, bundle: EvidenceBundle): Valid
       errors.push('claim 格式無效。');
       continue;
     }
+    // 字面對齊只保證回答有這句主張，不能保證被引來源的語意支持它。
+    if (typeof value.answer === 'string' && !value.answer.includes(claim.text)) errors.push('主張未出現在回答原文中。');
     if (!Array.isArray(claim.sourceIds) || claim.sourceIds.length === 0) errors.push('每個 claim 必須有 sourceId。');
     for (const sourceId of claim.sourceIds || []) {
       if (!sourceIds.has(sourceId)) errors.push(`引用不存在的 sourceId：${sourceId}`);

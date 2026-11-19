@@ -1,5 +1,5 @@
 // src/components/dashboard/CalibrationPanel.tsx
-// 校準面板：當前格局 → 打卡支持 → 分領域準確率 → 定盤年
+// 校準面板：當前格局 → 打卡支持 → 分領域紀錄吻合度 → 定盤年
 // 單一真實來源：src/calibration.ts、src/hooks/useCheckInStats、src/hooks/useCalibration
 import { useMemo, useState } from 'react';
 import type { PatternScores } from '../../pattern';
@@ -28,7 +28,7 @@ const TABS: Array<{
 }> = [
   { id: 'pattern', label: '當前格局' },
   { id: 'checkin', label: '打卡支持' },
-  { id: 'accuracy', label: '分領域準確率' },
+  { id: 'accuracy', label: '分領域紀錄吻合度' },
   { id: 'daYun', label: '定盤年' },
 ];
 
@@ -175,7 +175,7 @@ export default function CalibrationPanel({
             </div>
             {report.samples > 0 && (
               <div className="mt-2 p-2 bg-indigo-500/10 border border-indigo-500/20 rounded text-xs text-indigo-300">
-                近期吻合度：{report.accuracy}% ({report.matches}/
+                近期紀錄吻合度：{report.accuracy}% ({report.matches}/
                 {report.samples})
               </div>
             )}
@@ -192,7 +192,7 @@ export default function CalibrationPanel({
       {tab === 'accuracy' && (
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-amber-300 tracking-widest uppercase mb-2">
-            分領域準確率
+            分領域紀錄吻合度
           </h3>
           {categories.length === 0 ? (
             <div className="glass-card p-4 rounded-xl border border-white/5 text-center">
@@ -221,9 +221,12 @@ export default function CalibrationPanel({
                 </div>
               ))}
               <div className="mt-2 p-2 bg-indigo-500/10 border border-indigo-500/20 rounded text-xs text-indigo-300">
-                整體準確率：{report.accuracy}% ({report.matches}/
+                整體紀錄吻合度：{report.accuracy}% ({report.matches}/
                 {report.samples} 筆方向吻合)
               </div>
+              <p className="mt-2 text-[10px] text-zinc-500 leading-relaxed">
+                此比例僅反映打卡感受與系統規則的樣本內方向吻合，不是已通過獨立盲測的預測準確率。
+              </p>
             </div>
           )}
         </div>

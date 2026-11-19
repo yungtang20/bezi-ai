@@ -96,15 +96,20 @@ export async function saveDailyLog(log: DailyLog): Promise<void> {
     const s = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
     return storeGet<DailyLog>(s.index('date'), log.date);
   })();
-  const saved = { ...existing, ...log };
-  // autoIncrement keyPath：id 為 undefined 時不得留下 own property，
-  // 否則 put 評估 keyPath 得到 undefined（非法 key）→ DataError，首次打卡會靜默失敗。
-  const nextId = log.id ?? existing?.id;
-  if (nextId !== undefined) saved.id = nextId;
-  const wStore = db
-    .transaction('dailyLogs', 'readwrite')
-    .objectStore('dailyLogs');
-  await storePut(wStore, saved);
+  // 自動遞增 keyPath 不可包含 id: undefined；否則 IndexedDB 會丟 DataError。
+  // 新紀錄省略 id 以讓 key generator 配號，修改同一天紀錄則保留原 id。
+  const { id: suppliedId, ...fields } = log;
+  const resolvedId = suppliedId ?? existing?.id;
+  const saved: DailyLog =
+    resolvedId === undefined
+      ? { ...existing, ...fields }
+      : { ...existing, ...fields, id: resolvedId };
+  // 等待 transaction 真正 commit 才回報已儲存；request onsuccess 並非持久化完成。
+  // 避免打卡觸發自動格局切換與 window.reload 時，尚未提交的寫入遭中斷。
+  const tx = db.transaction('dailyLogs', 'readwrite');
+  const committed = txComplete(tx);
+  await storePut(tx.objectStore('dailyLogs'), saved);
+  await committed;
 }
 
 // 取得特定日期的打卡記錄
@@ -165,10 +170,10 @@ export interface AppNotification {
 // 儲存格局分數
 export async function savePatternScores(scores: PatternScores): Promise<void> {
   const db = await openDB();
-  const store = db
-    .transaction('patternScores', 'readwrite')
-    .objectStore('patternScores');
-  await storePut(store, { id: 'current', scores });
+  const tx = db.transaction('patternScores', 'readwrite');
+  const committed = txComplete(tx);
+  await storePut(tx.objectStore('patternScores'), { id: 'current', scores });
+  await committed;
 }
 
 // 讀取格局分數

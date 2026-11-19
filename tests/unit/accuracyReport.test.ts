@@ -110,6 +110,18 @@ describe('calculateAccuracy（既有行為維持）', () => {
 });
 
 describe('buildAccuracyReport', () => {
+  it('兩天三個可評估領域以欄位為分母，不誤當三天預測成功率 (#46)', () => {
+    const logs = [
+      makeLog({ date: '2026-10-01', dayTenGodType: '食傷', romance: 'good', health: 'bad' }),
+      makeLog({ date: '2026-10-02', dayTenGodType: '財星', wealth: 'good' }),
+    ];
+    const report = buildAccuracyReport(logs);
+    expect(report.checkedDays).toBe(2);
+    expect(report.samples).toBe(3);
+    expect(report.matches).toBe(2);
+    expect(report.accuracy).toBe(67);
+  });
+
   it('無記錄時為未開始狀態', () => {
     const report = buildAccuracyReport([]);
     expect(report.level).toBe('未開始');

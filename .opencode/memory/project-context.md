@@ -4,8 +4,8 @@
 
 ## 專案身份
 - 專案名：bezi（八字能量日誌）
-- 專案根目錄：`D:\徐玉蘭\bezi`
-- Git repo：已初始化，remote `origin` → `github.com/yungtang20/bezi`（private），branch `main`
+- 本機根目錄：以實際 clone 位置為準（舊路徑僅歷史參考）
+- GitHub repo：`github.com/yungtang20/bezi-ai`（目前 public）；本次品質改善整合分支 `matt/bezi-quality-20261115`
 - 套件：`bezi-ai`，npm workspace 包含 `packages/*`
 
 ## 技術架構
@@ -35,12 +35,12 @@
 
 ### Knowledge Layer（`src/data/`）
 分層：`core/`（基礎常數）、`charts/`（分類知識）、`rules/`（判斷規則）、`lecture/`（講義資料）。
-**已知雙源**：`src/data/lecture/lectureData.ts` 與 `packages/core/src/data/lecture/lectureData.ts` 有兩處語意差異，用 `npm run check:drift` 檢查（CI 中 `continue-on-error: true`）。
+**已知雙源**：`src/data/lecture/lectureData.ts` 與 `packages/core/src/data/lecture/lectureData.ts` 有兩處語意差異，用 `npm run check:drift` 檢查（2026-11-15 起 CI 鎖定已知 UNKNOWN baseline，新/變動差異擋 merge；詳 `docs/knowledge/known-lecture-drift.json`）。
 
 ## 驗收關卡
 ```bash
 npm run lint                       # tsc --noEmit
-npm test                           # vitest run（26 檔 ~175 例）
+npm test                           # vitest run（2026-11-15 CI 27 檔 205 例）
 npm run test:api                   # 7 檔 node --test（含 ownership、rate limit）
 npm run check:drift                # 講義雙源漂移偵測
 npm run build                      # vite build + esbuild server bundle
@@ -54,11 +54,20 @@ npx playwright test tests/e2e/specs/prod-smoke.spec.ts  # production smoke
 3. API key 僅 server-side env；嚴禁硬編碼或用 `VITE_` 傳遞
 4. `/api/chat` 必須 rate limit + input validation
 5. 知識內容變更 → 更新 `LLM_WIKI.md` 並同步溯源表
-6. 刪除檔案 / 新 dependency → 使用者核准
+6. 本輪非破壞性改動均已授權；刪除檔案、資料或既有功能仍須使用者另行核准（#50）
 
 ## 測試現況（2026-11-14）
 - lint：通過
-- unit：26 檔，~175 tests
-- API integration：7 檔 27 例（含新增 evidence ownership 3 例、rate limit 1 例）
+- unit：2026-11-15 CI 27 檔 205 tests
+- API integration：2026-11-15 CI 8 檔 35 例（含 evidence ownership、rate limit、model budget）
 - E2E：4 spec 26 例
 - CI：`npm ci` + core tsc + lint + drift + unit + API + build + prod smoke
+
+## 2026-11-15 Matt 品質改善
+
+- Plan：`docs/plans/2026-11-15-bezi-quality-matt.md`、GitHub #41、draft PR #51。
+- Backend Evidence 重排盤使用前端傳入且經驗證的出生地經度。注意：前端校準所得格局仍不同於伺服器重新計算的原始格局，不能假稱已完全一致。
+- AI 對確定性錯誤事實 fail closed；來源編號存在 ≠ 語意支持；legacy markdown footer 不再自動合成 claim。
+- `src/ai/modelBudget.ts` 在單一實例計算跨路由與重試的 provider-call 額度（不是 token 或金額計費）。
+- 打卡報告顯示「紀錄方向吻合度」，不可宣稱獨立預測效度。
+- 講義兩份已知差異維持 UNKNOWN 並釘死門檻；任何 teacher rule 修正需核對原始講義。

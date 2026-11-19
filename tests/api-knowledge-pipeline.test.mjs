@@ -42,7 +42,8 @@ before(async () => {
     req.on('end', () => {
       try { lastMessages = JSON.parse(raw).messages || []; } catch { lastMessages = []; }
       res.writeHead(200, { 'Content-Type': 'text/event-stream' });
-      const output = JSON.stringify(mockOutputFactory());
+      const generated = mockOutputFactory();
+      const output = typeof generated === 'string' ? generated : JSON.stringify(generated);
       res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: output } }] })}\n\ndata: [DONE]\n\n`);
     });
   });
@@ -145,7 +146,7 @@ test('first attempt invalid triggers one honest retry with correction, second at
     return {
       status: 'answered',
       answer: '重試後正確的回答',
-      claims: [{ text: '正確主張', sourceIds: ['kb:wealthGuidelines:wealth-土'], confidence: 'high' }],
+      claims: [{ text: '重試後正確的回答', sourceIds: ['kb:wealthGuidelines:wealth-土'], confidence: 'high' }],
       limitations: [], nextQuestions: [],
     };
   };
@@ -190,4 +191,86 @@ test('record with full pillars completes pipeline with pattern-dependent items',
   });
   const body = await post({ messages: [{ role: 'user', content: '我的命盤格局如何' }], record_id: 'demo-001' });
   assert.match(body, /命盤分析/);
+});
+
+
+test('current evidence uses selected true-solar longitude and rejects invalid longitude (#42)', async () => {
+  const makeEvidence = async (longitude) => {
+    const request = { birthDate: '1990-02-10', birthTime: '0', gender: 'male' };
+    if (longitude !== undefined) request.longitude = longitude;
+    return fetch(`${BASE}/api/evidence/current`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-chat-key' },
+      body: JSON.stringify(request),
+    });
+  };
+
+  for (const invalid of ['121.5', 181, -181, null]) {
+    const response = await makeEvidence(invalid);
+    assert.equal(response.status, 400, `longitude=${String(invalid)} must be rejected`);
+  }
+
+  const adjustedResponse = await makeEvidence(121.5);
+  assert.equal(adjustedResponse.status, 201);
+  const { record_id: adjustedId } = await adjustedResponse.json();
+  mockOutputFactory = () => ({
+    status: 'answered',
+    answer: '已提供命盤',
+    claims: [{ text: '已提供命盤', sourceIds: [`computed:${adjustedId}`], confidence: 'medium' }],
+    limitations: [], nextQuestions: [],
+  });
+  await post({ messages: [{ role: 'user', content: '我的命盤' }], record_id: adjustedId });
+  const adjustedMsg = lastMessages.find(m => m.role === 'system' && m.content.startsWith('[命盤資訊]'));
+  assert.ok(adjustedMsg, 'server must provide computed evidence to model');
+  const adjusted = JSON.parse(adjustedMsg.content.slice('[命盤資訊]\n'.length));
+  assert.equal(adjusted.bazi.day, '乙巳');
+  assert.equal(adjusted.bazi.dayMaster, '乙');
+
+  const ordinaryResponse = await makeEvidence(undefined);
+  assert.equal(ordinaryResponse.status, 201);
+  const { record_id: ordinaryId } = await ordinaryResponse.json();
+  mockOutputFactory = () => ({
+    status: 'answered',
+    answer: '已提供命盤',
+    claims: [{ text: '已提供命盤', sourceIds: [`computed:${ordinaryId}`], confidence: 'medium' }],
+    limitations: [], nextQuestions: [],
+  });
+  await post({ messages: [{ role: 'user', content: '我的命盤' }], record_id: ordinaryId });
+  const ordinaryMsg = lastMessages.find(m => m.role === 'system' && m.content.startsWith('[命盤資訊]'));
+  assert.ok(ordinaryMsg);
+  const ordinary = JSON.parse(ordinaryMsg.content.slice('[命盤資訊]\n'.length));
+  assert.equal(ordinary.bazi.day, '丙午');
+  assert.equal(ordinary.bazi.dayMaster, '丙');
+});
+
+
+test('AI answer with valid source but wrong chart fact is withheld (#43)', async () => {
+  mockOutputFactory = () => ({
+    status: 'answered',
+    answer: '日主為甲。適合向東方發展。',
+    claims: [{ text: '日主為甲', sourceIds: ['sql:demo-001'], confidence: 'high' }],
+    limitations: [], nextQuestions: [],
+  });
+  const body = await post({ messages: [{ role: 'user', content: '我的日主是什麼？' }], record_id: 'demo-001' });
+  assert.doesNotMatch(body, /日主為甲/, 'must not reveal a factual mismatch');
+  assert.match(body, /命盤事實核對未通過|與已驗證命盤不一致/);
+});
+
+test('AI answer with valid chart fact remains available (#43)', async () => {
+  mockOutputFactory = () => ({
+    status: 'answered',
+    answer: '日主為戊。',
+    claims: [{ text: '日主為戊', sourceIds: ['sql:demo-001'], confidence: 'high' }],
+    limitations: [], nextQuestions: [],
+  });
+  const body = await post({ messages: [{ role: 'user', content: '我的日主是什麼？' }], record_id: 'demo-001' });
+  assert.match(body, /日主為戊/);
+  assert.doesNotMatch(body, /命盤事實核對未通過/);
+});
+
+test('unstructured markdown footer cannot fabricate a claim citation from existing sourceIds (#44)', async () => {
+  mockOutputFactory = () => '文字：日主為戊。\n\n```json\n{"insight":"日主為戊","terms":[],"advice":[]}\n```';
+  const body = await post({ messages: [{ role: 'user', content: '請分析命盤' }], record_id: 'demo-001' });
+  assert.doesNotMatch(body, /文字：日主為戊/);
+  assert.match(body, /模型輸出未通過結構化引用驗證|目前資料不足/);
 });
