@@ -159,7 +159,7 @@ npm start
 # TypeScript 靜態檢查
 npm run lint
 
-# Vitest 單元測試（2026-11-19 本機 HEAD d402119：28 檔、211 測試）
+# Vitest 單元測試（本機 HEAD：32 檔、241 測試）
 npm test
 
 # API integration tests（8 檔、35 測試，含模型呼叫預算）
@@ -178,12 +178,12 @@ npm run test:e2e
 
 E2E 有四套 spec：
 
-| Spec                 | 覆蓋                                                                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `onboarding.spec.ts` | 範例建盤、校準閉環、reload 還原、真太陽時城市快選                                                                                                       |
-| `chat-flow.spec.ts`  | 匿名授權、SSE 渲染 term tooltip、打卡吻合度、四區導覽、多視窗                                                                                           |
-| `prod-smoke.spec.ts` | production bundle 掛載與同源資源 CORS                                                                                                                   |
-| `stress.spec.ts`     | 5 格局種子 onboarding、全頁面走查、快速跨頁切換、reload/deep-link 持久化、三日連續打卡、合盤分享圖、AI 問答、手機導覽、錯誤輸入驗證（全案 pageerror=0） |
+| Spec                 | 覆蓋                                                                                                                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onboarding.spec.ts` | 範例建盤、校準閉環、reload 還原、真太陽時城市快選                                                                                                                                                        |
+| `chat-flow.spec.ts`  | 匿名授權、SSE 渲染 term tooltip、打卡吻合度、四區導覽、多視窗（需 `AGNES_API_KEY`；本機無憑證時 5 案會失敗，非代碼缺陷）                                                                                 |
+| `prod-smoke.spec.ts` | production bundle 掛載與同源資源 CORS                                                                                                                                                                    |
+| `stress.spec.ts`     | 5 格局種子 onboarding、全頁面走查、快速跨頁切換、reload/deep-link 持久化、三日連續打卡、合盤分享圖、AI 問答、手機導覽、錯誤輸入驗證（需 `AGNES_API_KEY`；本機無憑證時 chat-flow 5 案會失敗，非代碼缺陷） |
 
 修改 `packages/core` 後，另執行：
 
@@ -220,7 +220,7 @@ bezi-ai/
 │  ├─ calibration.ts        # 打卡回饋 → 格局分數調整
 │  └─ storage.ts            # 瀏覽器 local-first 儲存
 ├─ tests/
-│  ├─ unit/                 # Vitest 單元（28 檔、211 測試，含 golden 回歸與講義對齊 pin）
+│  ├─ unit/                 # Vitest 單元（32 檔、241 測試，含 golden 回歸與講義對齊 pin）
 │  ├─ api-*.test.mjs        # API 整合（8 檔、35 測試）
 │  └─ e2e/specs/            # Playwright E2E（4 套，含參數化共 33 案）
 ├─ scripts/
@@ -228,6 +228,7 @@ bezi-ai/
 │  ├─ eval-knowledge-real.mjs  # 知識管線 × 真實模型評測（引用溯源誠實度）
 │  └─ agent/verify.mjs      # Control Glass 驗證 CLI
 ├─ server.ts                # Express API、授權、限流、知識管線與 Agnes SSE proxy
+├─ R7_ACCEPTANCE_REPORT.md  # 本次 R7 七天運勢與校準驗收報告
 ├─ LLM_WIKI.md              # 命理知識來源與規則索引（domain rule provenance）
 ├─ Dockerfile / render.yaml # 單一 image 部署（Render）
 └─ .github/workflows/ci.yml # core tsc + lint + drift gate + blind-eval + test + test:api + eval:ai-factual + build + prod-smoke + chat-flow e2e
