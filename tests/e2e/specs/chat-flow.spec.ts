@@ -482,12 +482,12 @@ test('編輯舊打卡可修改感受並重算吻合度', async ({ page, context 
     .getByRole('button', { name: /記錄今天的能量|記錄這天的能量/ })
     .click();
 
-  // 進入 RecordPage 編輯舊打卡（「點擊編輯」以 title 屬性呈現，非可見文本）
-  await page.getByRole('button', { name: '記錄' }).first().click();
-  await expect(page.getByTitle('點擊編輯').first()).toBeVisible({
+  // 進入 RecordPage 編輯舊打卡（使用 exact 匹配「記錄」，避免誤中 DailyForecastPage 打卡按鈕）
+  await page.getByRole('button', { name: '記錄', exact: true }).last().click();
+  await expect(page.locator('[title="點擊編輯"]').first()).toBeVisible({
     timeout: 15000,
   });
-  await page.getByTitle('點擊編輯').first().click();
+  await page.locator('[title="點擊編輯"]').first().click();
 
   // 修改感受：將 '順利' 改為 '不順'
   await page.getByRole('button', { name: '不順', exact: true }).first().click();
