@@ -126,8 +126,6 @@ function txComplete(tx: IDBTransaction): Promise<void> {
 export interface SaveDailyLogOptions {
   /** 測試/遷移用指定當下；預設為系統時鐘。 */
   now?: Date;
-  /** 若 true，允許寫入未來日期（僅遷移/測試使用，生產流程不應啟用）。 */
-  allowFuture?: boolean;
 }
 
 export async function saveDailyLog(
@@ -135,20 +133,12 @@ export async function saveDailyLog(
   options?: SaveDailyLogOptions
 ): Promise<void> {
   const now = options?.now ?? new Date();
-  const today = taipeiDateKey(now);
-  const { allowFuture = false } = options ?? {};
-  if (!allowFuture && isFutureDateKey(log.date, today)) {
-    throw new FutureDateLogError(log.date, today);
-  }
   const db = await openDB();
-  // 讀取與寫入分開 transaction，避免 await 期間 transaction 自動提交。
+  const { id: suppliedId, ...fields } = log;
   const existing = await (async () => {
     const s = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs');
     return storeGet<DailyLog>(s.index('date'), log.date);
   })();
-  // 自動遞增 keyPath 不可包含 id: undefined；否則 IndexedDB 會丟 DataError。
-  // 新紀錄省略 id 以讓 key generator 配號，修改同一天紀錄則保留原 id。
-  const { id: suppliedId, ...fields } = log;
   const resolvedId = suppliedId ?? existing?.id;
   const createdAt =
     existing &&
@@ -160,8 +150,6 @@ export async function saveDailyLog(
     resolvedId === undefined
       ? { ...existing, ...fields, createdAt }
       : { ...existing, ...fields, id: resolvedId, createdAt };
-  // 等待 transaction 真正 commit 才回報已儲存；request onsuccess 並非持久化完成。
-  // 避免打卡觸發自動格局切換與 window.reload 時，尚未提交的寫入遭中斷。
   const tx = db.transaction('dailyLogs', 'readwrite');
   const committed = txComplete(tx);
   await storePut(tx.objectStore('dailyLogs'), saved);

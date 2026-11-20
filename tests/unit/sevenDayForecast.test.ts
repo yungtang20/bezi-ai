@@ -159,4 +159,51 @@ describe('buildSevenDayForecast', () => {
     expect(typeof summary).toBe('string');
     expect(summary.length).toBeGreaterThan(0);
   });
+
+  it('兩張不同命盤不應產出完全相同的預報', () => {
+    const chartA = makeChart(); // 戊土日主
+    const chartB: BaziChart = {
+      ...makeChart(),
+      day: {
+        gan: '甲',
+        zhi: '子',
+        hiddenGan: [],
+        tenGod: '',
+        hiddenTenGods: [],
+      },
+      dayMaster: '甲',
+    }; // 甲木日主，喜忌不同
+
+    const forecastA = buildSevenDayForecast({
+      chart: chartA,
+      startDateKey: '2026-11-20',
+      days: 30,
+    });
+    const forecastB = buildSevenDayForecast({
+      chart: chartB,
+      startDateKey: '2026-11-20',
+      days: 30,
+    });
+
+    const same = forecastA.every(
+      (d, i) => d.trendLabel === forecastB[i].trendLabel
+    );
+    expect(same, '兩張命盤預報完全一致，代表喜忌未傳入引擎').toBe(false);
+  });
+
+  it('evidence 帶出引擎的喜忌判定說明', () => {
+    const chart = makeChart();
+    const forecast = buildSevenDayForecast({
+      chart,
+      startDateKey: '2026-11-20',
+      days: 30,
+    });
+
+    // 引擎的 theoreticalExplanation 會寫「喜用神(+n)」「忌神(-n)」。
+    // evidence 必須帶上，否則使用者看不到判定依據。
+    const evidenceText = forecast
+      .flatMap((d) => d.evidence.map((e) => e.label))
+      .join(' ');
+    expect(evidenceText).toMatch(/喜用神|忌神/);
+  });
 });

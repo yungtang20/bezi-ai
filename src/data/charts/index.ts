@@ -18,3 +18,4 @@ export * from './wealthCareers';
 export * from './wealthGuidelines';
 export * from './wealthRemediesData';
 export * from './workplaceStrategies';
+export * from './elementRemedy';

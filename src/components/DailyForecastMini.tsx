@@ -17,6 +17,7 @@ import {
 import { DailyLog, saveDailyLog, getDailyLog } from '../storage';
 import { CATEGORY_LABELS } from '../calibration';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { isFutureDateKey, todayKey } from '../lib/civilDate';
 
 // ==================== 型別定義 ====================
 
@@ -393,6 +394,10 @@ export default function DailyForecastMini({
     };
 
     try {
+      const today = todayKey();
+      if (isFutureDateKey(dateStr, today)) {
+        return;
+      }
       await saveDailyLog(log);
       setIsCheckedIn(true);
       setShowCheckIn(false);

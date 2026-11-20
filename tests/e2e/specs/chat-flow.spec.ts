@@ -248,32 +248,51 @@ test('打卡後出現連續天數與 AI 吻合度報告', async ({ page, context
   const today = await page.evaluate(() => {
     const now = new Date();
     return [
-      now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'),
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
       String(now.getDate()).padStart(2, '0'),
     ].join('-');
   });
-  const savedDates = () => page.evaluate(async () => new Promise<string[]>((resolve, reject) => {
-    const open = indexedDB.open('BaziJournalDB', 5);
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const db = open.result;
-      const request = db.transaction('dailyLogs', 'readonly').objectStore('dailyLogs').getAll();
-      request.onsuccess = () => {
-        const records = request.result as Array<{ date: string }>;
-        db.close();
-        resolve(records.map(record => record.date));
-      };
-      request.onerror = () => { db.close(); reject(request.error); };
-    };
-  }));
+  const savedDates = () =>
+    page.evaluate(
+      async () =>
+        new Promise<string[]>((resolve, reject) => {
+          const open = indexedDB.open('BaziJournalDB', 5);
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const db = open.result;
+            const request = db
+              .transaction('dailyLogs', 'readonly')
+              .objectStore('dailyLogs')
+              .getAll();
+            request.onsuccess = () => {
+              const records = request.result as Array<{ date: string }>;
+              db.close();
+              resolve(records.map((record) => record.date));
+            };
+            request.onerror = () => {
+              db.close();
+              reject(request.error);
+            };
+          };
+        })
+    );
 
-  await expect.poll(savedDates, { timeout: 15_000, message: '打卡應完成 IndexedDB 寫入' }).toEqual([today]);
+  await expect
+    .poll(savedDates, { timeout: 15_000, message: '打卡應完成 IndexedDB 寫入' })
+    .toEqual([today]);
   await page.reload();
   await page.getByRole('button', { name: '探索' }).first().click();
   await page.getByRole('button', { name: /近期日子/ }).click();
-  await expect(page.getByRole('heading', { name: '近期紀錄吻合度' })).toBeVisible();
-  await expect.poll(savedDates, { timeout: 15_000, message: '重新載入仍應保留打卡紀錄' }).toEqual([today]);
-  await expect(page.getByText('連續 1 天', { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '近期紀錄吻合度' })
+  ).toBeVisible();
+  await expect
+    .poll(savedDates, { timeout: 15_000, message: '重新載入仍應保留打卡紀錄' })
+    .toEqual([today]);
+  await expect(
+    page.getByText('連續 1 天', { exact: true }).first()
+  ).toBeVisible();
   if (evaluableDay) {
     // 只有一筆樣本時顯示累積進度 1/3 筆，而不是不可靠的百分比。
     await expect(page.getByText('1/3 筆', { exact: true })).toBeVisible();
@@ -424,19 +443,81 @@ test('授權後呼叫分流端點取得 SSE 回應並通過 grounding 驗證', a
   }
 });
 
-test('selected birth-city longitude reaches session Evidence from the real UI (#42)', async ({ page, context }) => {
+test('selected birth-city longitude reaches session Evidence from the real UI (#42)', async ({
+  page,
+  context,
+}) => {
   await seedChart(context);
   await context.addInitScript(() => {
     localStorage.setItem('bezi_longitude', '台北');
   });
   const evidenceRequest = page.waitForRequest(
-    request => new URL(request.url()).pathname === '/api/evidence/current',
+    (request) => new URL(request.url()).pathname === '/api/evidence/current',
     { timeout: 30000 }
   );
   await openChat(page);
   const request = await evidenceRequest;
-  const payload = request.postDataJSON() as { birthDate: string; birthTime: string; gender: string; longitude?: number };
+  const payload = request.postDataJSON() as {
+    birthDate: string;
+    birthTime: string;
+    gender: string;
+    longitude?: number;
+  };
   expect(payload.birthDate).toBe('1990-01-01');
   expect(payload.longitude).toBe(121.5);
   await expect(page.getByText('已連結目前命盤 Evidence')).toBeVisible();
+});
+test('編輯舊打卡可修改感受並重算吻合度', async ({ page, context }) => {
+  await seedChart(context);
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+
+  // 打卡今天
+  await page.getByRole('button', { name: '探索' }).first().click();
+  await page.getByRole('button', { name: /近期日子/ }).click();
+  await expect(page.getByText('本月流日預報')).toBeVisible({ timeout: 20000 });
+
+  await page.getByRole('button', { name: '順利' }).first().click();
+  await page
+    .getByRole('button', { name: /記錄今天的能量|記錄這天的能量/ })
+    .click();
+
+  // 進入 RecordPage 編輯舊打卡
+  await page.getByRole('button', { name: '記錄' }).first().click();
+  await expect(page.getByText('點擊編輯').first()).toBeVisible({
+    timeout: 15000,
+  });
+  await page.getByText('點擊編輯').first().click();
+
+  // 修改感受：將 '順利' 改為 '不順'
+  await page.getByRole('button', { name: '不順', exact: true }).first().click();
+  await page.getByRole('button', { name: /儲存修改|保存/ }).click();
+  await page.waitForTimeout(1000);
+
+  // 驗證修改已持久化：重新載入後仍為不順
+  await page.reload();
+  await page.getByRole('button', { name: '記錄' }).first().click();
+  await expect(page.getByText('不順').first()).toBeVisible({ timeout: 15000 });
+});
+
+test('首頁顯示七天運勢條列', async ({ page, context }) => {
+  await seedChart(context);
+  await page.goto('/');
+  await page.waitForTimeout(1500);
+
+  // 首頁應有「未來七天趨勢」條列
+  await expect(
+    page.getByText(/未來七天趨勢/),
+    '七天運勢條列標題應可見'
+  ).toBeVisible({ timeout: 20000 });
+
+  // 應有 7 個日期卡片
+  const dayCards = page.locator('[aria-pressed], button[aria-pressed]');
+  await expect(dayCards.count()).toBeGreaterThanOrEqual(7);
+
+  // 點擊任一條目應展開詳情（最多兩個領域）
+  await dayCards.first().click();
+  await expect(page.getByText(/領域/), '點擊後應顯示領域詳情').toBeVisible({
+    timeout: 10000,
+  });
 });

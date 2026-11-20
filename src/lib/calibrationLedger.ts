@@ -8,6 +8,7 @@
 import { adjustScores } from '../calibration';
 import { type DailyLog } from '../storage';
 import { compareDateKeys } from '../lib/civilDate';
+import { latestPerDate } from './dailyLog';
 import type { CalibrationBaseRecord } from '../storage';
 import type { PatternScores } from '../pattern';
 
@@ -33,15 +34,7 @@ export function recomputePatternScores(
   todayKey: string,
   version: RecomputeVersion = RECOMPUTE_VERSION
 ): RecomputeResult {
-  // 只取每個日期的最新修訂（依 createdAt 順序，穩定排序）。
-  const byDate = new Map<string, DailyLog>();
-  const ordered = [...logs].sort((a, b) =>
-    (a.createdAt ?? '').localeCompare(b.createdAt ?? '')
-  );
-  for (const log of ordered) {
-    if (log.date) byDate.set(log.date, log);
-  }
-  const latest = [...byDate.values()];
+  const latest = latestPerDate(logs);
 
   const applied: DailyLog[] = [];
   const skippedFuture: string[] = [];

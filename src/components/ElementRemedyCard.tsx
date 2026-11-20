@@ -18,7 +18,7 @@ import {
   HEALTH_PRESERVATION_GUIDE,
 } from '../data/charts/healthData';
 import { getHealthRemedy } from '../data/charts/healthRemedies';
-import type { CategoryType } from '../data/elementRemedyHelper';
+import type { CategoryType } from '../data/charts/elementRemedy';
 
 interface Props {
   chart: BaziChart;

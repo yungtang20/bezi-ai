@@ -201,25 +201,25 @@
 │       └─── 09_古籍 ←─── 三命通會, 子平真詮, 滴天髓, 窮通寶鑑, 命理探原     │
 │                                                                             │
 │       ▼                                                                     │
-│  程式碼 (src/)                                                              │
+│  程式碼 (兩層架構)                                                            │
 │       │                                                                     │
-│       ├─── src/constants.ts ←── 基礎對應表（天干地支五行、十神計算）         │
-│       │                                                                     │
-│       ├─── src/paipan.ts ←── 命盤計算（四柱、藏干、十神）                   │
-│       │                                                                     │
-│       ├─── src/pattern.ts ←── 格局判定（身強/身弱/從強/從弱）               │
-│       │                                                                     │
-│       ├─── src/dayun.ts ←── 大運流年計算                                    │
-│       │                                                                     │
-│       ├─── src/matchmaking.ts ←── 合盤判斷                                  │
-│       │                                                                     │
-│       ├─── src/dailyAnalysis.ts ←── 每日能量分析                            │
-│       │                                                                     │
-│       └─── src/data/                                                        │
-│              ├── core/ ←── 核心資料（日主、地支、五行、十神）                │
-│              ├── charts/ ←── 分類知識（健康、財富、事業、感情、人際）        │
-│              ├── rules/ ←── 判斷規則（大運、流年、合盤、太歲）               │
-│              └── lecture/ ←── 講義資料（十神特質、桃花時機）                 │
+│  packages/core/src/ ←── 核心命理引擎（純規則，無 UI 依賴）                   │
+│       ├─── paipan.ts ←── 命盤計算（四柱、藏干、十神）                        │
+│       ├─── pattern.ts ←── 格局判定（身強/身弱/從強/從弱）                   │
+│       ├─── dayun.ts ←── 大運流年計算                                        │
+│       ├─── dailyAnalysis.ts ←── 每日能量分析                                │
+│       ├─── constants.ts ←── 基礎對應表（天干地支五行、十神計算）             │
+│       ├─── trueSolarTime.ts ←── 真太陽時計算                                │
+│       └─── data/ ←── 核心資料（日主、地支、五行、十神）                      │
+│  src/ ←── React 前端 + 相容 shim（重新匯出 @bezi/core）                      │
+│       ├─── calibration.ts ←── 分數調整引擎（實作，非 shim）                  │
+│       ├─── storage.ts ←── IndexedDB 儲存（實作，非 shim）                    │
+│       ├─── matchmaking.ts ←── 合盤判斷（實作，非 shim）                      │
+│       ├─── config.ts, errors.ts, types.ts ←── 前端設定與錯誤                 │
+│       ├─── paipan.ts / pattern.ts / dayun.ts / dailyAnalysis.ts             │
+│       │          ←── shim：export * from '@bezi/core/…'                     │
+│       └─── lib/ ←── 共用純函數（dailyLog, domains, sevenDayForecast…）      │
+│       └─── components/ ←── React 元件（DailyForecastPage, RecordPage…）      │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -303,19 +303,19 @@
 
 #### 健康篇 (05_健康)
 
-| 概念           | 來源檔案    | 實現檔案                             | 變數                               |
-| -------------- | ----------- | ------------------------------------ | ---------------------------------- |
-| 五行器官對應   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.ORGANS`               |
-| 五行健康警訊   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.WARNINGS`             |
-| 大運看健康     | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.DAYUN_HEALTH`         |
-| 三刑與健康     | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.SANXING_HEALTH`       |
-| 飛星健康影響   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.FLYING_STAR_HEALTH`   |
-| 極端能量流日   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.EXTREME_DAYS`         |
-| 每月健康注意日 | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_DATA.MONTHLY_HEALTH_ALERT` |
-| 健康補運       | 健康篇.docx | `src/data/charts/healthRemedies.ts`  | `healthRemedies[]`                 |
-| 健康養生指南   | 健康篇.docx | `src/data/charts/healthData.ts`      | `HEALTH_PRESERVATION_GUIDE`        |
-| 每日健康注意日 | 健康篇.docx | `src/data/rules/dailyFlowDays.ts`    | `checkDayType()`                   |
-| 流日健康分析   | 健康篇.docx | `packages/core/src/dailyAnalysis.ts` | `getDailyEnergy()`                 |
+| 概念           | 來源檔案    | 實現檔案                                        | 變數                               |
+| -------------- | ----------- | ----------------------------------------------- | ---------------------------------- |
+| 五行器官對應   | 健康篇.docx | `src/data/charts/healthData.ts`                 | `HEALTH_DATA.ORGANS`               |
+| 五行健康警訊   | 健康篇.docx | `src/data/charts/healthData.ts`                 | `HEALTH_DATA.WARNINGS`             |
+| 大運看健康     | 健康篇.docx | `src/data/charts/healthData.ts`                 | `HEALTH_DATA.DAYUN_HEALTH`         |
+| 三刑與健康     | 健康篇.docx | `src/data/charts/healthData.ts`                 | `HEALTH_DATA.SANXING_HEALTH`       |
+| 飛星健康影響   | 健康篇.docx | `src/data/charts/healthData.ts`                 | `HEALTH_DATA.FLYING_STAR_HEALTH`   |
+| 極端能量流日   | 健康篇.docx | `src/data/charts/healthData.ts`                 | `HEALTH_DATA.EXTREME_DAYS`         |
+| 每月健康注意日 | 健康篇.docx | `src/data/charts/healthData.ts`                 | `HEALTH_DATA.MONTHLY_HEALTH_ALERT` |
+| 健康補運       | 健康篇.docx | `src/data/charts/healthRemedies.ts`             | `healthRemedies[]`                 |
+| 健康養生指南   | 健康篇.docx | `src/data/charts/healthData.ts`                 | `HEALTH_PRESERVATION_GUIDE`        |
+| 每日健康注意日 | 健康篇.docx | `packages/core/src/data/rules/dailyFlowDays.ts` | `checkDayType()`                   |
+| 流日健康分析   | 健康篇.docx | `packages/core/src/dailyAnalysis.ts`            | `getDailyEnergy()`                 |
 
 #### 財富篇 (02_財運)
 
@@ -402,16 +402,16 @@
 
 #### 大運流年篇 (08_大運流年)
 
-| 概念                         | 來源檔案                                     | 實現檔案                               | 變數                                                                                                                                                                                                        |
-| ---------------------------- | -------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 大運流年補運架構（靜態速查） | 大運流年補運架構/ ＋ 課程逐字稿 2-1-1～2-1-3 | `src/data/rules/dayunLiunian.ts`       | `DAYUN_LIUNIAN_GUIDES`（2026-10-27 重構：分支語義 remedyAlways / remedyWhenDayunGood / remedyWhenDayunBad；金日主濕土例外 note；喜忌方向由 `fiveElementsBalance.getLiunianAndRemedy` 程序化產生，單一來源） |
-| 大運流年斷應                 | 大運流年補運架構/                            | `src/data/rules/timelineGuidelines.ts` | `TIMELINE_GUIDELINES`                                                                                                                                                                                       |
-| 大運排法                     | 大運流年補運架構/                            | `packages/core/src/dayun.ts`           | `calculateDaYun()`                                                                                                                                                                                          |
-| 流年斷應                     | 2000-2030 流年五行對照表                     | `packages/core/src/dayun.ts`           | `getLiuNian()`, `getFutureLiuNian()`                                                                                                                                                                        |
-| 大運品質判斷                 | 大運流年補運架構/                            | `packages/core/src/dayun.ts`           | `getDaYunQuality()`                                                                                                                                                                                         |
-| 太歲判斷                     | 天干地支含刑沖破害                           | `src/data/rules/taiSui.ts`             | `checkTaiSui()`, `getTaiSuiAdvice()`                                                                                                                                                                        |
-| 每日流日分析                 | 5-2 講義                                     | `src/data/rules/dailyFlowDays.ts`      | `checkDayType()`                                                                                                                                                                                            |
-| 每日能量分析                 | 5-2 講義                                     | `packages/core/src/dailyAnalysis.ts`   | `getDailyEnergy()`                                                                                                                                                                                          |
+| 概念                         | 來源檔案                                     | 實現檔案                                        | 變數                                                                                                                                                                                                        |
+| ---------------------------- | -------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 大運流年補運架構（靜態速查） | 大運流年補運架構/ ＋ 課程逐字稿 2-1-1～2-1-3 | `src/data/rules/dayunLiunian.ts`                | `DAYUN_LIUNIAN_GUIDES`（2026-10-27 重構：分支語義 remedyAlways / remedyWhenDayunGood / remedyWhenDayunBad；金日主濕土例外 note；喜忌方向由 `fiveElementsBalance.getLiunianAndRemedy` 程序化產生，單一來源） |
+| 大運流年斷應                 | 大運流年補運架構/                            | `src/data/rules/timelineGuidelines.ts`          | `TIMELINE_GUIDELINES`                                                                                                                                                                                       |
+| 大運排法                     | 大運流年補運架構/                            | `packages/core/src/dayun.ts`                    | `calculateDaYun()`                                                                                                                                                                                          |
+| 流年斷應                     | 2000-2030 流年五行對照表                     | `packages/core/src/dayun.ts`                    | `getLiuNian()`, `getFutureLiuNian()`                                                                                                                                                                        |
+| 大運品質判斷                 | 大運流年補運架構/                            | `packages/core/src/dayun.ts`                    | `getDaYunQuality()`                                                                                                                                                                                         |
+| 太歲判斷                     | 天干地支含刑沖破害                           | `src/data/rules/taiSui.ts`                      | `checkTaiSui()`, `getTaiSuiAdvice()`                                                                                                                                                                        |
+| 每日流日分析                 | 5-2 講義                                     | `packages/core/src/data/rules/dailyFlowDays.ts` | `checkDayType()`                                                                                                                                                                                            |
+| 每日能量分析                 | 5-2 講義                                     | `packages/core/src/dailyAnalysis.ts`            | `getDailyEnergy()`                                                                                                                                                                                          |
 
 **大運流年補運 Domain Rule（徐玉蘭口徑，2.5 補運架構十張表）**：
 身強補運只有一組（耗洩：財、官殺、食傷），大運好壞流年好壞都不改；身弱補運**看大運不看流年**——

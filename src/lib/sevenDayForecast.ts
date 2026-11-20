@@ -9,13 +9,14 @@
 // 4. 決定論性：同一命盤與同一規則版本必須回傳相同結果，便於測試與回溯。
 import { type DailyEnergy, getDailyEnergy } from '../dailyAnalysis';
 import { checkDayType } from '@bezi/core';
-import { DAY_TYPE_FIELDS, type CategoryKey } from '../calibration';
+import { DAY_TYPE_FIELDS, type CategoryKey, CATEGORY_LABELS } from './domains';
 import { enumerateDateKeys, todayKey } from './civilDate';
 import type { BaziChart } from '../paipan';
 import { type EvidenceRef } from './evidenceStatus';
 import { ruleComputed, userCalibrated, reviewRequired } from './evidenceStatus';
-import { CATEGORY_LABELS } from '../calibration';
-import { determinePattern } from '../pattern';
+import { latestPerDate } from './dailyLog';
+import type { DailyLog } from '../storage';
+import { determinePattern, getFavorableElements } from '../pattern';
 
 export const FORECAST_RULES_VERSION = 'r7-2026-11-20';
 
@@ -154,20 +155,20 @@ export function buildSevenDayForecast({
   chart: BaziChart;
   startDateKey?: string;
   days?: number;
-  logs?: LogEntry[];
+  logs?: DailyLog[];
   now?: Date;
 }): DayForecast[] {
   const pattern = determinePattern(chart);
-  const { favorable, unfavorable } = {
-    favorable: [] as string[],
-    unfavorable: [] as string[],
-  };
-  const weakestElement = '';
+  const weakestElement = pattern.weakestElement;
+  const { favorable, unfavorable } = getFavorableElements(
+    chart.dayMaster,
+    pattern.pattern
+  );
 
   const dateKeys = enumerateDateKeys(startDateKey, days);
   const logsByDate = new Map<string, LogEntry>();
-  for (const log of logs) {
-    if (log.date) logsByDate.set(log.date, log);
+  for (const log of latestPerDate(logs ?? [])) {
+    if (log.date) logsByDate.set(log.date, log as unknown as LogEntry);
   }
 
   return dateKeys.map((dateKey) => {
@@ -217,6 +218,14 @@ export function buildSevenDayForecast({
         'dailyAnalysis.getDailyEnergy'
       ),
     ];
+    if (energy.theoreticalExplanation) {
+      evidence.push(
+        ruleComputed(
+          energy.theoreticalExplanation,
+          'dailyAnalysis.getDailyEnergy'
+        )
+      );
+    }
 
     if (energy.isExtremeDay) {
       reasons.push(`極端能量日：${energy.extremeType}`);
