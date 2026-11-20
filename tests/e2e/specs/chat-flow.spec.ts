@@ -511,8 +511,8 @@ test('首頁顯示七天運勢條列', async ({ page, context }) => {
     '七天運勢條列標題應可見'
   ).toBeVisible({ timeout: 20000 });
 
-  // 應有 7 個日期卡片
-  const dayCards = page.locator('[aria-pressed], button[aria-pressed]');
+  // 應有 7 個日期卡片（七天預報 section 下的所有按鈕）
+  const dayCards = page.locator('[aria-label="未來七天趨勢"] button');
   await expect(dayCards).toHaveCount(7);
 
   // 點擊任一條目應展開詳情（最多兩個領域）
