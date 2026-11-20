@@ -19,6 +19,12 @@ import DailyShareCard from '../share/DailyShareCard';
 import { DailyVerseHero, QuickCheckIn, deriveLogOutcome } from './DailyVerse';
 import { trackProductEvent } from '../../lib/productEvents';
 import {
+  addDaysToDateKey,
+  dateKeyToUtcMs,
+  formatFullDateLabel,
+  todayKey,
+} from '../../lib/civilDate';
+import {
   buildSevenDayForecast,
   forecastSummary,
   type DayForecast,
@@ -135,6 +141,15 @@ export default function TodayEnergyCard({
 
   const patternResult = useMemo(() => determinePattern(chart), [chart]);
   const primaryPattern = getPrimaryPattern(scores);
+  // [R7 P0-3] 能量日期以 Asia/Taipei 民用日期對應的 UTC 午夜，避免本地時區
+  // 午夜落到前一天 UTC 日期而導致日柱/星期錯位。
+  const todayInstant = useMemo(() => new Date(dateKeyToUtcMs(today)), [today]);
+  const tomorrowKey = useMemo(() => addDaysToDateKey(today, 1), [today]);
+  const tomorrowInstant = useMemo(
+    () => new Date(dateKeyToUtcMs(tomorrowKey)),
+    [tomorrowKey]
+  );
+
   const energy: DailyEnergy = useMemo(() => {
     return getDailyEnergy(
       chart,
@@ -142,37 +157,30 @@ export default function TodayEnergyCard({
       patternResult.favorable,
       patternResult.unfavorable,
       primaryPattern,
-      new Date()
+      todayInstant
     );
-  }, [chart, scores, patternResult]);
+  }, [chart, scores, patternResult, todayInstant]);
   // [AI MOD] 明日預告（每日一句 hero 用）：同一引擎算明日能量
   const tomorrowEnergy: DailyEnergy = useMemo(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
     return getDailyEnergy(
       chart,
       patternResult.weakestElement,
       patternResult.favorable,
       patternResult.unfavorable,
       primaryPattern,
-      tomorrow
+      tomorrowInstant
     );
-  }, [chart, scores, patternResult]);
+  }, [chart, scores, patternResult, tomorrowInstant]);
 
   const meta = OUTCOME_META[energy.theoreticalOutcome] || OUTCOME_META['平穩'];
   const directionHeadline =
     DIRECTION_HEADLINES[energy.theoreticalOutcome] ||
     DIRECTION_HEADLINES['平穩'];
-  const now = new Date();
-  const dateLabel = `${now.getMonth() + 1} 月 ${now.getDate()} 日 · 星期${WEEK_LABELS[now.getDay()]}`;
+  // [R7 P0-3] 日期標籤統一用台北民用日期，不再用瀏覽器本地 getMonth/getDay。
+  const dateLabel = formatFullDateLabel(today);
   const explanation = energy.theoreticalExplanation.replace(/^。$/, '').trim();
   const siteUrl = typeof window === 'undefined' ? '' : window.location.origin;
-  const weekStart = useMemo(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - 6);
-    return start.toISOString().slice(0, 10);
-  }, [today]);
+  const weekStart = useMemo(() => addDaysToDateKey(today, -6), [today]);
   const weeklyCheckIns = logs.filter(
     (log) => log.date >= weekStart && log.date <= today
   ).length;
@@ -181,7 +189,7 @@ export default function TodayEnergyCard({
     trackProductEvent('daily_checkin_viewed');
   }, []);
   const sevenDayForecast: DayForecast[] = useMemo(
-    () => buildSevenDayForecast({ chart, logs: logs as never }),
+    () => buildSevenDayForecast({ chart, logs }),
     [chart, logs]
   );
 
@@ -350,64 +358,66 @@ export default function TodayEnergyCard({
             className="flex items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2 text-xs font-bold text-zinc-200 transition-colors disabled:opacity-50"
           >
             <Share2 size={13} /> {isSharing ? '產生中' : '分享'}
-            <section
-              className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3"
-              aria-label="未來七天趨勢"
-            >
-              <h3 className="text-xs tracking-widest text-zinc-400 mb-2">
-                未來七天趨勢 · {forecastSummary(sevenDayForecast)}
-              </h3>
-              <div className="flex gap-1 overflow-x-auto pb-2 no-scrollbar">
-                {sevenDayForecast.map((day) => {
-                  const trendColor =
-                    day.trend === 'favorable'
-                      ? 'border-amber-500/30 text-amber-300 bg-amber-500/10'
-                      : day.trend === 'unfavorable'
-                        ? 'border-rose-500/30 text-rose-300 bg-rose-500/10'
-                        : 'border-zinc-500/20 text-zinc-400 bg-zinc-900/50';
-                  const isToday = day.dateKey === today;
-                  return (
-                    <button
-                      key={day.dateKey}
-                      className={`flex flex-col items-center gap-1 min-w-[72px] px-2 py-2 rounded-lg border ${trendColor} hover:bg-white/10 transition-colors ${
-                        isToday ? 'ring-1 ring-white/40' : ''
-                      }`}
-                      aria-pressed={isToday}
-                    >
-                      <span className="text-[10px] text-zinc-500">
-                        {day.monthDay}
-                      </span>
-                      <span className="text-[9px] text-zinc-400">
-                        {day.weekday.slice(2)}
-                      </span>
-                      <span className="text-[10px] font-bold text-zinc-200">
-                        {day.dayTenGodType.slice(0, 1)}
-                      </span>
-                      <span
-                        className={`text-[9px] font-medium ${trendColor.split(' ').pop() ?? 'text-zinc-400'}`}
-                      >
-                        {day.trendLabel}
-                      </span>
-                      {day.domains.length > 0 && (
-                        <span className="text-[9px] text-zinc-500">
-                          {day.domains.map((d) => d.label).join('、')}
-                        </span>
-                      )}
-                      {day.uncertainty.length > 0 && (
-                        <span
-                          className="text-[9px] text-amber-400/80"
-                          title={day.uncertainty.join('；')}
-                        >
-                          ⚠
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
           </button>
         </div>
+
+        {/* 七日預報卡片（獨立區塊，避免與按鈕巢狀互動元素） */}
+        <section
+          className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3"
+          aria-label="未來七天趨勢"
+        >
+          <h3 className="text-xs tracking-widest text-zinc-400 mb-2">
+            未來七天趨勢 · {forecastSummary(sevenDayForecast)}
+          </h3>
+          <div className="flex gap-1 overflow-x-auto pb-2 no-scrollbar">
+            {sevenDayForecast.map((day) => {
+              const trendColor =
+                day.trend === 'favorable'
+                  ? 'border-amber-500/30 text-amber-300 bg-amber-500/10'
+                  : day.trend === 'unfavorable'
+                    ? 'border-rose-500/30 text-rose-300 bg-rose-500/10'
+                    : 'border-zinc-500/20 text-zinc-400 bg-zinc-900/50';
+              const isToday = day.dateKey === today;
+              return (
+                <button
+                  key={day.dateKey}
+                  className={`flex flex-col items-center gap-1 min-w-[72px] px-2 py-2 rounded-lg border ${trendColor} hover:bg-white/10 transition-colors ${
+                    isToday ? 'ring-1 ring-white/40' : ''
+                  }`}
+                  aria-pressed={isToday}
+                >
+                  <span className="text-[10px] text-zinc-500">
+                    {day.monthDay}
+                  </span>
+                  <span className="text-[9px] text-zinc-400">
+                    {day.weekday.slice(2)}
+                  </span>
+                  <span className="text-[10px] font-bold text-zinc-200">
+                    {day.dayTenGodType.slice(0, 1)}
+                  </span>
+                  <span
+                    className={`text-[9px] font-medium ${trendColor.split(' ').pop() ?? 'text-zinc-400'}`}
+                  >
+                    {day.trendLabel}
+                  </span>
+                  {day.domains.length > 0 && (
+                    <span className="text-[9px] text-zinc-500">
+                      {day.domains.map((d) => d.label).join('、')}
+                    </span>
+                  )}
+                  {day.uncertainty.length > 0 && (
+                    <span
+                      className="text-[9px] text-amber-400/80"
+                      title={day.uncertainty.join('；')}
+                    >
+                      ⚠
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
         {lineShareUrl && (
           <button
