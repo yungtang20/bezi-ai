@@ -135,6 +135,34 @@ describe('recomputePatternScores', () => {
     expect(after.legacyCoveredDates).toEqual(['2026-08-01']);
   });
 
+  it('residual must not overwrite scores already adjusted by subsequent check-ins', () => {
+    const base = baseRecord({
+      provenance: 'legacy_anchor',
+      exact: false,
+      coveredDates: ['2026-08-01'],
+      residual: { strong: 10, weak: -5, followStrong: 0, followWeak: 0 },
+    });
+    // 2026-08-05 的打卡是「之後新增」，應累積在 replay 後的分數上
+    const logs = [
+      log('2026-08-05', { wealth: 'good' }, '財星'), // 財星+wealth good → strong +2
+    ];
+    const result = recomputePatternScores(base, logs, '2026-08-10');
+
+    expect(result.appliedDates).toEqual(['2026-08-05']);
+    // 期待：base.scores 先 replay 2026-08-05 調整（strong 50→52），再加 residual（strong+10, weak-5）
+    // 殘差只彌補差距，不得覆蓋後續打卡已累積的 +2 調整。
+    expect(result.scores).toEqual({
+      strong: 62,
+      weak: 23,
+      followStrong: 10,
+      followWeak: 10,
+    });
+    // 與「base.scores + residual 直接覆蓋」的錯誤結果不同（strong 應為 62 而非 60）。
+    expect(result.scores.strong).not.toBe(
+      Math.min(100, Math.max(0, baseScores.strong + base.residual!.strong))
+    );
+  });
+
   it('idempotent: identical repeated submission gives identical scores', () => {
     const base = baseRecord();
     const l = log('2026-08-01', { health: 'good' });

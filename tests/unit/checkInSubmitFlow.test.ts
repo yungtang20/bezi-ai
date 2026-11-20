@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { submitCheckIn } from '../../src/lib/checkInSubmit';
-import {
-  saveDailyLog,
-  savePatternScores,
-  getCalibrationBase,
-} from '../../src/storage';
+import { saveCheckInAtomic, getCalibrationBase } from '../../src/storage';
 import { adjustScores, checkAutoSwitch } from '../../src/calibration';
 import type { PatternScores } from '../../src/pattern';
 import type { DailyLog } from '../../src/storage';
@@ -30,12 +26,7 @@ vi.mock('../../src/storage', () => ({
     .fn()
     .mockImplementation(() => Promise.resolve([...capturedLogs])),
   getCalibrationBase: vi.fn(),
-  saveDailyLog: vi.fn().mockImplementation((log: DailyLog) => {
-    capturedLogs.push(log);
-    return Promise.resolve();
-  }),
-  savePatternScores: vi.fn(),
-  saveNotification: vi.fn(),
+  saveCheckInAtomic: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../src/calibration', () => ({
@@ -58,8 +49,7 @@ describe('submitCheckIn', () => {
     if (!result.ok) {
       expect(result.reason).toBe('FUTURE_DATE');
     }
-    expect(saveDailyLog).not.toHaveBeenCalled();
-    expect(savePatternScores).not.toHaveBeenCalled();
+    expect(saveCheckInAtomic).not.toHaveBeenCalled();
   });
 
   it('saves log and recomputes for today when no base exists', async () => {
@@ -71,8 +61,7 @@ describe('submitCheckIn', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(saveDailyLog).toHaveBeenCalledTimes(1);
-    expect(savePatternScores).toHaveBeenCalledTimes(1);
+    expect(saveCheckInAtomic).toHaveBeenCalledTimes(1);
     if (result.ok) {
       expect(result.autoSwitched).toBeNull();
       expect(result.recomputed.appliedDates).toEqual(['2026-11-20']);
@@ -100,8 +89,10 @@ describe('submitCheckIn', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.recomputed.exact).toBe(true);
-      expect(result.recomputed.appliedDates).toEqual(['2026-11-20']);
+      // getAllLogs 在寫入前被讀取，本次提交不在 appliedDates 內；
+      // 本次 log 的調整已透過 recomputeResult.scores 套入 newScores。
+      expect(result.recomputed.appliedDates).toEqual([]);
     }
-    expect(savePatternScores).toHaveBeenCalledTimes(1);
+    expect(saveCheckInAtomic).toHaveBeenCalledTimes(1);
   });
 });

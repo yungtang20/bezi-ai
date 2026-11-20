@@ -65,21 +65,19 @@ export function recomputePatternScores(
   for (const log of applied) {
     scores = adjustScores(scores, log, log.dayTenGodType);
   }
-  // 將 residual 差額逐鍵加回 scores，並 clamp 到 [0, 100]。
+  // 將 residual 差額逐鍵疊加於「已重算的打卡分數」上，並 clamp 到 [0, 100]。
+  // 殘差只彌補基準與重算結果的差距，不得覆蓋後續打卡已累積的調整量。
   if (base.residual) {
     scores = {
-      strong: Math.min(
-        100,
-        Math.max(0, base.scores.strong + base.residual.strong)
-      ),
-      weak: Math.min(100, Math.max(0, base.scores.weak + base.residual.weak)),
+      strong: Math.min(100, Math.max(0, scores.strong + base.residual.strong)),
+      weak: Math.min(100, Math.max(0, scores.weak + base.residual.weak)),
       followStrong: Math.min(
         100,
-        Math.max(0, base.scores.followStrong + base.residual.followStrong)
+        Math.max(0, scores.followStrong + base.residual.followStrong)
       ),
       followWeak: Math.min(
         100,
-        Math.max(0, base.scores.followWeak + base.residual.followWeak)
+        Math.max(0, scores.followWeak + base.residual.followWeak)
       ),
     };
   }

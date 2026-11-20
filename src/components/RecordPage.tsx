@@ -9,14 +9,12 @@ import {
 
 import {
   DailyLog,
-  saveDailyLog,
+  saveCheckInAtomic,
   getDailyLog,
   getMonthLogs,
   getWeekLogs,
-  savePatternScores,
-  saveNotification,
-  AppNotification,
 } from '../storage';
+import { submitCheckIn } from '../lib/checkInSubmit';
 import {
   addDaysToDateKey,
   compareDateKeys,
@@ -26,7 +24,6 @@ import {
 } from '../lib/civilDate';
 import {
   adjustScores,
-  checkAutoSwitch,
   calculateAccuracy,
   CATEGORY_LABELS,
   type CategoryKey,
@@ -202,25 +199,18 @@ export default function RecordPage({
       };
 
       try {
-        await saveDailyLog(log);
-        const newScores = adjustScores(localScores, log);
-        await savePatternScores(newScores);
-        setLocalScores(newScores);
-
-        const switchResult = checkAutoSwitch(newScores);
-        if (switchResult) {
-          const oldPattern = getPrimaryPattern(localScores);
-          await saveNotification({
-            type: 'pattern_switch',
-            title: '格局自動調整通知',
-            message: `我們發現您的近期身心感受，更接近「${switchResult}」的理論。系統已自動為您切換格局，並更新喜用神與各項建議。`,
-            oldPattern,
-            newPattern: switchResult,
-            createdAt: new Date().toISOString(),
-            read: false,
-          } as AppNotification);
+        const result = await submitCheckIn(localScores, {
+          date: todayDateStr,
+          theoreticalOutcome: dailyEnergy?.theoreticalOutcome || '平穩',
+          dayTenGodType: dailyEnergy?.dayTenGodType,
+          feedback: categoryFeedback,
+          note,
+        });
+        if (!result.ok) {
+          // 未來日期已由 submitCheckIn 阻止，不寫入任何資料。
+          return;
         }
-
+        setLocalScores(result.scores);
         setSubmitted(true);
         getWeekLogs()
           .then(setWeekLogs)
@@ -631,6 +621,7 @@ export default function RecordPage({
                     !Object.values(editCategoryFeedback).some((v) => v !== null)
                   )
                     return;
+                  if (!localScores) return;
                   const updatedLog: DailyLog = {
                     ...editingLog,
                     theoreticalOutcome: editOutcome,
@@ -642,11 +633,14 @@ export default function RecordPage({
                     friends: editCategoryFeedback.friends,
                     note: editNote,
                   };
+                  const newScores = adjustScores(localScores, updatedLog);
                   try {
-                    await saveDailyLog(updatedLog);
-                    const newScores = adjustScores(localScores, updatedLog);
-                    const m = await import('../storage');
-                    await m.savePatternScores(newScores);
+                    // 日誌與格局分數在同一 IndexedDB 交易內寫入，避免部分成功。
+                    await saveCheckInAtomic({
+                      log: updatedLog,
+                      scores: newScores,
+                    });
+                    setLocalScores(newScores);
                     setEditingLog(null);
                     window.location.reload();
                   } catch (e) {

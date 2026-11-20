@@ -133,6 +133,10 @@ export async function saveDailyLog(
   options?: SaveDailyLogOptions
 ): Promise<void> {
   const now = options?.now ?? new Date();
+  const today = taipeiDateKey(now);
+  if (isFutureDateKey(log.date, today)) {
+    throw new FutureDateLogError(log.date, today);
+  }
   const db = await openDB();
   const { id: suppliedId, ...fields } = log;
   const existing = await (async () => {
@@ -153,6 +157,74 @@ export async function saveDailyLog(
   const tx = db.transaction('dailyLogs', 'readwrite');
   const committed = txComplete(tx);
   await storePut(tx.objectStore('dailyLogs'), saved);
+  await committed;
+}
+
+/**
+ * 原子性寫入打卡：dailyLogs、patternScores、notifications 在同一 IndexedDB
+ * 交易內完成，任一步驟失敗全部回滾，不留部分資料。
+ *
+ * @param log 打卡紀錄（會先執行未來日期檢查，違規直接拋 FutureDateLogError）。
+ * @param scores 格局分數；省略則不寫入 patternScores。
+ * @param notification 通知；省略則不寫入 notifications。
+ * @param options 測試/遷移用指定當下。
+ */
+export async function saveCheckInAtomic({
+  log,
+  scores,
+  notification,
+  options,
+}: {
+  log: DailyLog;
+  scores?: PatternScores;
+  notification?: AppNotification;
+  options?: SaveDailyLogOptions;
+}): Promise<void> {
+  const now = options?.now ?? new Date();
+  const today = taipeiDateKey(now);
+  if (isFutureDateKey(log.date, today)) {
+    throw new FutureDateLogError(log.date, today);
+  }
+
+  const db = await openDB();
+
+  // 先在獨立的 readonly 事務讀取現有記錄，避免 IndexedDB 寫入事務
+  // 在異步 await 之間提前自動提交而導致寫入失敗。
+  const existing = await (async () => {
+    const tx = db.transaction('dailyLogs', 'readonly');
+    return storeGet<DailyLog>(
+      tx.objectStore('dailyLogs').index('date'),
+      log.date
+    );
+  })();
+
+  const resolvedId = existing?.id;
+  const createdAt =
+    existing && sameDailyLogContent(existing, log)
+      ? existing.createdAt
+      : now.toISOString();
+  const saved: DailyLog =
+    resolvedId === undefined
+      ? { ...log, createdAt }
+      : { ...existing, ...log, id: resolvedId, createdAt };
+
+  // 所有寫入操作緊接在同一 readwrite 事務創建後，避免事務提前關閉。
+  const tx = db.transaction(
+    ['dailyLogs', 'patternScores', 'notifications'],
+    'readwrite'
+  );
+  const committed = txComplete(tx);
+
+  await storePut(tx.objectStore('dailyLogs'), saved);
+
+  if (scores !== undefined) {
+    await storePut(tx.objectStore('patternScores'), { id: 'current', scores });
+  }
+
+  if (notification !== undefined) {
+    tx.objectStore('notifications').put(notification);
+  }
+
   await committed;
 }
 

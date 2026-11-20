@@ -10,7 +10,13 @@
 import { type DailyEnergy, getDailyEnergy } from '../dailyAnalysis';
 import { checkDayType } from '@bezi/core';
 import { DAY_TYPE_FIELDS, type CategoryKey, CATEGORY_LABELS } from './domains';
-import { enumerateDateKeys, todayKey } from './civilDate';
+import {
+  dateKeyToUtcMs,
+  dateKeyWeekdayLabel,
+  enumerateDateKeys,
+  formatMonthDay,
+  todayKey,
+} from './civilDate';
 import type { BaziChart } from '../paipan';
 import { type EvidenceRef } from './evidenceStatus';
 import { ruleComputed, userCalibrated, reviewRequired } from './evidenceStatus';
@@ -172,7 +178,9 @@ export function buildSevenDayForecast({
   }
 
   return dateKeys.map((dateKey) => {
-    const instant = new Date(`${dateKey}T00:00:00`);
+    // 以 Asia/Taipei 民用日期鍵對應的 UTC 午夜建構瞬間，避免本地時區午夜
+    // 在台灣落到前一天 UTC 日期而導致星期與八字日柱錯位。
+    const instant = new Date(dateKeyToUtcMs(dateKey));
     const energy = getDailyEnergy(
       chart,
       weakestElement,
@@ -269,8 +277,8 @@ export function buildSevenDayForecast({
 
     return {
       dateKey,
-      weekday: `星期${['日', '一', '二', '三', '四', '五', '六'][instant.getUTCDay()]}`,
-      monthDay: `${instant.getUTCMonth() + 1}/${instant.getUTCDate()}`,
+      weekday: dateKeyWeekdayLabel(dateKey),
+      monthDay: formatMonthDay(dateKey),
       dayGanZhi: energy.dayGanZhi.split(' ').pop() ?? '',
       dayTenGodType: energy.dayTenGodType,
       trend,

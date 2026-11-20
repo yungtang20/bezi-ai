@@ -6,9 +6,8 @@ import { isFutureDateKey, taipeiDateKey } from './civilDate';
 import {
   getAllLogs,
   getCalibrationBase,
-  saveDailyLog,
-  saveNotification,
-  savePatternScores,
+  saveCheckInAtomic,
+  type AppNotification,
   type DailyLog,
 } from '../storage';
 import { adjustScores, checkAutoSwitch } from '../calibration';
@@ -37,6 +36,7 @@ export type SubmitResult =
   | {
       ok: true;
       autoSwitched: string | null;
+      scores: PatternScores;
       recomputed: {
         appliedDates: string[];
         skippedFutureDates: string[];
@@ -91,8 +91,6 @@ export async function submitCheckIn(
     rulesVersion: RECOMPUTE_VERSION,
   };
 
-  await saveDailyLog(log);
-
   const base = await getCalibrationBase();
   let recomputeResult: RecomputeResult | null = null;
   if (base) {
@@ -103,11 +101,11 @@ export async function submitCheckIn(
   const newScores = recomputeResult
     ? recomputeResult.scores
     : adjustScores(scores, log, input.dayTenGodType);
-  await savePatternScores(newScores);
   const switched = checkAutoSwitch(newScores);
+  let notification: AppNotification | undefined;
   if (switched) {
     const oldPattern = getPrimaryPattern(scores);
-    await saveNotification({
+    notification = {
       date: now.toISOString(),
       type: 'pattern_switch',
       title: '格局自動調整通知',
@@ -116,12 +114,21 @@ export async function submitCheckIn(
       newPattern: switched,
       createdAt: now.toISOString(),
       read: false,
-    });
+    };
   }
+
+  // 日誌、格局分數、通知在同一 IndexedDB 交易內寫入；任一失敗皆回滾。
+  await saveCheckInAtomic({
+    log,
+    scores: newScores,
+    notification,
+    options: { now },
+  });
 
   return {
     ok: true,
     autoSwitched: switched,
+    scores: newScores,
     recomputed: recomputeResult
       ? {
           appliedDates: recomputeResult.appliedDates,
